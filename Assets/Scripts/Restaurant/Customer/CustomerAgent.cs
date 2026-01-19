@@ -15,7 +15,7 @@ public class CustomerAgent : MonoBehaviour
     [SerializeField] private bool autoTakeOrder = true;
     [SerializeField] private float autoTakeOrderDelay = 1.0f;
 
-    private RestaurantGameManager gm;
+    [SerializeField] private RestaurantGameManager gm;
 
     /* [ Runtime State ] */
     private CustomerState state;
@@ -36,6 +36,7 @@ public class CustomerAgent : MonoBehaviour
     private void Start()
     {
         patience = maxPatience;
+        currentSeat = null;
         gm = RestaurantGameManager.instance;
         // ChangeState(CustomerState.Enter);
     }
@@ -96,6 +97,7 @@ public class CustomerAgent : MonoBehaviour
     private void TrySeat()
     {
         if (currentSeat != null) { return; } // 이미 자리를 점유하고 있다면 -> 근데 이 코드에 걸릴 일은 없을 듯
+        gm = RestaurantGameManager.instance;
         currentSeat = RestaurantGameManager.instance.seatManager.TryAssignSeat(this);
 
         if (currentSeat == null) // 만약 입장했는데 자리가 없는 경우 <- 이 함수는 어느정도 개선이 필요함

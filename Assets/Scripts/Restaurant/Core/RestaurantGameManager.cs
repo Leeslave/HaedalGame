@@ -20,6 +20,12 @@ public class RestaurantGameManager : MonoBehaviour
 
     void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
         seatManager = GetComponentInChildren<SeatManager>();
         orderManager = GetComponentInChildren<OrderManager>();
         ratingSystem = GetComponentInChildren<RatingSystem>();

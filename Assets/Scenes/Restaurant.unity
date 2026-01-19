@@ -1019,7 +1019,7 @@ MonoBehaviour:
   gm: {fileID: 652301891}
   customerPrefeb: {fileID: 4843071628300461075, guid: 280726b4f5ddc464aa42d098119738b9, type: 3}
   spawnInterval: 3
-  maxAliveCustomers: 5
+  maxAliveCustomers: 13
   oneByOneEnter: 1
 --- !u!1 &1193176966
 GameObject:
