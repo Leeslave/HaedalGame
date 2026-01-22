@@ -4,8 +4,11 @@ using UnityEngine;
 
 public class CustomerAgent : MonoBehaviour
 {
+    [ReadOnly][SerializeField] private RestaurantGameManager gm;
+
     [Header("Patience")] // 인내심 관련 변수
-    [SerializeField] private float maxPatience = 25f;
+    private const float DefaultPatience = 25f;          // 기본 인내심을 이곳에서 정의
+    [ReadOnly][SerializeField] private float curPatience = 25f;
 
     [Header("Timings")]
     [SerializeField] private float eatDuration = 8f;
@@ -15,11 +18,10 @@ public class CustomerAgent : MonoBehaviour
     [SerializeField] private bool autoTakeOrder = true;
     [SerializeField] private float autoTakeOrderDelay = 1.0f;
 
-    [SerializeField] private RestaurantGameManager gm;
+    
 
     /* [ Runtime State ] */
     private CustomerState state;
-    private float patience;
     private float stateTimer;
     private RatingFlag ratingFlag = RatingFlag.None;
 
@@ -28,14 +30,14 @@ public class CustomerAgent : MonoBehaviour
 
     /* [ public getter ] */
     public CustomerState State => state;
-    public float Patience => patience;
+    public float Patience => curPatience;
     public RatingFlag Rating => ratingFlag;
     public Order CurrentOrder => currentOrder;
 
     /* [ Lifecycle Methods ] */
     private void Start()
     {
-        patience = maxPatience;
+        curPatience = DefaultPatience;
         currentSeat = null;
         gm = RestaurantGameManager.instance;
         // ChangeState(CustomerState.Enter);
@@ -46,6 +48,7 @@ public class CustomerAgent : MonoBehaviour
          UpdateState(Time.deltaTime);
     }
 
+// ========================================================================================
     /* [ State Machine ] */
     private void UpdateState(float dt)
     {
@@ -92,7 +95,7 @@ public class CustomerAgent : MonoBehaviour
         }
     }
 
-
+// ========================================================================================
     /* [ State Logic ] */
     private void TrySeat()
     {
@@ -112,6 +115,8 @@ public class CustomerAgent : MonoBehaviour
         ChangeState(CustomerState.WaitingForOrder);
 
     }
+
+    
     
     
     /* 남은 작업은 order, Patience */
@@ -132,4 +137,13 @@ public class CustomerAgent : MonoBehaviour
         
         Destroy(gameObject);
     }
+
+    // ========================================================================================
+    /* [ Event Logic ] */
+    private void ResetPatience(bool isEvent = false, float patienceValue = DefaultPatience)
+    {
+        if (isEvent) { SetMaxPatience(patienceValue); }
+    }
+    private void SetMaxPatience(float value) { curPatience = value; } // 특정 이벤트에서 최대 인내심이 다른 경우
+
 }

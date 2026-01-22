@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class CustomerSpawner : MonoBehaviour
 {
-    [SerializeField] private RestaurantGameManager gm;
+    private RestaurantGameManager gm;
     [SerializeField] private CustomerAgent customerPrefeb;
 
     [Header("Spawn")]
@@ -13,7 +13,10 @@ public class CustomerSpawner : MonoBehaviour
     private float spawnTimer; // 스폰을 대기하는 타이머
     private int aliveCount;   // 지금 가게에 있는 인원
 
-
+    private void Start()
+    {
+        gm = RestaurantGameManager.instance;
+    }
     private void Update()
     {
         spawnTimer += Time.deltaTime;
