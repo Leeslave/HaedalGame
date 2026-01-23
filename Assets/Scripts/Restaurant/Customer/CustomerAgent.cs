@@ -1,6 +1,7 @@
 using System.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
+using System;
 
 public class CustomerAgent : MonoBehaviour
 {
@@ -8,15 +9,30 @@ public class CustomerAgent : MonoBehaviour
 
     [Header("Patience")] // 인내심 관련 변수
     private const float DefaultPatience = 25f;          // 기본 인내심을 이곳에서 정의
-    [ReadOnly][SerializeField] private float curPatience = 25f;
+    [ReadOnly][SerializeField] private float curPatience = DefaultPatience;
+
+    [SerializeField] private float waitingGraceSec = 3f;    // 웨이팅 룸으로 갔을 때 바로 인내심이 깎이는 것이 아니라 일부 대기 시간 부여
+    [SerializeField] private float foodGraceSec = 5f;       // 음식을 주문 했을 때 바로 인내심이 깎이는 것이 아니라 일부 대기 시간 부여
+    private float graceTimer;
+    
+
+    [Header("Patience Drain")]
+    [ReadOnly][SerializeField] private float waitingDrainPerSec = 1.0f;
+    [ReadOnly][SerializeField] private float orderDrainPerSec = 1.0f;
+    [ReadOnly][SerializeField] private float foodDrainPerSec = 1.0f;
+    
 
     [Header("Timings")]
     [SerializeField] private float eatDuration = 8f;
     [SerializeField] private float payDuration = 2f;
+    [SerializeField] private float stateChangeDuration = 1.0f;
 
     [Header("Other")]
     [SerializeField] private bool autoTakeOrder = true;
     [SerializeField] private float autoTakeOrderDelay = 1.0f;
+    
+    // Destroy Event
+    public Action<CustomerAgent> onExited;
 
     
 
@@ -35,12 +51,9 @@ public class CustomerAgent : MonoBehaviour
     public Order CurrentOrder => currentOrder;
 
     /* [ Lifecycle Methods ] */
-    private void Start()
+    private void Awake()
     {
-        curPatience = DefaultPatience;
-        currentSeat = null;
         gm = RestaurantGameManager.instance;
-        // ChangeState(CustomerState.Enter);
     }
 
     private void Update()
@@ -59,6 +72,9 @@ public class CustomerAgent : MonoBehaviour
                 break;
             case CustomerState.Seating:
                 TrySeat();
+                break;
+            case CustomerState.WaitingRoom:
+                // 대기실로 이동하는 코드 추가
                 break;
             case CustomerState.WaitingForOrder:
                 // 기다리는 함수 추가
@@ -97,11 +113,11 @@ public class CustomerAgent : MonoBehaviour
 
 // ========================================================================================
     /* [ State Logic ] */
+    // CustomerState.Seating 
     private void TrySeat()
     {
         if (currentSeat != null) { return; } // 이미 자리를 점유하고 있다면 -> 근데 이 코드에 걸릴 일은 없을 듯
-        gm = RestaurantGameManager.instance;
-        currentSeat = RestaurantGameManager.instance.seatManager.TryAssignSeat(this);
+        currentSeat = gm.seatManager.TryAssignSeat(this);
 
         if (currentSeat == null) // 만약 입장했는데 자리가 없는 경우 <- 이 함수는 어느정도 개선이 필요함
         {
@@ -112,15 +128,42 @@ public class CustomerAgent : MonoBehaviour
         }
 
         transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
-        ChangeState(CustomerState.WaitingForOrder);
-
+        //ChangeState(CustomerState.WaitingForOrder);
+        StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder));
     }
 
-    
-    
-    
-    /* 남은 작업은 order, Patience */
+    // CustomerState.WaitingForOrder
+    private void TryOrder()
+    {
+        
+    }
 
+    // CustomState.WaitingForFood
+    private void WaitFood()
+    {
+        
+    } 
+
+    // CustomState.Eating
+    private void Eating()
+    {
+        
+    }
+
+    // CustomState.Paying
+    private void Paying()
+    {
+        
+    }
+
+    // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
+    private IEnumerator WaitStateChange(CustomerState curState)
+    {
+        yield return new WaitForSeconds(stateChangeDuration);
+        ChangeState(curState);
+    }
+
+    // CustomState.Exit
     private void ExitRestaurant()
     {
         if (ratingFlag == RatingFlag.None)
@@ -135,15 +178,28 @@ public class CustomerAgent : MonoBehaviour
             currentSeat = null;
         }
         
+        onExited.Invoke(this);
         Destroy(gameObject);
     }
 
     // ========================================================================================
     /* [ Event Logic ] */
-    private void ResetPatience(bool isEvent = false, float patienceValue = DefaultPatience)
+    public void SpawnCustomer(float patienceValue = DefaultPatience)
     {
-        if (isEvent) { SetMaxPatience(patienceValue); }
+        InitPatience(patienceValue);
     }
-    private void SetMaxPatience(float value) { curPatience = value; } // 특정 이벤트에서 최대 인내심이 다른 경우
+
+    private void InitPatience(float patienceValue) 
+    { 
+        if (null == gm) { gm = RestaurantGameManager.instance; }
+
+        state = CustomerState.None;
+        currentSeat = null;
+
+        SetPatience(patienceValue); 
+        StartCoroutine(WaitStateChange(CustomerState.Enter));
+    }
+
+    private void SetPatience(float value) { curPatience = value; } // 특정 이벤트에서 최대 인내심이 다른 경우
 
 }
