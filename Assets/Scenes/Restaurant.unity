@@ -982,6 +982,7 @@ GameObject:
   m_Component:
   - component: {fileID: 761560148}
   - component: {fileID: 761560149}
+  - component: {fileID: 761560150}
   m_Layer: 0
   m_Name: CustomerSpawner
   m_TagString: Untagged
@@ -1016,11 +1017,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed759d40dae882747bf13e30e4ea42c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CustomerSpawner
-  gm: {fileID: 652301891}
+  csm: {fileID: 0}
+  isTest: 1
+  customers:
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  - patience: 25
+  spawnInterval: 5
+--- !u!114 &761560150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 761560147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 522047e3ec5e2f74093865ccd54a3c07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomerSpawnManager
   customerPrefeb: {fileID: 4843071628300461075, guid: 280726b4f5ddc464aa42d098119738b9, type: 3}
-  spawnInterval: 3
-  maxAliveCustomers: 13
-  oneByOneEnter: 1
+  spawnInterval: 10
+  maxAliveCustomers: 15
 --- !u!1 &1193176966
 GameObject:
   m_ObjectHideFlags: 0

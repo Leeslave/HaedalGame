@@ -20,8 +20,3 @@ public enum RatingFlag
     Perfect     // 4
 }
 
-public enum CustomerType
-{
-    Default, // 일반 손님
-    Special  // 특별 손님
-}
