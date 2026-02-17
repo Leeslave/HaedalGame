@@ -37,6 +37,7 @@ public class CustomerAgent : MonoBehaviour
     private bool isEating = false;
     private bool isPaying = false;
 
+    public event Action OnOrderReceived;
 
     // Destroy Event
     public Action<CustomerAgent> onExited;
@@ -64,6 +65,11 @@ public class CustomerAgent : MonoBehaviour
     private void Awake()
     {
         gm = RestaurantGameManager.instance;
+    }
+
+    private void Start()
+    {
+        
     }
 
     private void Update()
@@ -151,6 +157,8 @@ public class CustomerAgent : MonoBehaviour
 
         }
     }
+
+    
 
     private void OnMouseDown()
     {
