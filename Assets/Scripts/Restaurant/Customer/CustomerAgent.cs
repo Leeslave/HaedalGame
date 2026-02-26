@@ -1,5 +1,4 @@
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 using System;
 
@@ -37,10 +36,14 @@ public class CustomerAgent : MonoBehaviour
     private bool isEating = false;
     private bool isPaying = false;
 
-    public event Action OnOrderReceived;
+    private bool canBoost;
+    private float boostLoadingTime = 5f;
+
+    public event Action<CustomerAgent> OnOrderReceived;
+    public event Action<CustomerAgent> OnFoodReceived;
 
     // Destroy Event
-    public Action<CustomerAgent> onExited;
+    public Action<CustomerAgent> OnExited;
 
 
 
@@ -69,7 +72,23 @@ public class CustomerAgent : MonoBehaviour
 
     private void Start()
     {
-        
+        canBoost = true;
+    }
+
+    private void OnMouseDown()
+    {
+        if (canBoost)
+        {
+            canBoost = false;
+            TaskManager.Instance.BoostCustomer(this);
+            StartCoroutine(BoostLoading());
+        }
+    }
+
+    private IEnumerator BoostLoading()
+    {
+        yield return new WaitForSeconds(boostLoadingTime);
+        canBoost = true;
     }
 
     private void Update()
@@ -138,11 +157,11 @@ public class CustomerAgent : MonoBehaviour
                 WaitingRoom();
                 break;
             case CustomerState.WaitingForOrder:
-                Debug.Log($"{gameObject.name}이 주문을 대기하고 있습니다.");
+                //Debug.Log($"{gameObject.name}이 주문을 대기하고 있습니다.");
                 TryOrder();
                 break;
             case CustomerState.WaitingForFood:
-                Debug.Log($"{gameObject.name}이 음식을 대기하고 있습니다.");
+                //Debug.Log($"{gameObject.name}이 음식을 대기하고 있습니다.");
                 WaitFood();
                 break;
             case CustomerState.Eating:
@@ -158,12 +177,12 @@ public class CustomerAgent : MonoBehaviour
         }
     }
 
-    
 
-    private void OnMouseDown()
-    {
-        ActivateCondition();
-    }
+
+    // void OnMouseDown()
+    // {
+    //     ActivateCondition();
+    // }
 
     public void ActivateCondition()
     {
@@ -182,7 +201,7 @@ public class CustomerAgent : MonoBehaviour
         if (currentSeat == null) // 만약 입장했는데 자리가 없는 경우 <- 이 함수는 어느정도 개선이 필요함
         {
             ratingFlag = RatingFlag.Low;
-            Debug.Log($"{gameObject.name}의 이번 식사의 평가는 {ratingFlag}입니다.");
+            //Debug.Log($"{gameObject.name}의 이번 식사의 평가는 {ratingFlag}입니다.");
             ChangeState(CustomerState.Exit);
             return;
         }
@@ -211,6 +230,12 @@ public class CustomerAgent : MonoBehaviour
         StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder));
     }
 
+    public void MoveWaitingSeat(Seat newSeat)
+    {
+        currentSeat = newSeat;
+        transform.position = newSeat.GetSeatPoint().position;
+    }
+
     // CustomerState.WaitingForOrder
     private void TryOrder()
     {
@@ -227,6 +252,8 @@ public class CustomerAgent : MonoBehaviour
         graceTimer = orderGraceSec;
         isPatience = true;
         isOrder = true;
+
+        OnOrderReceived?.Invoke(this);
     }
 
     public void ReceiveOrder()
@@ -245,6 +272,8 @@ public class CustomerAgent : MonoBehaviour
         graceTimer = foodGraceSec;
         isPatience = true;
         isWaitingFood = true;
+
+        OnFoodReceived?.Invoke(this);
     }
 
     public void ReceiveFood()
@@ -291,8 +320,8 @@ public class CustomerAgent : MonoBehaviour
             gm.seatManager.ReleaseSeat(currentSeat, isWaiting);
             currentSeat = null;
         }
-
-        //onExited.Invoke(this);
+        Debug.Log("고객이 만족하고 퇴장하였습니다!");
+        OnExited?.Invoke(this);
         StopAllCoroutines();
         Destroy(gameObject);
     }
@@ -312,6 +341,7 @@ public class CustomerAgent : MonoBehaviour
         currentSeat = null;
 
         SetPatience(patienceValue);
+        TaskManager.Instance.RegisterCustomer(this);
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 

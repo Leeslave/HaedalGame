@@ -28,7 +28,7 @@ public class SeatManager : MonoBehaviour
     public void RegisterSeats(List<TableGroup> sortedTables)
     {
         seats.Clear();
-        foreach(var table in sortedTables)
+        foreach (var table in sortedTables)
         {
             seats.AddRange(table.GetSeats());
         }
@@ -37,7 +37,7 @@ public class SeatManager : MonoBehaviour
     public void RegisterWaitingSeats(List<WaitingGroup> waiting)
     {
         waitingSeats.Clear();
-        foreach(var seat in waiting)
+        foreach (var seat in waiting)
         {
             waitingSeats.AddRange(seat.GetSeats());
         }
@@ -45,7 +45,7 @@ public class SeatManager : MonoBehaviour
 
 
     // 손님 오브젝트가 좌석을 앉으려고 시도하는 함수
-    public Seat TryAssignSeat(CustomerAgent customer, out bool indoor) 
+    public Seat TryAssignSeat(CustomerAgent customer, out bool indoor)
     {
         indoor = false;
         for (int i = 0; i < seats.Count; i++) // 전체 좌석을 순회하면서
@@ -86,7 +86,7 @@ public class SeatManager : MonoBehaviour
         {
             if (!seats[i].GetIsOccupied()) { emptySeat = seats[i]; break; } // 빈 자리가 있으면 해당 자리를 가져옴
         }
-        if (emptySeat == null) return; 
+        if (emptySeat == null) return;
 
         for (int i = 0; i < waitingSeats.Count; i++)
         {
@@ -98,10 +98,26 @@ public class SeatManager : MonoBehaviour
                 emptySeat.TryOccupy(customer);
                 seatedCount++;
                 customer.PromoteToSeat(emptySeat);
-                return;    
+
+                ShiftWaitingCustomersForward(i);
+                return;
             }
-            
+
         }
 
     }
+    private void ShiftWaitingCustomersForward(int fromIndex)
+    {
+        for (int i = fromIndex + 1; i < waitingSeats.Count; i++)
+        {
+            if (!waitingSeats[i].GetIsOccupied()) break;
+
+            CustomerAgent next = waitingSeats[i].GetOccupant();
+            waitingSeats[i].Vacate();
+            waitingSeats[i - 1].TryOccupy(next);
+            next.MoveWaitingSeat(waitingSeats[i - 1]);
+        }
+    }
+
+
 }

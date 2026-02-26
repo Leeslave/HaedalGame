@@ -5,35 +5,28 @@ public class ServerManager : MonoBehaviour
 {
     public static ServerManager Instance;
 
-    [SerializeField] private ServerAgent serverPrefab;
+    //[SerializeField] private ServerAgent serverPrefab;
     [SerializeField] private ServerData[] servers;
+    [SerializeField] private Transform[] serverInitposition;
+    [SerializeField] private Transform kitchen;
+    public Vector2 GetKitchenPosition() { return kitchen.position; }
+    public Vector2 GetInitPosition(int n) { return serverInitposition[n-1].position; }
     [ReadOnly][SerializeField] private List<ServerAgent> activeServers;
 
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
     }
 
     void Start()
     {
-        InitializeServers();
+        //InitializeServers();
     }
 
     private void InitializeServers()
     {
-        foreach(ServerData d in servers)
-        {
-            var server = Instantiate(serverPrefab, Vector2.zero, Quaternion.identity);
-            server.InitialServerSetting(d);
-            activeServers.Add(server);
-        }
+        
     }
 
     public void HireServer(ServerData target)
