@@ -84,38 +84,42 @@ public class SeatManager : MonoBehaviour
         Seat emptySeat = null;
         for (int i = 0; i < seats.Count; i++)
         {
-            if (!seats[i].GetIsOccupied()) { emptySeat = seats[i]; break; } // 빈 자리가 있으면 해당 자리를 가져옴
+            if (!seats[i].GetIsOccupied()) { emptySeat = seats[i]; break; } // 식당 내부에 빈 자리가 있으면 해당 자리를 가져옴
         }
         if (emptySeat == null) return;
 
-        for (int i = 0; i < waitingSeats.Count; i++)
+        for (int i = 0; i < waitingSeats.Count; i++) // 웨이팅 석 탐색
         {
-            if (waitingSeats[i].GetIsOccupied())
+            if (waitingSeats[i].GetIsOccupied())     // 웨이팅을 하고 있는 인원이 있다면
             {
                 CustomerAgent customer = waitingSeats[i].GetOccupant();
                 waitingSeats[i].Vacate();
                 waitingCount--;
-                emptySeat.TryOccupy(customer);
+                emptySeat.TryOccupy(customer);      // 줄의 맨 앞 사람을 위에서 찾아준 빈 자리에 넣는다.
                 seatedCount++;
                 customer.PromoteToSeat(emptySeat);
 
-                ShiftWaitingCustomersForward(i);
+                ShiftWaitingCustomersForward(i);    // 웨이팅 대기석 앞당기기
                 return;
             }
 
         }
 
     }
+
+    // 웨이팅 석 앞당기기
     private void ShiftWaitingCustomersForward(int fromIndex)
     {
-        for (int i = fromIndex + 1; i < waitingSeats.Count; i++)
+        // 웨이팅 석의 빈자리가 생긴 지점의 다음 좌석부터 순회
+        for (int i = fromIndex + 1; i < waitingSeats.Count; i++) 
         {
-            if (!waitingSeats[i].GetIsOccupied()) break;
+            // 자리가 비어있으면 끝 -> 만약 새치기가 생긴다면 이 부분이 수정되어야 함.
+            if (!waitingSeats[i].GetIsOccupied()) break; 
 
             CustomerAgent next = waitingSeats[i].GetOccupant();
             waitingSeats[i].Vacate();
             waitingSeats[i - 1].TryOccupy(next);
-            next.MoveWaitingSeat(waitingSeats[i - 1]);
+            next.MoveWaitingSeat(waitingSeats[i - 1]); // 실제로 자리 이동
         }
     }
 

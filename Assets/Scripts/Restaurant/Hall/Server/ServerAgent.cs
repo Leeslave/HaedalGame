@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 
 // ServerData로부터 받아온 서빙 알바의 정보를 나타내는 클래스
@@ -55,7 +54,10 @@ public class ServerAgent : MonoBehaviour
             returnCoroutine = null;
         }
 
-
+        if (task.Customer.GetBoost())
+        {
+            Debug.Log("**※※※** Boost한 업무를 수주했습니다.");
+        }
         curTask = task;
         isIdle = false;
         StartCoroutine(ExecuteTask(curTask));

@@ -36,8 +36,9 @@ public class CustomerAgent : MonoBehaviour
     private bool isEating = false;
     private bool isPaying = false;
 
-    private bool canBoost;
-    private float boostLoadingTime = 5f;
+    private bool canBoost; // 플레이어가 NPC를 클릭해서 우선순위를 올릴 수 있는지 판단 bool
+    public bool GetBoost() { return canBoost; } // 디버깅용
+    [SerializeField] private float boostLoadingTime = 5f; // 무지성 우선순위 상승 방지용 쿨타임
 
     public event Action<CustomerAgent> OnOrderReceived;
     public event Action<CustomerAgent> OnFoodReceived;
