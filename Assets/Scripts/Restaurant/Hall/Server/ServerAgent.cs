@@ -67,7 +67,8 @@ public class ServerAgent : MonoBehaviour
     {
         while (Vector2.Distance(transform.position, iniPosition) > arrivalThreshold)
         {
-            transform.position = Vector2.MoveTowards(transform.position, iniPosition, status.speed * Time.deltaTime);
+            //transform.position = Vector2.MoveTowards(transform.position, iniPosition, status.speed * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, iniPosition, 10.0f * Time.deltaTime);
             yield return null;
         }
         returnCoroutine = null;
@@ -84,7 +85,8 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
                 yield return null;
             }
             // 실제로 올바른 위치에 도달하면
@@ -104,7 +106,8 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
                 yield return null;
             }
             Debug.Log("음식을 수령 중입니다.");
@@ -121,7 +124,8 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
                 yield return null;
             }
 
@@ -136,7 +140,7 @@ public class ServerAgent : MonoBehaviour
     public void InitialServerSetting(ServerData data, int number)
     {
         serverName = data.serverName;
-        level = data.level;
+        //level = data.level;
         status = data.status;
         serverNumber = number;
         iniPosition = ServerManager.Instance.GetInitPosition(number);
