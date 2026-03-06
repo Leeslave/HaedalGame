@@ -6,7 +6,7 @@ public class ServerManager : MonoBehaviour
     public static ServerManager Instance;
 
     //[SerializeField] private ServerAgent serverPrefab;
-    [SerializeField] private ServerData[] servers;
+    [SerializeField] private PartTimerData[] servers;
     [SerializeField] private Transform[] serverInitposition;
     [SerializeField] private Transform kitchen;
     public Vector2 GetKitchenPosition() { return kitchen.position; }
@@ -29,12 +29,12 @@ public class ServerManager : MonoBehaviour
         
     }
 
-    public void HireServer(ServerData target)
+    public void HireServer(PartTimerData target)
     {
         
     }
 
-    public void FireServer(ServerData target)
+    public void FireServer(PartTimerData target)
     {
         
     }

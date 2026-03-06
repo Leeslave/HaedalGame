@@ -1,16 +1,17 @@
 [System.Serializable]
-public class ServerStatus
+public class PartTimerStatus
 {
-    public float speed; // 이동 속도
-    public float attraction; // 매력
-    public float hp; // 체력
+    public float serving; // 서빙 속도
+    public float cooking; // 요리 속도
+    public float handy;   // 손재주 -> 팁 받을 확률 증가, 요리 등급업 증가
+    public float hp;      // 체력
 }
 
-public class ServerData
+public class PartTimerData
 {
     public string serverName;       // 서빙 알바의 이름
     public int level;               // 서빙 알바의 등급
-    public ServerStatus status;     // 서빙 알바의 status
+    public PartTimerStatus status;     // 서빙 알바의 status
 
     public void ServerStatusInit()  // 처음 가챠 등으로 생성 시 실행하여 해당 레벨에 맞는 스탯을 설정해야함
     {

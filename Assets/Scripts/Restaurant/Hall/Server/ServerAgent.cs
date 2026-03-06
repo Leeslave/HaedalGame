@@ -8,7 +8,7 @@ public class ServerAgent : MonoBehaviour
     //[ReadOnly]
     [SerializeField] private string serverName;
     //[ReadOnly]
-    [SerializeField] private ServerStatus status;
+    [SerializeField] private PartTimerStatus status;
     //[ReadOnly]
     [SerializeField] private Vector2 iniPosition;
     //[ReadOnly]
@@ -137,7 +137,7 @@ public class ServerAgent : MonoBehaviour
         TryClaimTask();
     }
 
-    public void InitialServerSetting(ServerData data, int number)
+    public void InitialServerSetting(PartTimerData data, int number)
     {
         serverName = data.serverName;
         //level = data.level;
