@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
 
-public class TaskManager : MonoBehaviour
+public class HallSystem : MonoBehaviour
 {
-    public static TaskManager Instance;
+    public static HallSystem Instance;
     public event Action OnTaskAvailable;
     private ServingTaskQueue taskQueue = new ServingTaskQueue();
 

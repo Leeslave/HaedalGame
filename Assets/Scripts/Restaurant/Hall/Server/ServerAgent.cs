@@ -3,30 +3,15 @@ using System.Collections;
 using UnityEngine;
 
 // ServerData로부터 받아온 서빙 알바의 정보를 나타내는 클래스
-public class ServerAgent : MonoBehaviour
+public class ServerAgent : PartTimerAgent
 {
-    //[ReadOnly]
-    [SerializeField] private string serverName;
-    //[ReadOnly]
     [SerializeField] private PartTimerStatus status;
-    //[ReadOnly]
-    [SerializeField] private Vector2 iniPosition;
-    //[ReadOnly]
-    [SerializeField] private int level;
-    [SerializeField] private int serverNumber; // 서빙 알바의 대기 위치를 나타내는 번호
-
-    [ReadOnly][SerializeField] private bool isIdle = true;
     private ServingTask curTask;
-    float arrivalThreshold = 0.1f; // 약간의 오차범위
-    private Coroutine returnCoroutine;
-
-
-
 
     void Start()
     {
-        TaskManager.Instance.OnTaskAvailable += OnTaskAvailable;
-        iniPosition = ServerManager.Instance.GetInitPosition(serverNumber);
+        HallSystem.Instance.OnTaskAvailable += OnTaskAvailable;
+        initPosition = ServerManager.Instance.GetInitPosition(positionNumber);
     }
 
     private void OnTaskAvailable()
@@ -37,12 +22,12 @@ public class ServerAgent : MonoBehaviour
 
     private void TryClaimTask()
     {
-        ServingTask task = TaskManager.Instance.ClaimTask(this);
+        ServingTask task = HallSystem.Instance.ClaimTask(this);
         if (task == null)
         {
-            if (Vector2.Distance(transform.position, iniPosition) > arrivalThreshold && returnCoroutine == null)
+            if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold && returnCoroutine == null)
             {
-                returnCoroutine = StartCoroutine(ReturnToBase());
+                returnCoroutine = StartCoroutine(ReturnToBase(status.serving)); // 서빙 속도에 따라서 스피드 변경
             }
             return;
         } // 이미 다른 알바가 다 점유하고 있거나 작업이 없음
@@ -54,24 +39,14 @@ public class ServerAgent : MonoBehaviour
             returnCoroutine = null;
         }
 
-        if (task.Customer.GetBoost())
+        if (task.Customer.GetCheckBoost())
         {
             Debug.Log("**※※※** Boost한 업무를 수주했습니다.");
+            task.Customer.SetCheckBoost(false);
         }
         curTask = task;
         isIdle = false;
         StartCoroutine(ExecuteTask(curTask));
-    }
-
-    private IEnumerator ReturnToBase()
-    {
-        while (Vector2.Distance(transform.position, iniPosition) > arrivalThreshold)
-        {
-            //transform.position = Vector2.MoveTowards(transform.position, iniPosition, status.speed * Time.deltaTime);
-            transform.position = Vector2.MoveTowards(transform.position, iniPosition, 10.0f * Time.deltaTime);
-            yield return null;
-        }
-        returnCoroutine = null;
     }
 
     private IEnumerator ExecuteTask(ServingTask task)
@@ -85,8 +60,7 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
-                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
                 yield return null;
             }
             // 실제로 올바른 위치에 도달하면
@@ -106,8 +80,7 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
-                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
                 yield return null;
             }
             Debug.Log("음식을 수령 중입니다.");
@@ -124,8 +97,7 @@ public class ServerAgent : MonoBehaviour
 
             while (Vector2.Distance(transform.position, target) > arrivalThreshold)
             {
-                //transform.position = Vector2.MoveTowards(transform.position, target, status.speed * Time.deltaTime);
-                transform.position = Vector2.MoveTowards(transform.position, target, 10.0f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
                 yield return null;
             }
 
@@ -139,17 +111,17 @@ public class ServerAgent : MonoBehaviour
 
     public void InitialServerSetting(PartTimerData data, int number)
     {
-        serverName = data.serverName;
-        //level = data.level;
+        partTimerName = data.serverName;
+        level = data.level;
         status = data.status;
-        serverNumber = number;
-        iniPosition = ServerManager.Instance.GetInitPosition(number);
+        positionNumber = number;
+        initPosition = ServerManager.Instance.GetInitPosition(number);
     }
 
 
     private void OnDestroy()
     {
-        TaskManager.Instance.OnTaskAvailable -= OnTaskAvailable;
+        HallSystem.Instance.OnTaskAvailable -= OnTaskAvailable;
     }
 
 

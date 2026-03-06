@@ -37,6 +37,9 @@ public class CustomerAgent : MonoBehaviour
     private bool isPaying = false;
 
     private bool canBoost; // 플레이어가 NPC를 클릭해서 우선순위를 올릴 수 있는지 판단 bool
+    private bool checkBoost; // [디버그 용] 플레이어가 부스트 버튼을 눌렀는지 확인.
+    public bool GetCheckBoost() { return checkBoost; }
+    public void SetCheckBoost(bool flag) { checkBoost = flag; }
     public bool GetBoost() { return canBoost; } // 디버깅용
     [SerializeField] private float boostLoadingTime = 5f; // 무지성 우선순위 상승 방지용 쿨타임
 
@@ -53,14 +56,19 @@ public class CustomerAgent : MonoBehaviour
     private RatingFlag ratingFlag = RatingFlag.None;
 
     private Seat currentSeat;
-    private Order currentOrder;
+    private OrderFoodData currentOrder;
+    public OrderFoodData GetOrderFoodData() 
+    { 
+        if(currentOrder != null) 
+        { 
+            return currentOrder; 
+        }
+        else
+        {
+            return null;
+        }
+    }
 
-    /* [ public getter ] */
-    public CustomerState State => state;
-    public float Patience => curPatience;
-    public RatingFlag Rating => ratingFlag;
-    public Order CurrentOrder => currentOrder;
-    public bool IsWaiting => isWaiting;
 
     /* [ public Setter ]*/
     public void SetDrainRate(float value) { drainPerSec = value; }
@@ -74,6 +82,8 @@ public class CustomerAgent : MonoBehaviour
     private void Start()
     {
         canBoost = true;
+        checkBoost = false;
+        currentOrder = null;
     }
 
     private void OnMouseDown()
@@ -81,7 +91,8 @@ public class CustomerAgent : MonoBehaviour
         if (canBoost)
         {
             canBoost = false;
-            TaskManager.Instance.BoostCustomer(this);
+            checkBoost = true;
+            HallSystem.Instance.BoostCustomer(this);
             StartCoroutine(BoostLoading());
         }
     }
@@ -243,6 +254,15 @@ public class CustomerAgent : MonoBehaviour
         StartCoroutine(ChoosingMenu());
     }
 
+    private void GenerateOrder()
+    {
+        /* 주문 생성 로직 */
+
+        // 임시
+        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png");
+        return;
+    }
+
     private IEnumerator ChoosingMenu()
     {
         yield return new WaitForSeconds(3f); // 이 값은 랜덤으로 줘도 됨
@@ -250,6 +270,7 @@ public class CustomerAgent : MonoBehaviour
         Debug.Log("메뉴를 골랐습니다!");
 
         yield return new WaitForSeconds(1f);
+        GenerateOrder();
         graceTimer = orderGraceSec;
         isPatience = true;
         isOrder = true;
@@ -342,7 +363,8 @@ public class CustomerAgent : MonoBehaviour
         currentSeat = null;
 
         SetPatience(patienceValue);
-        TaskManager.Instance.RegisterCustomer(this);
+        HallSystem.Instance.RegisterCustomer(this);
+        KitchenSystem.Instance.RegisterCustomer(this);
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
