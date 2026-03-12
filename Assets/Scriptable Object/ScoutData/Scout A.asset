@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06b8167903411de48989992de74c2aab, type: 3}
   m_Name: Scout A
   m_EditorClassIdentifier: Assembly-CSharp::ScoutData
-  RequiredCurrencyCount: 0
+  RequiredCurrencyCount: 10000
   GradeDistribution:
     _serializedList:
-    - Key: C
+    - Key: {fileID: 11400000, guid: a2d07c4cd1430f64d8f14f4e45e0d552, type: 2}
       Value: 60
-    - Key: B
+    - Key: {fileID: 11400000, guid: b8bf6778fbb3c2948b28ce8b112dc95a, type: 2}
       Value: 30
-    - Key: A
+    - Key: {fileID: 11400000, guid: 46c98bf7661f67a4fbff3a900901d737, type: 2}
       Value: 10
   applicantCount: 4

@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06b8167903411de48989992de74c2aab, type: 3}
-  m_Name: Scout C
+  m_Name: Scout D
   m_EditorClassIdentifier: Assembly-CSharp::ScoutData
-  RequiredCurrencyCount: 0
+  RequiredCurrencyCount: 100
   GradeDistribution:
     _serializedList:
-    - Key: E
-      Value: 70
-    - Key: D
-      Value: 30
-    - Key: C
-      Value: 10
-  applicantCount: 3
+    - Key: {fileID: 11400000, guid: a98c9f7806fa26449880e6fe869cfbd2, type: 2}
+      Value: 75
+    - Key: {fileID: 11400000, guid: 0757420680963044fa2bb0219560e37c, type: 2}
+      Value: 20
+    - Key: {fileID: 11400000, guid: 85e6b06cda00e31499f561beb77e60d6, type: 2}
+      Value: 5
+  applicantCount: 2
