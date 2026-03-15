@@ -5,6 +5,7 @@ public class ChefAgent : PartTimerAgent
 {
     [SerializeField] private PartTimerStatus status;
     private CookingTask curTask;
+    [ReadOnly][SerializeField] private Transform target;
 
     void Start()
     {
@@ -42,9 +43,57 @@ public class ChefAgent : PartTimerAgent
 
     private IEnumerator ExecuteTask(CookingTask task)
     {
-        /* */
+        Transform target = null;
+        CookingType curType = task.GetCookingType();
+        if (curType != CookingType.none)
+        {
+            target = ChefManager.Instance.GetCookingToolTransform(curType);
+        }
+        if (target == null) { yield break; }
         yield return new WaitForSeconds(1f);
+
+        while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
+        {
+            transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
+            yield return null;
+        }
+
+        if (task.Customer == null)
+        {
+            isIdle = true;
+            TryClaimTask();
+            yield break;
+        }
+
+        yield return StartCoroutine(ExecuteCooking(task));
+
+        target.position = ChefManager.Instance.GetKitchenPosition();
+
+        while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
+        {
+            transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
+            yield return null;
+        }
+
+        if (task.Customer == null)
+        {
+            Debug.Log("요리가 완성되었지만 손님이 가셔서 폐기처분 했습니다.");
+
+        }
+        isIdle = true;
+        TryClaimTask();
+        yield break;
+
     }
+
+    private IEnumerator ExecuteCooking(CookingTask task)
+    {
+        // 뭐 UI 변경 하겠지
+        yield return new WaitForSeconds(task.CookingTime);
+
+    }
+
+
 
 
 

@@ -10,6 +10,7 @@ public class ServerAgent : PartTimerAgent
 
     void Start()
     {
+        isIdle = true;
         HallSystem.Instance.OnTaskAvailable += OnTaskAvailable;
         initPosition = ServerManager.Instance.GetInitPosition(positionNumber);
     }

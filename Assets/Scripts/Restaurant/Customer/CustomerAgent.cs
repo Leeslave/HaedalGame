@@ -259,7 +259,7 @@ public class CustomerAgent : MonoBehaviour
         /* 주문 생성 로직 */
 
         // 임시
-        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png");
+        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png", CookingType.raw, 5f);
         return;
     }
 
