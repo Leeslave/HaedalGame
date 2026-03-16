@@ -29,6 +29,7 @@ public class CookingTask
     public float EnqueuedTime { get; private set; }
 
     public CookingType GetCookingType() { return Type; }
+    public CustomerAgent GetCustomerAgent() { return Customer; }
 
     public CookingTask(CookingDiff diffcult, CustomerAgent customer, CookingType type = CookingType.none, float time = 10.0f)
     {

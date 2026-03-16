@@ -9,6 +9,7 @@ public class ChefAgent : PartTimerAgent
 
     void Start()
     {
+        isIdle = true;
         KitchenSystem.Instance.OnTaskAvailable += OnTaskAvailable;
         initPosition = ChefManager.Instance.GetInitPosition(positionNumber);
     }
@@ -45,12 +46,28 @@ public class ChefAgent : PartTimerAgent
     {
         Transform target = null;
         CookingType curType = task.GetCookingType();
+
         if (curType != CookingType.none)
         {
             target = ChefManager.Instance.GetCookingToolTransform(curType);
         }
         if (target == null) { yield break; }
+
+        while (!ChefManager.Instance.TryOccupyTool(curType))
+        {
+            if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold)
+            {
+                transform.position = Vector2.MoveTowards(transform.position, initPosition, status.serving * Time.deltaTime);
+            }
+            yield return null;
+        }
+
+
         yield return new WaitForSeconds(1f);
+        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.GetOrderFoodData().foodName}주문을 받았습니다.");
+
+
+
 
         while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
         {
@@ -62,28 +79,45 @@ public class ChefAgent : PartTimerAgent
         {
             isIdle = true;
             TryClaimTask();
+            ChefManager.Instance.ReleaseTool(curType);
             yield break;
         }
 
+
+        // yield return StartCoroutine(ExecuteCooking(task));
+
+        // target.position = ChefManager.Instance.GetKitchenPosition();
+
+        // while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
+        // {
+        //     transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
+        //     yield return null;
         yield return StartCoroutine(ExecuteCooking(task));
+        ChefManager.Instance.ReleaseTool(curType);
+        Vector2 kitchenPos = ChefManager.Instance.GetKitchenPosition();
 
-        target.position = ChefManager.Instance.GetKitchenPosition();
-
-        while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
+        while (Vector2.Distance(transform.position, kitchenPos) > arrivalThreshold)
         {
-            transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, kitchenPos, status.serving * Time.deltaTime);
             yield return null;
         }
 
         if (task.Customer == null)
         {
             Debug.Log("요리가 완성되었지만 손님이 가셔서 폐기처분 했습니다.");
-
         }
+
+
+        else
+        {
+            KitchenSystem.Instance.CompleteFood(task);
+            TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.GetOrderFoodData().foodName}주문을 완성했습니다.");
+            TaskLogger.Instance.LogServing($"현재 {task.Customer.GetOrderFoodData().foodName}주문이 완성되었습니다.");
+        }
+
         isIdle = true;
         TryClaimTask();
         yield break;
-
     }
 
     private IEnumerator ExecuteCooking(CookingTask task)

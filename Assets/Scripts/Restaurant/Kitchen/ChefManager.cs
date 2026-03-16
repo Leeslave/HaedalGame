@@ -16,12 +16,29 @@ public class ChefManager : MonoBehaviour
 
 
     public Vector2 GetKitchenPosition() { return kitchen.position; }
-    public Vector2 GetInitPosition(int n) { return chefInitposition[n-1].position; }
+    public Vector2 GetInitPosition(int n) { return chefInitposition[n - 1].position; }
     [ReadOnly][SerializeField] private List<ServerAgent> activeServers;
+
+    private Dictionary<CookingType, bool> toolOccupied = new Dictionary<CookingType, bool>();
+
+    public bool TryOccupyTool(CookingType type)
+    {
+        if (toolOccupied.ContainsKey(type) && toolOccupied[type])
+            return false;
+        toolOccupied[type] = true;
+        return true;
+    }
+
+    public void ReleaseTool(CookingType type)
+    {
+        if (toolOccupied.ContainsKey(type))
+            toolOccupied[type] = false;
+    }
+
 
     public Transform GetCookingToolTransform(CookingType type)
     {
-        switch(type)
+        switch (type)
         {
             case CookingType.Grill:
                 return grillArea;
@@ -38,6 +55,10 @@ public class ChefManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        toolOccupied[CookingType.Grill] = false;
+        toolOccupied[CookingType.Mix] = false;
+        toolOccupied[CookingType.raw] = false;
+        toolOccupied[CookingType.dessert] = false;
     }
 
     void Start()
@@ -47,22 +68,22 @@ public class ChefManager : MonoBehaviour
 
     private void InitializeServers()
     {
-        
+
     }
 
     public void HireServer(PartTimerData target)
     {
-        
+
     }
 
     public void FireServer(PartTimerData target)
     {
-        
+
     }
 
     public void UpgradeServer(ServerAgent target)
     {
-        
+
     }
 
     public void ArrangeServers()

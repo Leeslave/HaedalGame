@@ -31,23 +31,28 @@ public class KitchenSystem : MonoBehaviour
 
     }
 
-    public void RegisterCustomer(CustomerAgent customer)
-    {
-        customer.OnOrderReceived += HandleOrderReceived;
-        customer.OnExited += UnregisterCustomer;
-    }
+    // public void RegisterCustomer(CustomerAgent customer)
+    // {
+    //     customer.OnOrderReceived += HandleOrderReceived;
+    //     customer.OnExited += UnregisterCustomer;
+    // }
 
-    private void UnregisterCustomer(CustomerAgent customer)
-    {
-        customer.OnOrderReceived -= HandleOrderReceived;
-        customer.OnExited -= UnregisterCustomer;
-    }
+    // private void UnregisterCustomer(CustomerAgent customer)
+    // {
+    //     customer.OnOrderReceived -= HandleOrderReceived;
+    //     customer.OnExited -= UnregisterCustomer;
+    // }
 
-    private void HandleOrderReceived(CustomerAgent customer)
+    public void HandleOrderReceived(CustomerAgent customer)
     {
         OrderFoodData data = customer.GetOrderFoodData();
-        if (data != null) { taskQueue.Enqueue(new CookingTask(data.cookingDiff,customer, data.cookingType, data.cookingTime));}
+        if (data != null) { taskQueue.Enqueue(new CookingTask(data.cookingDiff, customer, data.cookingType, data.cookingTime));}
         else {Debug.Log("주문한 요리가 없습니다!");}
+    }
+
+    public void CompleteFood(CookingTask task)
+    {
+        HallSystem.Instance.HandleFoodReceived(task);
     }
 
     

@@ -29,6 +29,7 @@ public class CustomerAgent : MonoBehaviour
 
     [Header("Other")]
     private bool indoor = false;
+    private int seatNumber;
     private bool isPatience = false;
     private bool isWaiting = false;
     [ReadOnly][SerializeField] private bool isOrder = false;
@@ -219,7 +220,7 @@ public class CustomerAgent : MonoBehaviour
         }
 
         transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
-
+        seatNumber = currentSeat.seatNumber;
         if (indoor) { StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }
@@ -238,6 +239,7 @@ public class CustomerAgent : MonoBehaviour
         isPatience = false;
         isWaiting = false;
         transform.position = newSeat.GetSeatPoint().position;
+        TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
         StopAllCoroutines();
         StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder));
     }
@@ -259,7 +261,7 @@ public class CustomerAgent : MonoBehaviour
         /* 주문 생성 로직 */
 
         // 임시
-        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png", CookingType.raw, 5f);
+        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png", CookingType.raw, 3f);
         return;
     }
 
@@ -271,6 +273,7 @@ public class CustomerAgent : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
         GenerateOrder();
+        TaskLogger.Instance.LogServing($"현재 손님이 {currentOrder.foodName}를 주문하였습니다.");
         graceTimer = orderGraceSec;
         isPatience = true;
         isOrder = true;
@@ -278,10 +281,13 @@ public class CustomerAgent : MonoBehaviour
         OnOrderReceived?.Invoke(this);
     }
 
+
+
     public void ReceiveOrder()
     {
         if (!isOrder) { return; }
         Debug.Log("주문을 받았습니다!");
+        KitchenSystem.Instance.HandleOrderReceived(this);
         isOrder = false;
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
     }
@@ -295,13 +301,14 @@ public class CustomerAgent : MonoBehaviour
         isPatience = true;
         isWaitingFood = true;
 
-        OnFoodReceived?.Invoke(this);
+        //OnFoodReceived?.Invoke(this);
     }
 
     public void ReceiveFood()
     {
         if (!isWaitingFood) { return; }
         Debug.Log("손님이 음식을 받았습니다!");
+        TaskLogger.Instance.LogServing($"현재 {seatNumber}번째 고객이 {currentOrder.foodName}주문의 음식을 받았습니다.");
         isWaitingFood = false;
         StartCoroutine(WaitStateChange(CustomerState.Eating));
     }
@@ -364,7 +371,7 @@ public class CustomerAgent : MonoBehaviour
 
         SetPatience(patienceValue);
         HallSystem.Instance.RegisterCustomer(this);
-        KitchenSystem.Instance.RegisterCustomer(this);
+        //KitchenSystem.Instance.RegisterCustomer(this);
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
