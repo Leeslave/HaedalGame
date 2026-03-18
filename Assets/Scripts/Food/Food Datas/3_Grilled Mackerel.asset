@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f99d62a3367278c4bbca44c0310545e5, type: 3}
+  m_Name: 3_Grilled Mackerel
+  m_EditorClassIdentifier: Assembly-CSharp::FoodData
+  id: 3
+  foodName: "\uACE0\uB4F1\uC5B4 \uAD6C\uC774"
+  cookTime: 3
+  price: 20
+  cookingType: 0
+  imageName: {fileID: 466252145379395039, guid: 0f5c2b83c3fc6e9498c4c9dcf8e07136, type: 3}

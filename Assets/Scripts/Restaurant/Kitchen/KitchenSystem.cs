@@ -46,8 +46,8 @@ public class KitchenSystem : MonoBehaviour
     public void HandleOrderReceived(CustomerAgent customer)
     {
         FoodData data = customer.coc.GetOrderData();
-        if (data != null) { taskQueue.Enqueue(new CookingTask(data.cookingDiff, customer, data.cookingType, data.cookTime));}
-        else {Debug.Log("주문한 요리가 없습니다!");}
+        //if (data != null) { taskQueue.Enqueue(new CookingTask(data.cookingDiff, customer, data.cookingType, data.cookTime));}
+        //else {Debug.Log("주문한 요리가 없습니다!");}
     }
 
     public void CompleteFood(CookingTask task)

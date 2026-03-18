@@ -11,6 +11,7 @@ public enum CookingType
 {
     Grill,
     Mix,
+    Pot,
     raw,
     dessert,
     none

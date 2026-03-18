@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
+// RestaurantGameManager에 선언
 [System.Serializable]
 public class MenuData
 {

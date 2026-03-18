@@ -156,9 +156,10 @@ public class MenuManager : MonoBehaviour
 
     public void LoadMenuData()
     {
-        unlockedFoods.Clear();
-        dailyFoods.Clear();
-        unlockedFoodIdSet.Clear();
+        unlockedFoods.Clear();          // 탐험 후, 새로운 음식이 해금 되었다면 덮어쓰기 해야함 
+        unlockedFoodIdSet.Clear();      // 언락된 음식들을 빠르게 찾기 위해 만든 리스트도 덮어쓰기 해야함.
+        dailyFoods.Clear();             // 매일마다 오늘의 메뉴가 다르니 덮어쓰기 해야함.
+         
 
         MenuSaveData saveData = FoodSaveLoadManager.LoadMenu();
 
@@ -167,7 +168,7 @@ public class MenuManager : MonoBehaviour
             Debug.Log("메뉴 세이브 데이터가 없어서 기본 상태로 시작합니다.");
             return;
         }
-
+        
         if (saveData.unlockedFoodIds != null)
         {
             foreach (int id in saveData.unlockedFoodIds)
