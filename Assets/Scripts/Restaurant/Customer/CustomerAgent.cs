@@ -6,31 +6,17 @@ public class CustomerAgent : MonoBehaviour
 {
     [ReadOnly][SerializeField] private RestaurantGameManager gm;
 
-    [Header("Patience")] // 인내심 관련 변수
-    private const float DefaultPatience = 25f;          // 기본 인내심을 이곳에서 정의
-    [ReadOnly][SerializeField] private float curPatience = DefaultPatience;
-
-    [SerializeField] private float waitingGraceSec = 3f;    // 웨이팅 룸으로 갔을 때 바로 인내심이 깎이는 것이 아니라 일부 대기 시간 부여
-    [SerializeField] private float orderGraceSec = 5f;       // 음식을 주문 했을 때 바로 인내심이 깎이는 것이 아니라 일부 대기 시간 부여
-    [SerializeField] private float foodGraceSec = 5f;       // 음식을 주문 했을 때 바로 인내심이 깎이는 것이 아니라 일부 대기 시간 부여
-    private float graceTimer;
-
-
-    [Header("Patience Drain")]
-    [SerializeField] private float drainPerSec = 0.1f;
-
+    public CustomerPatienceComponent cpc;
+    public CustomerOrderComponent coc;
 
     [Header("Timings")]
     [SerializeField] private float eatDuration = 8f;
-    private float eatTimer;
     [SerializeField] private float payDuration = 2f;
-    private float payTimer;
     [SerializeField] private float stateChangeDuration = 1.0f;
 
     [Header("Other")]
     private bool indoor = false;
     private int seatNumber;
-    private bool isPatience = false;
     private bool isWaiting = false;
     [ReadOnly][SerializeField] private bool isOrder = false;
     [ReadOnly][SerializeField] private bool isWaitingFood = false;
@@ -57,22 +43,40 @@ public class CustomerAgent : MonoBehaviour
     private RatingFlag ratingFlag = RatingFlag.None;
 
     private Seat currentSeat;
-    private OrderFoodData currentOrder;
-    public OrderFoodData GetOrderFoodData() 
-    { 
-        if(currentOrder != null) 
-        { 
-            return currentOrder; 
-        }
-        else
-        {
-            return null;
-        }
+
+
+    /* [ Spawn ] */
+    public void SpawnCustomer(float patienceValue)
+    {
+        InitPatience(patienceValue);
+    }
+
+    private void InitPatience(float patienceValue)
+    {
+        if (null == gm) { gm = RestaurantGameManager.instance; }
+        state = CustomerState.None;
+        currentSeat = null;
+        HallSystem.Instance.RegisterCustomer(this);
+        StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
 
-    /* [ public Setter ]*/
-    public void SetDrainRate(float value) { drainPerSec = value; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /* [ Lifecycle Methods ] */
     private void Awake()
@@ -84,8 +88,15 @@ public class CustomerAgent : MonoBehaviour
     {
         canBoost = true;
         checkBoost = false;
-        currentOrder = null;
+        cpc.OnPatienceExhausted += PatienceExhausted;
     }
+
+    private void PatienceExhausted()
+    {
+        ratingFlag = RatingFlag.Low;
+        StartCoroutine(WaitStateChange(CustomerState.Exit));
+    }
+
 
     private void OnMouseDown()
     {
@@ -104,54 +115,6 @@ public class CustomerAgent : MonoBehaviour
         canBoost = true;
     }
 
-    private void Update()
-    {
-        if (isPatience)
-        {
-            if (graceTimer > 0)
-            {
-                graceTimer -= Time.deltaTime;
-            }
-            else
-            {
-                curPatience -= drainPerSec * Time.deltaTime;
-
-                if (curPatience <= 0)
-                {
-                    curPatience = 0;
-                    isPatience = false;
-                    ratingFlag = RatingFlag.Low;
-                    StartCoroutine(WaitStateChange(CustomerState.Exit));
-                }
-            }
-        }
-
-        if (isEating)
-        {
-            eatTimer -= Time.deltaTime;
-            if (eatTimer <= 0)
-            {
-                eatTimer = 0;
-                isEating = false;
-                StartCoroutine(WaitStateChange(CustomerState.Paying));
-            }
-        }
-
-        if (isPaying)
-        {
-            payTimer -= Time.deltaTime;
-            if (payTimer <= 0)
-            {
-                payTimer = 0;
-                isPaying = false;
-
-                StartCoroutine(WaitStateChange(CustomerState.Exit));
-            }
-        }
-
-
-    }
-
     // ========================================================================================
     /* [ State Machine ] */
 
@@ -167,14 +130,12 @@ public class CustomerAgent : MonoBehaviour
                 TrySeat(); ;
                 break;
             case CustomerState.WaitingRoom:
-                WaitingRoom();
+                cpc.ResetGraceTimer();
                 break;
             case CustomerState.WaitingForOrder:
-                //Debug.Log($"{gameObject.name}이 주문을 대기하고 있습니다.");
                 TryOrder();
                 break;
             case CustomerState.WaitingForFood:
-                //Debug.Log($"{gameObject.name}이 음식을 대기하고 있습니다.");
                 WaitFood();
                 break;
             case CustomerState.Eating:
@@ -190,12 +151,6 @@ public class CustomerAgent : MonoBehaviour
         }
     }
 
-
-
-    // void OnMouseDown()
-    // {
-    //     ActivateCondition();
-    // }
 
     public void ActivateCondition()
     {
@@ -214,7 +169,6 @@ public class CustomerAgent : MonoBehaviour
         if (currentSeat == null) // 만약 입장했는데 자리가 없는 경우 <- 이 함수는 어느정도 개선이 필요함
         {
             ratingFlag = RatingFlag.Low;
-            //Debug.Log($"{gameObject.name}의 이번 식사의 평가는 {ratingFlag}입니다.");
             ChangeState(CustomerState.Exit);
             return;
         }
@@ -225,18 +179,12 @@ public class CustomerAgent : MonoBehaviour
         else { isWaiting = true; StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }
 
-    // CustomerState.WaitingRoom
-    private void WaitingRoom()
-    {
-        graceTimer = waitingGraceSec;
-        isPatience = true;
-    }
 
     public void PromoteToSeat(Seat newSeat)
     {
         currentSeat = newSeat;
         indoor = true;
-        isPatience = false;
+        //isPatience = false;
         isWaiting = false;
         transform.position = newSeat.GetSeatPoint().position;
         TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
@@ -256,14 +204,6 @@ public class CustomerAgent : MonoBehaviour
         StartCoroutine(ChoosingMenu());
     }
 
-    private void GenerateOrder()
-    {
-        /* 주문 생성 로직 */
-
-        // 임시
-        currentOrder = new OrderFoodData("스파게티", CookingDiff.Normal, "1234.png", CookingType.raw, 3f);
-        return;
-    }
 
     private IEnumerator ChoosingMenu()
     {
@@ -272,10 +212,8 @@ public class CustomerAgent : MonoBehaviour
         Debug.Log("메뉴를 골랐습니다!");
 
         yield return new WaitForSeconds(1f);
-        GenerateOrder();
-        TaskLogger.Instance.LogServing($"현재 손님이 {currentOrder.foodName}를 주문하였습니다.");
-        graceTimer = orderGraceSec;
-        isPatience = true;
+        // GenerateFood();
+        cpc.ResetGraceTimer();
         isOrder = true;
 
         OnOrderReceived?.Invoke(this);
@@ -286,7 +224,6 @@ public class CustomerAgent : MonoBehaviour
     public void ReceiveOrder()
     {
         if (!isOrder) { return; }
-        Debug.Log("주문을 받았습니다!");
         KitchenSystem.Instance.HandleOrderReceived(this);
         isOrder = false;
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
@@ -297,8 +234,7 @@ public class CustomerAgent : MonoBehaviour
     // CustomState.WaitingForFood
     private void WaitFood()
     {
-        graceTimer = foodGraceSec;
-        isPatience = true;
+        cpc.ResetGraceTimer();
         isWaitingFood = true;
 
         //OnFoodReceived?.Invoke(this);
@@ -307,30 +243,31 @@ public class CustomerAgent : MonoBehaviour
     public void ReceiveFood()
     {
         if (!isWaitingFood) { return; }
-        Debug.Log("손님이 음식을 받았습니다!");
-        TaskLogger.Instance.LogServing($"현재 {seatNumber}번째 고객이 {currentOrder.foodName}주문의 음식을 받았습니다.");
         isWaitingFood = false;
         StartCoroutine(WaitStateChange(CustomerState.Eating));
     }
 
     // CustomState.Eating
-    private void Eating()
+    private IEnumerator Eating()
     {
-        eatTimer = eatDuration;
         isEating = true;
+        yield return new WaitForSeconds(eatDuration);
+        StartCoroutine(WaitStateChange(CustomerState.Paying));
     }
 
     // CustomState.Paying
-    private void Paying()
+    private IEnumerator Paying()
     {
-        payTimer = payDuration;
         isPaying = true;
+        yield return new WaitForSeconds(payDuration);
+        StartCoroutine(WaitStateChange(CustomerState.Exit));
+        
     }
 
     // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
     private IEnumerator WaitStateChange(CustomerState curState)
     {
-        isPatience = false;
+        //isPatience = false;
         yield return new WaitForSeconds(stateChangeDuration);
         ChangeState(curState);
     }
@@ -355,26 +292,6 @@ public class CustomerAgent : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // ========================================================================================
-    /* [ Event Logic ] */
-    public void SpawnCustomer(float patienceValue = DefaultPatience)
-    {
-        InitPatience(patienceValue);
-    }
-
-    private void InitPatience(float patienceValue)
-    {
-        if (null == gm) { gm = RestaurantGameManager.instance; }
-
-        state = CustomerState.None;
-        currentSeat = null;
-
-        SetPatience(patienceValue);
-        HallSystem.Instance.RegisterCustomer(this);
-        //KitchenSystem.Instance.RegisterCustomer(this);
-        StartCoroutine(WaitStateChange(CustomerState.Enter));
-    }
-
-    private void SetPatience(float value) { curPatience = value; } // 특정 이벤트에서 최대 인내심이 다른 경우
+    
 
 }

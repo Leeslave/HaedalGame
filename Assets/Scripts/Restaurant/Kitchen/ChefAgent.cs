@@ -64,7 +64,7 @@ public class ChefAgent : PartTimerAgent
 
 
         yield return new WaitForSeconds(1f);
-        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.GetOrderFoodData().foodName}주문을 받았습니다.");
+        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
 
 
 
@@ -111,8 +111,8 @@ public class ChefAgent : PartTimerAgent
         else
         {
             KitchenSystem.Instance.CompleteFood(task);
-            TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.GetOrderFoodData().foodName}주문을 완성했습니다.");
-            TaskLogger.Instance.LogServing($"현재 {task.Customer.GetOrderFoodData().foodName}주문이 완성되었습니다.");
+            TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 완성했습니다.");
+            TaskLogger.Instance.LogServing($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 완성되었습니다.");
         }
 
         isIdle = true;
