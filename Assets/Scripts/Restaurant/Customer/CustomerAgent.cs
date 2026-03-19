@@ -8,6 +8,8 @@ public class CustomerAgent : MonoBehaviour
 
     public CustomerPatienceComponent cpc;
     public CustomerOrderComponent coc;
+    public CustomerUIComponent cuc;
+    public CustomerBoostComponent cbc;
 
     [Header("Timings")]
     [SerializeField] private float eatDuration = 8f;
@@ -20,29 +22,36 @@ public class CustomerAgent : MonoBehaviour
     private bool isWaiting = false;
     [ReadOnly][SerializeField] private bool isOrder = false;
     [ReadOnly][SerializeField] private bool isWaitingFood = false;
-    private bool isEating = false;
-    private bool isPaying = false;
 
-    private bool canBoost; // 플레이어가 NPC를 클릭해서 우선순위를 올릴 수 있는지 판단 bool
-    private bool checkBoost; // [디버그 용] 플레이어가 부스트 버튼을 눌렀는지 확인.
-    public bool GetCheckBoost() { return checkBoost; }
-    public void SetCheckBoost(bool flag) { checkBoost = flag; }
-    public bool GetBoost() { return canBoost; } // 디버깅용
-    [SerializeField] private float boostLoadingTime = 5f; // 무지성 우선순위 상승 방지용 쿨타임
-
+    
+    // Action
     public event Action<CustomerAgent> OnOrderReceived;
-    public event Action<CustomerAgent> OnFoodReceived;
 
     // Destroy Event
     public Action<CustomerAgent> OnExited;
 
 
-
-    /* [ Runtime State ] */
     private CustomerState state;
     private RatingFlag ratingFlag = RatingFlag.None;
 
     private Seat currentSeat;
+
+    /* [ Awake & Start ] */
+    private void Awake()
+    {
+        gm = RestaurantGameManager.instance;
+    }
+
+    private void Start()
+    {
+        cpc = GetComponent<CustomerPatienceComponent>();
+        coc = GetComponent<CustomerOrderComponent>();
+        cuc = GetComponent<CustomerUIComponent>();
+        cbc = GetComponent<CustomerBoostComponent>();
+
+        cpc.OnPatienceExhausted += PatienceExhausted;
+        //cpc.OnWaitingProgress += ChangeWaitingEmotion;
+    }
 
 
     /* [ Spawn ] */
@@ -55,65 +64,17 @@ public class CustomerAgent : MonoBehaviour
     {
         if (null == gm) { gm = RestaurantGameManager.instance; }
         state = CustomerState.None;
+        cpc.SetPatience(patienceValue);
         currentSeat = null;
         HallSystem.Instance.RegisterCustomer(this);
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
+    
+
+    
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /* [ Lifecycle Methods ] */
-    private void Awake()
-    {
-        gm = RestaurantGameManager.instance;
-    }
-
-    private void Start()
-    {
-        canBoost = true;
-        checkBoost = false;
-        cpc.OnPatienceExhausted += PatienceExhausted;
-    }
-
-    private void PatienceExhausted()
-    {
-        ratingFlag = RatingFlag.Low;
-        StartCoroutine(WaitStateChange(CustomerState.Exit));
-    }
-
-
-    private void OnMouseDown()
-    {
-        if (canBoost)
-        {
-            canBoost = false;
-            checkBoost = true;
-            HallSystem.Instance.BoostCustomer(this);
-            StartCoroutine(BoostLoading());
-        }
-    }
-
-    private IEnumerator BoostLoading()
-    {
-        yield return new WaitForSeconds(boostLoadingTime);
-        canBoost = true;
-    }
 
     // ========================================================================================
     /* [ State Machine ] */
@@ -127,7 +88,7 @@ public class CustomerAgent : MonoBehaviour
                 StartCoroutine(WaitStateChange(CustomerState.Seating));
                 break;
             case CustomerState.Seating:
-                TrySeat(); ;
+                TrySeat();
                 break;
             case CustomerState.WaitingRoom:
                 cpc.ResetGraceTimer();
@@ -175,7 +136,7 @@ public class CustomerAgent : MonoBehaviour
 
         transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
         seatNumber = currentSeat.seatNumber;
-        if (indoor) { StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
+        if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }
 
@@ -250,7 +211,6 @@ public class CustomerAgent : MonoBehaviour
     // CustomState.Eating
     private IEnumerator Eating()
     {
-        isEating = true;
         yield return new WaitForSeconds(eatDuration);
         StartCoroutine(WaitStateChange(CustomerState.Paying));
     }
@@ -258,10 +218,8 @@ public class CustomerAgent : MonoBehaviour
     // CustomState.Paying
     private IEnumerator Paying()
     {
-        isPaying = true;
         yield return new WaitForSeconds(payDuration);
         StartCoroutine(WaitStateChange(CustomerState.Exit));
-        
     }
 
     // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
@@ -291,6 +249,27 @@ public class CustomerAgent : MonoBehaviour
         StopAllCoroutines();
         Destroy(gameObject);
     }
+
+
+
+    // Event
+
+    private void PatienceExhausted()
+    {
+        ratingFlag = RatingFlag.Low;
+        StartCoroutine(WaitStateChange(CustomerState.Exit));
+    }
+
+    private void ChangeWaitingEmotion()
+    {
+        cuc.ChangeEmotion();
+    }
+
+    private void OnMouseDown()
+    {
+        cbc.Boost(this);
+    }
+
 
     
 

@@ -166,6 +166,12 @@ public class MenuManager : MonoBehaviour
         if (saveData == null)
         {
             Debug.Log("메뉴 세이브 데이터가 없어서 기본 상태로 시작합니다.");
+            
+            //  테스트용 - 모든 음식 자동 해금
+            foreach (var food in foodDatabase.GetAllFoods())
+            {
+                UnlockMenu(food);
+            }
             return;
         }
         

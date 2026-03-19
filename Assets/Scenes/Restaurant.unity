@@ -2281,6 +2281,7 @@ MonoBehaviour:
   ratingSystem: {fileID: 0}
   customerSpawner: {fileID: 0}
   kitchenSystem: {fileID: 0}
+  foodDatabase: {fileID: 0}
 --- !u!4 &652301892
 Transform:
   m_ObjectHideFlags: 0
@@ -2303,6 +2304,7 @@ Transform:
   - {fileID: 1634874891}
   - {fileID: 240519551}
   - {fileID: 1522432154}
+  - {fileID: 1713875609}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &695650734
@@ -10806,7 +10808,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.0003138947}
+  m_AnchoredPosition: {x: 0, y: 0.000055233282}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1546725869
@@ -11326,6 +11328,53 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3599439862333145637, guid: f9014dd01adde3d408567ece7975159b, type: 3}
   m_PrefabInstance: {fileID: 1322736289}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1713875608
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1713875609}
+  - component: {fileID: 1713875610}
+  m_Layer: 0
+  m_Name: MenuManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1713875609
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713875608}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 652301892}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1713875610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713875608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ae12ec066c3993489f398ad9b83b700, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MenuManager
+  foodDatabase: {fileID: 11400000, guid: 5f72916352735b64099f697e4e1cae10, type: 2}
+  unlockedFoods: []
+  dailyFoods: []
 --- !u!1 &1725906072
 GameObject:
   m_ObjectHideFlags: 0
@@ -11927,7 +11976,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.0003138947}
+  m_AnchoredPosition: {x: 0, y: 0.000055233282}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1924779882

@@ -40,10 +40,10 @@ public class ServerAgent : PartTimerAgent
             returnCoroutine = null;
         }
 
-        if (task.Customer.GetCheckBoost())
+        if (task.Customer.cbc.GetCheckBoost())
         {
             Debug.Log("**※※※** Boost한 업무를 수주했습니다.");
-            task.Customer.SetCheckBoost(false);
+            task.Customer.cbc.SetCheckBoost(false);
         }
         curTask = task;
         isIdle = false;
