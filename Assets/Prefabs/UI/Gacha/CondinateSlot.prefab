@@ -181,9 +181,41 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7819833134453759709}
     m_Modifications:
+    - target: {fileID: 104798415795735101, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_text
+      value: "\uCCB4\uB825"
+      objectReference: {fileID: 0}
+    - target: {fileID: 774002519082722769, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 774002519082722769, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 774002519082722769, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1137520292018872104, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_text
+      value: "\uC11C\uBE59"
+      objectReference: {fileID: 0}
     - target: {fileID: 1203547320827765873, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
       propertyPath: m_Name
       value: HPSection
+      objectReference: {fileID: 0}
+    - target: {fileID: 1911081204183460054, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 9cd6c9443eaf03244b880e1f57538aa1, type: 2}
+    - target: {fileID: 1911081204183460054, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -5270137420359585301, guid: 9cd6c9443eaf03244b880e1f57538aa1, type: 2}
+    - target: {fileID: 1911081204183460054, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2165882730495996260, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
       propertyPath: m_Name
@@ -321,6 +353,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5528183733959891430, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 9cd6c9443eaf03244b880e1f57538aa1, type: 2}
+    - target: {fileID: 5528183733959891430, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -5270137420359585301, guid: 9cd6c9443eaf03244b880e1f57538aa1, type: 2}
+    - target: {fileID: 5528183733959891430, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6333329645728857137, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -337,9 +381,33 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6802852012381620127, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6802852012381620127, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6802852012381620127, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6802852012381620127, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7224830003745130410, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_text
+      value: "\uC694\uB9AC"
+      objectReference: {fileID: 0}
     - target: {fileID: 7325678801033159423, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
       propertyPath: m_Name
       value: HandySection
+      objectReference: {fileID: 0}
+    - target: {fileID: 8389502957518343347, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
+      propertyPath: m_text
+      value: "\uC19C\uC528"
       objectReference: {fileID: 0}
     - target: {fileID: 8467975593833048550, guid: 7ebfd3e7f84ec444b82b565bf008c397, type: 3}
       propertyPath: m_Name

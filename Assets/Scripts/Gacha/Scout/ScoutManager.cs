@@ -9,6 +9,12 @@ public class ScoutManager : MonoBehaviour
     public List<ScoutData> ScoutDatas;
     public List<PartTimerData> CandinateList = new List<PartTimerData>();
     public List<CondinateSlot> UiSlots;
+
+    public GameObject SelectedSection;
+
+    [SerializeField] private List<GameObject> _sections;
+    private int _selectedSectionIndex;
+
     [Header("임금체불 패널티 관련 변수")]
     public bool _isPenaltyActive;
     private void Awake()
@@ -19,6 +25,8 @@ public class ScoutManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
         }
         else Destroy(gameObject);
+
+        SelectedSection = _sections[0];
     }
 
     public int GetPenaltyReductionCount(int unpaidWageCount)
@@ -41,7 +49,7 @@ public class ScoutManager : MonoBehaviour
     public void Scout(ScoutData targetScoutData)
     {
         //TODO GetPanaltyReductionCount 인자 주급 미지급횟수로 변수 변경
-        int finallyScoutCnt = Mathf.Max(0, targetScoutData.applicantCount - GetPenaltyReductionCount(0));
+        int finallyScoutCnt = Mathf.Max(0, targetScoutData.ApplicantCount - GetPenaltyReductionCount(0));
         //후보 리스트 초기화
         CandinateList.Clear();
 
@@ -93,5 +101,17 @@ public class ScoutManager : MonoBehaviour
                 UiSlots[i].SetEmpty();
             }
         }
+    }
+
+    public void ChangeSection()
+    {
+        _sections[_selectedSectionIndex].SetActive(false);
+
+        _selectedSectionIndex = (_selectedSectionIndex + 1) % _sections.Count;
+
+        var nextSection = _sections[_selectedSectionIndex];
+        nextSection.SetActive(true);
+
+        SelectedSection = nextSection.gameObject;
     }
 }

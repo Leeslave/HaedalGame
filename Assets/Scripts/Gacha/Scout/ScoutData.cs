@@ -8,5 +8,7 @@ public class ScoutData : ScriptableObject
     [Header("식별 및 기본 정보")]
     public int RequiredCurrencyCount;
     public SerializedDictionary<GradeData, float> GradeDistribution;
-    public int applicantCount;
+    public int ApplicantCount;
+    public Sprite ScoutIcon;
+    public string ScoutName;
 }
