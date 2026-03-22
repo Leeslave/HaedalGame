@@ -8,6 +8,7 @@ public class CustomerUIComponent : MonoBehaviour
 
     [SerializeField] private Sprite feelingHappy;
     [SerializeField] private Sprite feelingSoSo;
+    [SerializeField] private Sprite feelingWarning;
     [SerializeField] private Sprite feelingBad;
     [SerializeField] private Sprite loading;
 
@@ -49,7 +50,7 @@ public class CustomerUIComponent : MonoBehaviour
 
     public void ChangeEmotion()
     {
-        if (isWaiting) { return; }
+        if (!isWaiting) { return; }
         if (waitingCount == 0)
         {
             content.sprite = feelingSoSo;
@@ -57,6 +58,12 @@ public class CustomerUIComponent : MonoBehaviour
             return;
         }
         else if (waitingCount == 1)
+        {
+            content.sprite = feelingWarning;
+            waitingCount++;
+            return;
+        }
+        else if (waitingCount == 2)
         {
             content.sprite = feelingBad;
             waitingCount++;

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class CustomerOrderComponent : MonoBehaviour
@@ -7,16 +6,21 @@ public class CustomerOrderComponent : MonoBehaviour
     private FoodData curData;
     public FoodData GetOrderData()
     {
-        if (curData != null) {return curData; }
+        if (curData != null) { return curData; }
         return null;
     }
 
     public void GenerateOrder()
     {
-        List<int> ownedIds = RestaurantGameManager.instance.menuData.GetOwnedMenuIds();
-        int randomId = ownedIds[Random.Range(0, ownedIds.Count)];
-        curData = RestaurantGameManager.instance.foodDatabase.GetFoodById(randomId);
-        return;
+        IReadOnlyList<FoodData> menu = MenuManager.Instance.UnlockedFoods;
+        if (menu == null || menu.Count == 0)
+        {
+            Debug.LogWarning("오늘의 메뉴가 없습니다.");
+            return;
+        }
+
+        int index = Random.Range(0, menu.Count);
+        curData = menu[index];
     }
 
 

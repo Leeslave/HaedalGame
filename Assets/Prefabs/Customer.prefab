@@ -87,6 +87,10 @@ GameObject:
   - component: {fileID: 2466556514395592166}
   - component: {fileID: 4843071628300461075}
   - component: {fileID: -2738659564462838882}
+  - component: {fileID: 6616123096852584693}
+  - component: {fileID: 5121419921048113531}
+  - component: {fileID: 6447797753864113469}
+  - component: {fileID: 1714947949680622316}
   m_Layer: 0
   m_Name: Customer
   m_TagString: Untagged
@@ -184,12 +188,13 @@ MonoBehaviour:
   gm: {fileID: 0}
   cpc: {fileID: 0}
   coc: {fileID: 0}
+  cuc: {fileID: 0}
+  cbc: {fileID: 0}
   eatDuration: 8
   payDuration: 2
   stateChangeDuration: 1
   isOrder: 0
   isWaitingFood: 0
-  boostLoadingTime: 5
 --- !u!61 &-2738659564462838882
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -236,6 +241,65 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
+--- !u!114 &6616123096852584693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674153651529083623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5615364c9199c8498dfa4f6a8d1dfbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomerPatienceComponent
+  curPatience: 0
+  graceSec: 5
+  drainPerSec: 0.5
+--- !u!114 &5121419921048113531
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674153651529083623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af800c7909e5d0844b944abc7a8f8b02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomerOrderComponent
+--- !u!114 &6447797753864113469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674153651529083623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72b3887b83e4a034c879510c40bb2e18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomerUIComponent
+  panel: {fileID: 8162579878102582465}
+  content: {fileID: 6460391545262477103}
+  feelingHappy: {fileID: 6266176060360064, guid: 4f3e134e35b114c48b7f0163413f2609, type: 3}
+  feelingSoSo: {fileID: 4606157284126940538, guid: 4aaf98fbb31a81a4c9601904db1ed9ea, type: 3}
+  feelingWarning: {fileID: -7138696280642375699, guid: 93939aa51b73a22479d5d206d2263c97, type: 3}
+  feelingBad: {fileID: 6523257063958270593, guid: 72f66bd6009a7c241a1f54889c3175be, type: 3}
+  loading: {fileID: -1134032105938053371, guid: cf2f67b9ac7d2e14c803db5833054ba7, type: 3}
+--- !u!114 &1714947949680622316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674153651529083623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 821538277e927f7458891faa596e2f87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomerBoostComponent
+  boostLoadingTime: 5
 --- !u!1 &7512896355236127431
 GameObject:
   m_ObjectHideFlags: 0

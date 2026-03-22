@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class CustomerAgent : MonoBehaviour
 {
@@ -23,7 +24,7 @@ public class CustomerAgent : MonoBehaviour
     [ReadOnly][SerializeField] private bool isOrder = false;
     [ReadOnly][SerializeField] private bool isWaitingFood = false;
 
-    
+
     // Action
     public event Action<CustomerAgent> OnOrderReceived;
 
@@ -50,13 +51,17 @@ public class CustomerAgent : MonoBehaviour
         cbc = GetComponent<CustomerBoostComponent>();
 
         cpc.OnPatienceExhausted += PatienceExhausted;
-        //cpc.OnWaitingProgress += ChangeWaitingEmotion;
+        cpc.OnWaitingProgress += cuc.ChangeEmotion;
     }
 
 
     /* [ Spawn ] */
     public void SpawnCustomer(float patienceValue)
     {
+        cpc = GetComponent<CustomerPatienceComponent>();
+        coc = GetComponent<CustomerOrderComponent>();
+        cuc = GetComponent<CustomerUIComponent>();
+        cbc = GetComponent<CustomerBoostComponent>();
         InitPatience(patienceValue);
     }
 
@@ -70,9 +75,9 @@ public class CustomerAgent : MonoBehaviour
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
-    
 
-    
+
+
 
 
 
@@ -137,7 +142,7 @@ public class CustomerAgent : MonoBehaviour
         transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
         seatNumber = currentSeat.seatNumber;
         if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
-        else { isWaiting = true; StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
+        else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }
 
 
@@ -147,6 +152,7 @@ public class CustomerAgent : MonoBehaviour
         indoor = true;
         //isPatience = false;
         isWaiting = false;
+        cuc.CloseBubble();
         transform.position = newSeat.GetSeatPoint().position;
         TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
         StopAllCoroutines();
@@ -168,12 +174,11 @@ public class CustomerAgent : MonoBehaviour
 
     private IEnumerator ChoosingMenu()
     {
+        cuc.ShowBubble(2);
         yield return new WaitForSeconds(3f); // 이 값은 랜덤으로 줘도 됨
-        // 여기다 어떤 메뉴를 골랐는지 UI에 띄우기
-        Debug.Log("메뉴를 골랐습니다!");
-
-        yield return new WaitForSeconds(1f);
-        // GenerateFood();
+        coc.GenerateOrder();
+        Debug.Log("메뉴를 골랏습니다");
+        cuc.ShowBubble(0, coc.GetOrderData().image);
         cpc.ResetGraceTimer();
         isOrder = true;
 
@@ -185,6 +190,7 @@ public class CustomerAgent : MonoBehaviour
     public void ReceiveOrder()
     {
         if (!isOrder) { return; }
+        //cuc.CloseBubble();
         KitchenSystem.Instance.HandleOrderReceived(this);
         isOrder = false;
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
@@ -205,6 +211,7 @@ public class CustomerAgent : MonoBehaviour
     {
         if (!isWaitingFood) { return; }
         isWaitingFood = false;
+        cuc.CloseBubble();
         StartCoroutine(WaitStateChange(CustomerState.Eating));
     }
 
@@ -244,7 +251,7 @@ public class CustomerAgent : MonoBehaviour
             gm.seatManager.ReleaseSeat(currentSeat, isWaiting);
             currentSeat = null;
         }
-        Debug.Log("고객이 만족하고 퇴장하였습니다!");
+        //Debug.Log("고객이 만족하고 퇴장하였습니다!");
         OnExited?.Invoke(this);
         StopAllCoroutines();
         Destroy(gameObject);
@@ -271,6 +278,6 @@ public class CustomerAgent : MonoBehaviour
     }
 
 
-    
+
 
 }

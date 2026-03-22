@@ -17,4 +17,4 @@ MonoBehaviour:
   cookTime: 3
   price: 15
   cookingType: 2
-  imageName: {fileID: 8621606463560945452, guid: 3f7f762953249f84594b91ccb9c8431c, type: 3}
+  image: {fileID: 8621606463560945452, guid: 3f7f762953249f84594b91ccb9c8431c, type: 3}

@@ -14,8 +14,12 @@ public class CustomerPatienceComponent : MonoBehaviour
 
     private bool isPatience;                            // 인내심 감소 중인지 확인 flag
     private bool isWaiting;
+    private bool triggered07;
+    private bool triggered04;
+    private bool triggered01;
+
     public event Action OnPatienceExhausted;            // 만약 인내심이 바닥났을 경우 실행하는 이벤트
-    public event Action<float> OnWaitingProgress;
+    public event Action OnWaitingProgress;
 
     /* public Method */
 
@@ -49,6 +53,11 @@ public class CustomerPatienceComponent : MonoBehaviour
     void Start()
     {
         isPatience = false;
+        
+        triggered07 = false;
+        triggered04 = false;
+        triggered01 = false;
+
         ratio = 0.0f;
         curPatience = defaultPatience;
         graceTimer = graceSec;
@@ -81,11 +90,29 @@ public class CustomerPatienceComponent : MonoBehaviour
     private void ForWaiting()
     {
         ratio = curPatience / defaultPatience;
-        if (ratio < 0.7f && ratio >= 0.5f)
+
+        if (!triggered07 && ratio < 0.7f)
         {
-            
+            triggered07 = true;
+            OnWaitingProgress?.Invoke();
+            return;
+        }
+
+        if (!triggered04 && ratio < 0.4f)
+        {
+            triggered04 = true;
+            OnWaitingProgress?.Invoke();
+            return;
         }
         
+        if (!triggered01 && ratio < 0.1f)
+        {
+            triggered01 = true;
+            OnWaitingProgress?.Invoke();
+            return;
+        }
+
+        return;
     }
 
 

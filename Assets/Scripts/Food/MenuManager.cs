@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class MenuManager : MonoBehaviour
 {
+    public static MenuManager Instance;
     [Header("DB")]
     [SerializeField] private FoodDatabase foodDatabase;
 
@@ -17,6 +18,7 @@ public class MenuManager : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         if (foodDatabase == null)
         {
             Debug.LogError("MenuManager에 FoodDatabaseSO가 연결되지 않았습니다.");
@@ -161,8 +163,8 @@ public class MenuManager : MonoBehaviour
         dailyFoods.Clear();             // 매일마다 오늘의 메뉴가 다르니 덮어쓰기 해야함.
          
 
-        MenuSaveData saveData = FoodSaveLoadManager.LoadMenu();
-
+        //MenuSaveData saveData = FoodSaveLoadManager.LoadMenu();
+        MenuSaveData saveData = null;
         if (saveData == null)
         {
             Debug.Log("메뉴 세이브 데이터가 없어서 기본 상태로 시작합니다.");

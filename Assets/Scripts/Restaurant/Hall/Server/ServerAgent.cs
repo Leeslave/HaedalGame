@@ -71,8 +71,8 @@ public class ServerAgent : PartTimerAgent
                 TryClaimTask();
                 yield break;
             }
-            TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
-            TaskLogger.Instance.LogCooking($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 들어왔습니다.");
+            //TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
+            //TaskLogger.Instance.LogCooking($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 들어왔습니다.");
             task.Customer.ReceiveOrder();
         }
 
@@ -87,7 +87,7 @@ public class ServerAgent : PartTimerAgent
                 yield return null;
             }
             Debug.Log("음식을 수령 중입니다.");
-            TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}음식을 받았습니다.");
+            //TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}음식을 받았습니다.");
             yield return new WaitForSeconds(2f);
 
             if (task.Customer == null)

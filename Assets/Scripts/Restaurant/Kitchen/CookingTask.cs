@@ -32,10 +32,9 @@ public class CookingTask
     public CookingType GetCookingType() { return Type; }
     public CustomerAgent GetCustomerAgent() { return Customer; }
 
-    public CookingTask(CookingDiff diffcult, CustomerAgent customer, CookingType type = CookingType.none, float time = 10.0f)
+    public CookingTask( CustomerAgent customer, CookingType type = CookingType.none, float time = 10.0f)
     {
         State = TaskState.Waitng;
-        Diffcult = diffcult;
         Type = type;
         EnqueuedTime = Time.time;
         CookingTime = time;
