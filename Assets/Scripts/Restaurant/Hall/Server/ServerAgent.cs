@@ -105,6 +105,13 @@ public class ServerAgent : PartTimerAgent
                 yield return null;
             }
 
+            if (task.Customer == null)
+            {
+                isIdle = true;
+                TryClaimTask();
+                yield break;
+            }
+
             task.Customer.ReceiveFood();
         }
 

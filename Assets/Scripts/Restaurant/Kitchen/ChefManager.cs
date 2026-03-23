@@ -12,7 +12,7 @@ public class ChefManager : MonoBehaviour
     [SerializeField] private Transform grillArea;
     [SerializeField] private Transform mixArea;
     [SerializeField] private Transform rawArea;
-    [SerializeField] private Transform dessertArea;
+    [SerializeField] private Transform potArea;
 
 
     public Vector2 GetKitchenPosition() { return kitchen.position; }
@@ -46,8 +46,8 @@ public class ChefManager : MonoBehaviour
                 return mixArea;
             case CookingType.raw:
                 return rawArea;
-            case CookingType.dessert:
-                return dessertArea;
+            case CookingType.Pot:
+                return potArea;
         }
         return null;
     }
@@ -58,7 +58,7 @@ public class ChefManager : MonoBehaviour
         toolOccupied[CookingType.Grill] = false;
         toolOccupied[CookingType.Mix] = false;
         toolOccupied[CookingType.raw] = false;
-        toolOccupied[CookingType.dessert] = false;
+        toolOccupied[CookingType.Pot] = false;
     }
 
     void Start()

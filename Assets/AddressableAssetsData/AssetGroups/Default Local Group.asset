@@ -14,27 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 8bb3c51216f005d4f85fd56e08cd4f1f
-  m_SerializeEntries:
-  - m_GUID: 0f5c2b83c3fc6e9498c4c9dcf8e07136
-    m_Address: Grilled_Mackerel
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3f7f762953249f84594b91ccb9c8431c
-    m_Address: Abalone_porridge
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 41d4d5581f2c8f546b25abb1afd0459e
-    m_Address: Seaweed_Soup
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a4474c3e2c869b149a015b4b88292224
-    m_Address: Shrimp_Sushi
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
+  m_SerializeEntries: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 01ca4a0c4086e3441a4edf301969f46d, type: 2}
   m_SchemaSet:

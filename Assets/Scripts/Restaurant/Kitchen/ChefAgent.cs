@@ -24,6 +24,7 @@ public class ChefAgent : PartTimerAgent
         CookingTask task = KitchenSystem.Instance.ClaimTask(this);
         if (task == null)
         {
+            Debug.LogWarning("주방 알바가 할 일이 없습니다.");
             if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold && returnCoroutine == null)
             {
                 returnCoroutine = StartCoroutine(ReturnToBase(status.serving)); // 서빙 속도에 따라서 스피드 변경
@@ -106,16 +107,15 @@ public class ChefAgent : PartTimerAgent
         {
             Debug.Log("요리가 완성되었지만 손님이 가셔서 폐기처분 했습니다.");
         }
-
-
         else
         {
             KitchenSystem.Instance.CompleteFood(task);
-            TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 완성했습니다.");
-            TaskLogger.Instance.LogServing($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 완성되었습니다.");
+            //TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 완성했습니다.");
+            //TaskLogger.Instance.LogServing($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 완성되었습니다.");
         }
 
         isIdle = true;
+        Debug.LogWarning("주방 알바가 할 일을 마쳤습니다!");
         TryClaimTask();
         yield break;
     }

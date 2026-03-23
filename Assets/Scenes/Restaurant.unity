@@ -333,7 +333,7 @@ MonoBehaviour:
   grillArea: {fileID: 211388436}
   mixArea: {fileID: 1391993521}
   rawArea: {fileID: 1815518061}
-  dessertArea: {fileID: 2084352349}
+  potArea: {fileID: 2084352349}
   activeServers: []
 --- !u!1 &153700031
 GameObject:

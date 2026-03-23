@@ -51,6 +51,7 @@ public class CustomerUIComponent : MonoBehaviour
     public void ChangeEmotion()
     {
         if (!isWaiting) { return; }
+        Debug.Log("표정 변화");
         if (waitingCount == 0)
         {
             content.sprite = feelingSoSo;
