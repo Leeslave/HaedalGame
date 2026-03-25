@@ -1,13 +1,12 @@
 using System.Collections.Generic;
-using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 public class ScoutManager : MonoBehaviour
 {
     public static ScoutManager Instance;
+
     public List<ScoutData> ScoutDatas;
-    public List<PartTimerData> CandinateList = new List<PartTimerData>();
+    public List<PartTimerData> CandinateLists = new();
     public List<CondinateSlot> UiSlots;
 
     public GameObject SelectedSection;
@@ -17,6 +16,7 @@ public class ScoutManager : MonoBehaviour
 
     [Header("임금체불 패널티 관련 변수")]
     public bool _isPenaltyActive;
+
     private void Awake()
     {
         if (Instance == null)
@@ -24,9 +24,24 @@ public class ScoutManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
         }
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
 
-        SelectedSection = _sections[0];
+        Initialize();
+    }
+
+    public void Initialize()
+    {
+        _sections[_selectedSectionIndex].SetActive(false);
+        _selectedSectionIndex = 0;
+        SelectedSection = _sections[_selectedSectionIndex];
+        SelectedSection.SetActive(true);
+
+        for (int i = 0; i < UiSlots.Count; i++)
+            UiSlots[i].SetEmpty();
     }
 
     public int GetPenaltyReductionCount(int unpaidWageCount)
@@ -42,48 +57,47 @@ public class ScoutManager : MonoBehaviour
             else
                 penaltyReductionCount = 3;
         }
-        
+
         return penaltyReductionCount;
     }
 
     public void Scout(ScoutData targetScoutData)
     {
-        //TODO GetPanaltyReductionCount 인자 주급 미지급횟수로 변수 변경
         int finallyScoutCnt = Mathf.Max(0, targetScoutData.ApplicantCount - GetPenaltyReductionCount(0));
-        //후보 리스트 초기화
-        CandinateList.Clear();
+
+        CandinateLists.Clear();
 
         for (int i = 0; i < finallyScoutCnt; i++)
         {
             GradeData rolledGrade = DetermineGrade(targetScoutData);
+            if (rolledGrade == null)
+                continue;
 
-            if (rolledGrade == null) continue;
             PartTimerData newData = new PartTimerData();
             newData.status = GachaManager.Instance.GenerateRandomStatus(rolledGrade);
             newData.serverName = "신입 해달";
             newData.level = rolledGrade.name;
-            CandinateList.Add(newData);
+
+            CandinateLists.Add(newData);
         }
 
-        UpdateScoutUI(); 
+        UpdateScoutUI();
     }
 
     public GradeData DetermineGrade(ScoutData targetScoutData)
     {
         float probabilty = Random.Range(0f, 100f);
-        // 누적 확률
         float cumulativeProbability = 0f;
+
         foreach (var grade in targetScoutData.GradeDistribution)
         {
             cumulativeProbability += grade.Value;
 
             if (probabilty <= cumulativeProbability)
-            {
                 return grade.Key;
-            }
         }
 
-        Debug.Log("DeterminGrade 함수 오류");
+        Debug.LogWarning("DetermineGrade 함수 오류");
         return null;
     }
 
@@ -91,16 +105,40 @@ public class ScoutManager : MonoBehaviour
     {
         for (int i = 0; i < UiSlots.Count; i++)
         {
-            if (i < CandinateList.Count)
-            {
-                PartTimerData data = CandinateList[i];
-                UiSlots[i].SetData(data.level, data.serverName, data.status);
-            }
+            if (i < CandinateLists.Count)
+                UiSlots[i].BindMystery(CandinateLists[i], i);
             else
-            {
                 UiSlots[i].SetEmpty();
-            }
         }
+    }
+
+    public void RequestHire(CondinateSlot slot)
+    {
+        if (slot == null || slot.Data == null)
+            return;
+
+        PopupManager.Instance.ShowConfirmPopup(
+            $"{slot.Data.serverName}을(를) 고용하시겠습니까?\n",
+            "네",
+            "아니오",
+            () => HireCandidate(slot),
+            null,
+            "(고용 시 첫 주급이 바로 지불됩니다.)"
+        );
+    }
+
+    private void HireCandidate(CondinateSlot slot)
+    {
+        if (slot == null || slot.Data == null)
+            return;
+
+        PartTimerData hiredData = slot.Data;
+
+        Debug.Log($"{hiredData.serverName} 고용 완료");
+        bool success = PartTimerAssignmentManager.Instance.RegisterHiredPartTimer(slot.Data);
+        slot.MarkHired();
+        // TODO:
+        Initialize();
     }
 
     public void ChangeSection()
@@ -109,9 +147,9 @@ public class ScoutManager : MonoBehaviour
 
         _selectedSectionIndex = (_selectedSectionIndex + 1) % _sections.Count;
 
-        var nextSection = _sections[_selectedSectionIndex];
+        GameObject nextSection = _sections[_selectedSectionIndex];
         nextSection.SetActive(true);
 
-        SelectedSection = nextSection.gameObject;
+        SelectedSection = nextSection;
     }
 }

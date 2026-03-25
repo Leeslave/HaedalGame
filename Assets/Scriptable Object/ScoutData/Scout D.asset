@@ -21,6 +21,6 @@ MonoBehaviour:
       Value: 20
     - Key: {fileID: 11400000, guid: 85e6b06cda00e31499f561beb77e60d6, type: 2}
       Value: 5
-  ApplicantCount: 0
+  ApplicantCount: 2
   ScoutIcon: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   ScoutName: "\uC2E0\uC785"

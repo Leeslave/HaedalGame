@@ -1,4 +1,11 @@
+public enum PartTimerRole
+{
+    None,
+    Serving,
+    Kitchen
+}
 [System.Serializable]
+
 public class PartTimerStatus
 {
     public float serving; // 서빙 속도

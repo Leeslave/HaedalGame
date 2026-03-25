@@ -32,18 +32,26 @@ public class ScoutButton : MonoBehaviour
 
     public void OnClickButton()
     {
-        if (CurrencyManager.Instance.GetCurrency(_targetCurrency) > _scoutData.RequiredCurrencyCount)
-        {
-            var tx = new CurrencyTransaction(_targetCurrency, _scoutData.RequiredCurrencyCount * -1, TransactionSource.GotchaUse);
-            CurrencyManager.Instance.ProcessTransaction(tx);
-            if (ScoutManager.Instance != null)
+        if (CurrencyManager.Instance.GetCurrency(_targetCurrency) < _scoutData.RequiredCurrencyCount)
+            return;
+
+        var tx = new CurrencyTransaction(
+            _targetCurrency,
+            -_scoutData.RequiredCurrencyCount,
+            TransactionSource.GotchaUse
+        );
+
+        PopupManager.Instance.ShowConfirmPopup(
+            $"{_scoutData.RequiredCurrencyCount}G를 사용하여 신입 해달을\n구인하시겠습니까?",
+            "네",
+            "아니오",
+            () =>
             {
                 ScoutManager.Instance.ChangeSection();
+                CurrencyManager.Instance.ProcessTransaction(tx);
                 ScoutManager.Instance.Scout(_scoutData);
-            }
-            
-        }
-    }
 
-  
+            }
+        );
+    }
 }
