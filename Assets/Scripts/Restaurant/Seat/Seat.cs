@@ -7,6 +7,8 @@ public class Seat : MonoBehaviour
     private CustomerAgent occupant;                             // 점유하고 있는 손님 [EX] occupant ==  null => 아무도 없음. [But] occupant != null => 누군가 자리를 점유하고 있음
     public Transform GetSeatPoint() { return seatPoint; }       // 현재 자리의 위치가 어딘지 리턴
 
+    public int seatNumber = 0;
+
     private bool isOccupied = false;                            // 현재 누군가 자리를 점유하고 있는지를 보여주는 flag
     public bool GetIsOccupied() { return isOccupied; }          // 현재 누군가 자리를 점유하고 있는지 리턴
     public CustomerAgent GetOccupant() { return occupant; }     // 그럼 누가 점유하고 있는지 리턴

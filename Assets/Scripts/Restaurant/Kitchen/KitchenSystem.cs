@@ -1,16 +1,59 @@
+using System;
 using UnityEngine;
 
 public class KitchenSystem : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public static KitchenSystem Instance;
+    public event Action OnTaskAvailable;
+    private CookingTaskQueue taskQueue = new CookingTaskQueue();
+
+    void Awake()
     {
-        
+        Instance = this;
     }
 
-    // Update is called once per frame
-    void Update()
+    void Start()
     {
-        
+        taskQueue.OnTaskEnqueue += RelayTaskEnqueue;
     }
+
+    private void RelayTaskEnqueue()
+    {
+        OnTaskAvailable?.Invoke();
+    }
+
+    public CookingTask ClaimTask(ChefAgent worker)
+    {
+        CookingTask task = taskQueue.GetNext();
+        if (task == null) { return null; }
+        if (taskQueue.TryClaim(task,worker)) { return task; }
+        else return null;
+
+    }
+
+    // public void RegisterCustomer(CustomerAgent customer)
+    // {
+    //     customer.OnOrderReceived += HandleOrderReceived;
+    //     customer.OnExited += UnregisterCustomer;
+    // }
+
+    // private void UnregisterCustomer(CustomerAgent customer)
+    // {
+    //     customer.OnOrderReceived -= HandleOrderReceived;
+    //     customer.OnExited -= UnregisterCustomer;
+    // }
+
+    public void HandleOrderReceived(CustomerAgent customer)
+    {
+        FoodData data = customer.coc.GetOrderData();
+        if (data != null) { taskQueue.Enqueue(new CookingTask(customer, data.cookingType, data.cookTime));}
+        else {Debug.Log("주문한 요리가 없습니다!");}
+    }
+
+    public void CompleteFood(CookingTask task)
+    {
+        HallSystem.Instance.HandleFoodReceived(task);
+    }
+
+    
 }
