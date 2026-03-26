@@ -2,6 +2,7 @@ using UnityEngine;
 
 public abstract class UIPopup : MonoBehaviour
 {
+    public bool IsMenu = false;
     public virtual void Open()
     {
         gameObject.SetActive(true);
@@ -12,8 +13,5 @@ public abstract class UIPopup : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    public void OnClickCloseButton()
-    {
-       // PopupManager.Instance.ClosePopup(this);
-    }
+
 }

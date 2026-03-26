@@ -5,18 +5,45 @@ public class PartTimerAssignmentManager : MonoBehaviour
 {
     public static PartTimerAssignmentManager Instance;
 
+    [Header("References")]
+    [SerializeField] private SnapScrollRect _ownedPartTimerScrollRect; 
+
     [Header("Owned PartTimers")]
     [SerializeField] private List<PartTimerData> _ownedPartTimers = new();
 
     [Header("Owned PartTimer UI")]
-    [SerializeField] private GameObject _ownedPartTimerPanel;
     [SerializeField] private List<OwnedPartTimerSlotUI> _ownedPartTimerSlots = new();
 
     [Header("Work Slots")]
     [SerializeField] private List<PartTimerSlot> _workSlots = new();
+    [SerializeField] private CanvasGroup _kitchenSection;
+    [SerializeField] private CanvasGroup _serverSection;
+
+
+    [Header("Keyboard")]
+    [SerializeField] private bool _useKeyboardSelection = true;
+    [SerializeField] private KeyCode _upKey = KeyCode.UpArrow;
+    [SerializeField] private KeyCode _downKey = KeyCode.DownArrow;
+    [SerializeField] private KeyCode _selectKey = KeyCode.Return;
+    [SerializeField] private KeyCode _selectKey2 = KeyCode.Space;
+
+    [Header("Top Tab Buttons")]
+    [SerializeField] private TopTabButtonUI _serverTabButton;
+    [SerializeField] private TopTabButtonUI _kitchenTabButton;
+
+    [Header("Top Tab Colors")]
+    [SerializeField] private Color _selectedButtonColor = Color.white;
+    [SerializeField] private Color _unselectedButtonColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+    [SerializeField] private Color _selectedTextColor = Color.black;
+    [SerializeField] private Color _unselectedTextColor = Color.white;
 
     private PartTimerSlot _selectedTargetSlot;
     private PartTimerData _selectedOwnedPartTimer;
+
+    private int _ownedCursorIndex = -1;
+
+    private TopTabType _currentTopTab = TopTabType.Kitchen;
+
 
     private void Awake()
     {
@@ -28,8 +55,14 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         Instance = this;
 
-        if (_ownedPartTimerPanel != null)
-            _ownedPartTimerPanel.SetActive(false);
+        RefreshOwnedPartTimerList();
+        SetTopTab(TopTabType.Kitchen);
+
+    }
+
+    private void Update()
+    {
+        HandleOwnedPartTimerKeyboard();
     }
 
     public bool RegisterHiredPartTimer(PartTimerData candidateData)
@@ -38,11 +71,15 @@ public class PartTimerAssignmentManager : MonoBehaviour
             return false;
 
         PartTimerData newHire = ClonePartTimerData(candidateData);
-        //newHire.CurrentRole = PartTimerRole.None;
+        newHire.CurrentRole = PartTimerRole.None;
 
         _ownedPartTimers.Add(newHire);
-        RefreshOwnedPartTimerList();
 
+        if (_ownedCursorIndex < 0)
+            _ownedCursorIndex = 0;
+
+        RefreshOwnedPartTimerList();
+        _ownedPartTimerScrollRect.ValidItemCount++;
         return true;
     }
 
@@ -51,7 +88,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
         if (clickedSlot == null || clickedSlot.IsLock)
             return;
 
-        // 직원을 아직 선택 안 한 상태면 목록 오픈
         if (_selectedOwnedPartTimer == null)
         {
             _selectedTargetSlot = clickedSlot;
@@ -59,7 +95,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
             return;
         }
 
-        // 직원을 이미 선택한 상태면 이 슬롯에 배치/교체 시도
         RequestAssignOrSwap(_selectedOwnedPartTimer, clickedSlot);
     }
 
@@ -69,7 +104,91 @@ public class PartTimerAssignmentManager : MonoBehaviour
             return;
 
         _selectedOwnedPartTimer = ownedSlotUI.Data;
+        _ownedCursorIndex = GetOwnedSlotIndex(ownedSlotUI);
         RefreshOwnedPartTimerList();
+    }
+
+    private void HandleOwnedPartTimerKeyboard()
+    {
+        if (!_useKeyboardSelection)
+            return;
+
+
+        int validCount = GetValidOwnedCount();
+        if (validCount <= 0)
+            return;
+
+        if (_ownedCursorIndex < 0 || _ownedCursorIndex >= validCount)
+            _ownedCursorIndex = GetInitialCursorIndex();
+
+        if (Input.GetKeyDown(_upKey) || Input.GetKeyDown(KeyCode.W))
+        {
+            MoveOwnedCursor(-1, validCount);
+        }
+        else if (Input.GetKeyDown(_downKey) || Input.GetKeyDown(KeyCode.S))
+        {
+            MoveOwnedCursor(1, validCount);
+        }
+
+        if (Input.GetKeyDown(_selectKey) || Input.GetKeyDown(_selectKey2))
+        {
+            SelectOwnedCursor();
+        }
+    }
+
+    private void MoveOwnedCursor(int direction, int validCount)
+    {
+        if (validCount <= 0)
+            return;
+
+        _ownedCursorIndex += direction;
+        _ownedCursorIndex = Mathf.Clamp(_ownedCursorIndex, 0, validCount - 1);
+
+        PartTimerData cursorData = _ownedPartTimers[_ownedCursorIndex];
+        _selectedOwnedPartTimer = cursorData;
+        RefreshOwnedPartTimerList();
+    }
+
+    private void SelectOwnedCursor()
+    {
+        if (_ownedCursorIndex < 0 || _ownedCursorIndex >= _ownedPartTimerSlots.Count)
+            return;
+
+        OwnedPartTimerSlotUI slotUI = _ownedPartTimerSlots[_ownedCursorIndex];
+        if (slotUI == null || slotUI.IsEmpty)
+            return;
+
+        OnClickOwnedPartTimer(slotUI);
+    }
+
+    private int GetInitialCursorIndex()
+    {
+        if (_selectedOwnedPartTimer != null)
+        {
+            for (int i = 0; i < _ownedPartTimers.Count; i++)
+            {
+                if (_ownedPartTimers[i] == _selectedOwnedPartTimer)
+                    return i;
+            }
+        }
+
+        return _ownedPartTimers.Count > 0 ? 0 : -1;
+    }
+
+    private int GetValidOwnedCount()
+    {
+        return Mathf.Min(_ownedPartTimers.Count, _ownedPartTimerSlots.Count);
+    }
+
+    private int GetOwnedSlotIndex(OwnedPartTimerSlotUI target)
+    {
+        for (int i = 0; i < _ownedPartTimerSlots.Count; i++)
+        {
+            if (_ownedPartTimerSlots[i] == target)
+                return i;
+        }
+
+        return -1;
     }
 
     private void RequestAssignOrSwap(PartTimerData selectedPartTimer, PartTimerSlot targetSlot)
@@ -91,7 +210,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
             if (targetPartTimer == selectedPartTimer)
             {
                 ClearSelection();
-                CloseOwnedPartTimerList();
                 return;
             }
 
@@ -106,7 +224,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
             () =>
             {
                 ClearSelection();
-                CloseOwnedPartTimerList();
             });
     }
 
@@ -118,28 +235,23 @@ public class PartTimerAssignmentManager : MonoBehaviour
         PartTimerSlot sourceSlot = FindAssignedSlot(selectedPartTimer);
         PartTimerData targetPartTimer = targetSlot.CurrentPartTimer;
 
-        // 1) 선택한 알바가 현재 아무 슬롯에도 없는 경우
         if (sourceSlot == null)
         {
-            //if (targetPartTimer != null)
-            //    targetPartTimer.CurrentRole = PartTimerRole.None;
+            if (targetPartTimer != null)
+                targetPartTimer.CurrentRole = PartTimerRole.None;
 
             targetSlot.SetPartTimer(selectedPartTimer);
         }
-        // 2) 같은 슬롯이면 무시
         else if (sourceSlot == targetSlot)
         {
             ClearSelection();
-            CloseOwnedPartTimerList();
             return;
         }
-        // 3) 빈 슬롯에 이동
         else if (targetPartTimer == null)
         {
             sourceSlot.Clear();
             targetSlot.SetPartTimer(selectedPartTimer);
         }
-        // 4) 차있는 슬롯과 교체
         else
         {
             sourceSlot.SetPartTimer(targetPartTimer);
@@ -149,7 +261,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
         RefreshAllWorkSlots();
         RefreshOwnedPartTimerList();
         ClearSelection();
-        CloseOwnedPartTimerList();
     }
 
     public bool TryMoveOrSwap(PartTimerSlot fromSlot, PartTimerSlot toSlot)
@@ -215,20 +326,23 @@ public class PartTimerAssignmentManager : MonoBehaviour
         return null;
     }
 
-    private void OpenOwnedPartTimerList()
+    public void OpenOwnedPartTimerList()
     {
-        if (_ownedPartTimerPanel != null)
-            _ownedPartTimerPanel.SetActive(true);
+
+        if (_ownedPartTimers.Count > 0)
+        {
+            if (_selectedOwnedPartTimer != null)
+                _ownedCursorIndex = GetInitialCursorIndex();
+            else
+                _ownedCursorIndex = 0;
+        }
+        else
+        {
+            _ownedCursorIndex = -1;
+        }
 
         RefreshOwnedPartTimerList();
     }
-
-    private void CloseOwnedPartTimerList()
-    {
-        if (_ownedPartTimerPanel != null)
-            _ownedPartTimerPanel.SetActive(false);
-    }
-
     private void RefreshOwnedPartTimerList()
     {
         for (int i = 0; i < _ownedPartTimerSlots.Count; i++)
@@ -245,7 +359,6 @@ public class PartTimerAssignmentManager : MonoBehaviour
             }
         }
     }
-
     private void RefreshAllWorkSlots()
     {
         for (int i = 0; i < _workSlots.Count; i++)
@@ -254,14 +367,13 @@ public class PartTimerAssignmentManager : MonoBehaviour
                 _workSlots[i].RefreshUI();
         }
     }
-
     private void ClearSelection()
     {
         _selectedOwnedPartTimer = null;
         _selectedTargetSlot = null;
+        _ownedCursorIndex = _ownedPartTimers.Count > 0 ? 0 : -1;
         RefreshOwnedPartTimerList();
     }
-
     private string GetRoleText(PartTimerRole role)
     {
         switch (role)
@@ -274,13 +386,12 @@ public class PartTimerAssignmentManager : MonoBehaviour
                 return "대기";
         }
     }
-
     private PartTimerData ClonePartTimerData(PartTimerData source)
     {
         PartTimerData newData = new PartTimerData();
         newData.serverName = source.serverName;
         newData.level = source.level;
-      //  newData.CurrentRole = PartTimerRole.None;
+        newData.CurrentRole = PartTimerRole.None;
 
         newData.status = new PartTimerStatus
         {
@@ -292,4 +403,53 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         return newData;
     }
+
+    #region TopButton
+
+    private void SetSectionState(CanvasGroup section, bool active)
+    {
+        if (section == null)
+            return;
+
+        section.alpha = active ? 1f : 0f;
+        section.interactable = active;
+        section.blocksRaycasts = active;
+    }
+
+    private void SetTabButtonState(TopTabButtonUI tabButton, bool selected)
+    {
+        if (tabButton == null)
+            return;
+
+        if (tabButton.background != null)
+            tabButton.background.color = selected ? _selectedButtonColor : _unselectedButtonColor;
+
+        if (tabButton.label != null)
+            tabButton.label.color = selected ? _selectedTextColor : _unselectedTextColor;
+    }
+
+    public void SetTopTab(TopTabType tabType)
+    {
+        _currentTopTab = tabType;
+
+        bool isServer = tabType == TopTabType.Server;
+        bool isKitchen = tabType == TopTabType.Kitchen;
+
+        SetSectionState(_kitchenSection, isKitchen);
+        SetSectionState(_serverSection, isServer);
+
+        SetTabButtonState(_serverTabButton, isServer);
+        SetTabButtonState(_kitchenTabButton, isKitchen);
+    }
+
+    public void OnClickServerTopButton()
+    {
+        SetTopTab(TopTabType.Server);
+    }
+
+    public void OnClickKitchenTopButton()
+    {
+        SetTopTab(TopTabType.Kitchen);
+    }
+    #endregion
 }

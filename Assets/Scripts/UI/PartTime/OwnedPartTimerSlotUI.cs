@@ -45,6 +45,7 @@ public class OwnedPartTimerSlotUI : MonoBehaviour, IPointerClickHandler
         _cookingText.text = _data.status.cooking.ToString();
         _handyText.text = _data.status.handy.ToString();
         _hpText.text = _data.status.hp.ToString();
+        _roleText.text = GetRoleText(data.CurrentRole);
     }
 
     public void SetEmpty()

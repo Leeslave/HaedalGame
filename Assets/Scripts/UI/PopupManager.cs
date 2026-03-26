@@ -7,13 +7,14 @@ public class PopupManager : MonoBehaviour
     public static PopupManager Instance;
     public GameObject ConfirmPopupPrefab;
 
-    [SerializeField] private GameObject _dimPanel;
 
+    [SerializeField] private GameObject _dimPanel;
+    [SerializeField] CanvasGroup _navCanvasGroup;
     private readonly Stack<UIPopup> _popupStack = new Stack<UIPopup>();
 
     public bool HasPopup => _popupStack.Count > 0;
     public UIPopup CurrentPopup => HasPopup ? _popupStack.Peek() : null;
-    
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -34,6 +35,10 @@ public class PopupManager : MonoBehaviour
 
         if (_popupStack.Contains(popup))
             return;
+
+        if (popup.IsMenu)
+            _navCanvasGroup.interactable = false;
+
 
         _popupStack.Push(popup);
         popup.Open();
@@ -86,6 +91,10 @@ public class PopupManager : MonoBehaviour
             return;
 
         UIPopup top = _popupStack.Pop();
+        if (top.IsMenu)
+        {
+            _navCanvasGroup.interactable = true;
+        }
         top.Close();
 
         RefreshDimPanel();
@@ -102,6 +111,7 @@ public class PopupManager : MonoBehaviour
 
         RefreshDimPanel();
     }
+
 
     private void RefreshDimPanel()
     {
@@ -130,5 +140,15 @@ public class PopupManager : MonoBehaviour
 
         popup.Bind(content, confirmText, denyText, confirmAction, denyAction,subContentText);
         OpenPopup(popup);
+    }
+
+    public void Update()
+    {
+        if (!HasPopup) return;
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            CloseTopPopup();
+        }
     }
 }

@@ -36,16 +36,16 @@ public class PartTimerSlot : MonoBehaviour, IPointerClickHandler
     {
         _currentPartTimer = data;
 
-        //if (_currentPartTimer != null)
-        //    _currentPartTimer.CurrentRole = _slotRole;
+        if (_currentPartTimer != null)
+            _currentPartTimer.CurrentRole = _slotRole;
 
         RefreshUI();
     }
 
     public void Clear()
     {
-        //if (_currentPartTimer != null)
-        //    _currentPartTimer.CurrentRole = PartTimerRole.None;
+        if (_currentPartTimer != null)
+            _currentPartTimer.CurrentRole = PartTimerRole.None;
 
         _currentPartTimer = null;
         RefreshUI();
@@ -73,6 +73,7 @@ public class PartTimerSlot : MonoBehaviour, IPointerClickHandler
         _cookingText.text = _currentPartTimer.status.cooking.ToString();
         _handyText.text = _currentPartTimer.status.handy.ToString();
         _hpText.text = _currentPartTimer.status.hp.ToString();
+        
     }
 
     public void OnPointerClick(PointerEventData eventData)

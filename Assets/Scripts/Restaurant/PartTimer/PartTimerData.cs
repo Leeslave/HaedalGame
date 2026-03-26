@@ -20,6 +20,7 @@ public class PartTimerData
     public string level;               // 서빙 알바의 등급
     public PartTimerStatus status;     // 서빙 알바의 status
     public int wage;
+    public PartTimerRole CurrentRole = PartTimerRole.None;
     public void ServerStatusInit()  // 처음 가챠 등으로 생성 시 실행하여 해당 레벨에 맞는 스탯을 설정해야함
     {
         // 값 랜덤 설정
