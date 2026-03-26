@@ -33,20 +33,25 @@ public class HallSystem : MonoBehaviour
     public void RegisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived += HandleOrderReceived;
-        //customer.OnFoodReceived += HandleFoodReceived;
+        customer.OnOrderTaken += HandleOrderTaken;
         customer.OnExited += UnregisterCustomer;
     }
 
     private void UnregisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived -= HandleOrderReceived;
-        //customer.OnFoodReceived -= HandleFoodReceived;
+        customer.OnOrderTaken -= HandleOrderTaken;
         customer.OnExited -= UnregisterCustomer;
     }
 
     private void HandleOrderReceived(CustomerAgent customer)
     {
         taskQueue.Enqueue(new ServingTask(ServingTaskType.TakeOrder, customer));
+    }
+
+    private void HandleOrderTaken(CustomerAgent customer)
+    {
+        KitchenSystem.Instance.HandleOrderReceived(customer);
     }
 
     public void HandleFoodReceived(CookingTask task)

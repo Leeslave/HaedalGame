@@ -21,14 +21,11 @@ public class CustomerAgent : MonoBehaviour
     private bool indoor = false;
     private int seatNumber;
     private bool isWaiting = false;
-    [ReadOnly][SerializeField] private bool isOrder = false;
-    [ReadOnly][SerializeField] private bool isWaitingFood = false;
 
 
     // Action
     public event Action<CustomerAgent> OnOrderReceived;
-
-    // Destroy Event
+    public event Action<CustomerAgent> OnOrderTaken;
     public Action<CustomerAgent> OnExited;
 
 
@@ -43,7 +40,8 @@ public class CustomerAgent : MonoBehaviour
         gm = RestaurantGameManager.instance;
     }
 
-    private void Start()
+    /* [ Spawn ] */
+    public void SpawnCustomer(float patienceValue)
     {
         cpc = GetComponent<CustomerPatienceComponent>();
         coc = GetComponent<CustomerOrderComponent>();
@@ -52,16 +50,6 @@ public class CustomerAgent : MonoBehaviour
 
         cpc.OnPatienceExhausted += PatienceExhausted;
         cpc.OnWaitingProgress += cuc.ChangeEmotion;
-    }
-
-
-    /* [ Spawn ] */
-    public void SpawnCustomer(float patienceValue)
-    {
-        cpc = GetComponent<CustomerPatienceComponent>();
-        coc = GetComponent<CustomerOrderComponent>();
-        cuc = GetComponent<CustomerUIComponent>();
-        cbc = GetComponent<CustomerBoostComponent>();
         InitPatience(patienceValue);
     }
 
@@ -74,12 +62,6 @@ public class CustomerAgent : MonoBehaviour
         HallSystem.Instance.RegisterCustomer(this);
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
-
-
-
-
-
-
 
     // ========================================================================================
     /* [ State Machine ] */
@@ -118,13 +100,6 @@ public class CustomerAgent : MonoBehaviour
         }
     }
 
-
-    public void ActivateCondition()
-    {
-        if (isOrder) { ReceiveOrder(); }
-        if (isWaitingFood) { ReceiveFood(); }
-    }
-
     // ========================================================================================
     /* [ State Logic ] */
     // CustomerState.Seating 
@@ -152,7 +127,6 @@ public class CustomerAgent : MonoBehaviour
         currentSeat = newSeat;
         indoor = true;
         cpc.SetIsWaiting(false);
-        //isPatience = false;
         isWaiting = false;
         cuc.CloseBubble();
         transform.position = newSeat.GetSeatPoint().position;
@@ -182,8 +156,6 @@ public class CustomerAgent : MonoBehaviour
         Debug.Log("메뉴를 골랏습니다");
         cuc.ShowBubble(0, coc.GetOrderData().image);
         cpc.ResetGraceTimer();
-        isOrder = true;
-
         OnOrderReceived?.Invoke(this);
     }
 
@@ -191,11 +163,9 @@ public class CustomerAgent : MonoBehaviour
 
     public void ReceiveOrder()
     {
-        if (!isOrder) { return; }
-        //cuc.CloseBubble();
+        if (coc.GetOrderData() == null) { return; }
         cpc.ChangeState();
-        KitchenSystem.Instance.HandleOrderReceived(this);
-        isOrder = false;
+        OnOrderTaken?.Invoke(this);
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
     }
 
@@ -205,15 +175,11 @@ public class CustomerAgent : MonoBehaviour
     private void WaitFood()
     {
         cpc.ResetGraceTimer();
-        isWaitingFood = true;
-
-        //OnFoodReceived?.Invoke(this);
     }
 
     public void ReceiveFood()
     {
-        if (!isWaitingFood) { return; }
-        isWaitingFood = false;
+        if (state != CustomerState.WaitingForFood) { return; }
         cpc.ChangeState();
         cuc.CloseBubble();
         StartCoroutine(WaitStateChange(CustomerState.Eating));
@@ -269,6 +235,7 @@ public class CustomerAgent : MonoBehaviour
     {
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
+        StopAllCoroutines();
         StartCoroutine(WaitStateChange(CustomerState.Exit));
     }
 

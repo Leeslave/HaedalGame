@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,6 +34,7 @@ public class CustomerUIComponent : MonoBehaviour
         {
             content.sprite = feelingHappy;
             isWaiting = true;
+            StartCoroutine(UnActiveEmoji());
         }
         else if (state == 2)
         {
@@ -51,25 +53,29 @@ public class CustomerUIComponent : MonoBehaviour
     public void ChangeEmotion()
     {
         if (!isWaiting) { return; }
-        Debug.Log("표정 변화");
         if (waitingCount == 0)
         {
             content.sprite = feelingSoSo;
-            waitingCount++;
-            return;
         }
         else if (waitingCount == 1)
         {
             content.sprite = feelingWarning;
-            waitingCount++;
-            return;
         }
         else if (waitingCount == 2)
         {
             content.sprite = feelingBad;
-            waitingCount++;
-            return;
+            
         }
+        panel.SetActive(true);
+        waitingCount++;
+        StartCoroutine(UnActiveEmoji());
         return;
     }
+
+    private IEnumerator UnActiveEmoji()
+    {
+        yield return new WaitForSeconds(3f);
+        CloseBubble();
+    }
+
 }
