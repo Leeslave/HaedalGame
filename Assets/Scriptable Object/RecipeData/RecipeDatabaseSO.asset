@@ -1,0 +1,239 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1347211bc665fe74abfc7f697d387292, type: 3}
+  m_Name: RecipeDatabaseSO
+  m_EditorClassIdentifier: Assembly-CSharp::RecipeDatabaseSO
+  _ingredients:
+  - _ingredientId: 1
+    _ingredientName: "\uBBF8\uC5ED"
+    _recipeCode: 1001
+  - _ingredientId: 2
+    _ingredientName: "\uCD08\uC7A5"
+    _recipeCode: 1002
+  - _ingredientId: 3
+    _ingredientName: "\uC300"
+    _recipeCode: 1003
+  - _ingredientId: 4
+    _ingredientName: "\uC0DD\uC120"
+    _recipeCode: 1004
+  - _ingredientId: 5
+    _ingredientName: "\uC0C8\uC6B0"
+    _recipeCode: 1005
+  - _ingredientId: 6
+    _ingredientName: "\uC870\uAC1C"
+    _recipeCode: 1006
+  - _ingredientId: 7
+    _ingredientName: "\uC804\uBCF5"
+    _recipeCode: 1007
+  - _ingredientId: 8
+    _ingredientName: "\uC624\uC774"
+    _recipeCode: 1008
+  - _ingredientId: 9
+    _ingredientName: "\uBB38\uC5B4"
+    _recipeCode: 1009
+  - _ingredientId: 10
+    _ingredientName: "\uBC00"
+    _recipeCode: 1010
+  - _ingredientId: 11
+    _ingredientName: "\uB300\uD30C"
+    _recipeCode: 1011
+  - _ingredientId: 12
+    _ingredientName: "\uB2F9\uADFC"
+    _recipeCode: 1012
+  - _ingredientId: 13
+    _ingredientName: "\uC18C\uAE08"
+    _recipeCode: 1013
+  - _ingredientId: 14
+    _ingredientName: "\uB2EC\uAC40"
+    _recipeCode: 1014
+  - _ingredientId: 15
+    _ingredientName: "\uAC04\uC7A5"
+    _recipeCode: 1015
+  _recipes:
+  - _recipeId: 1
+    _recipeName: "\uCD08\uBC25"
+    _unlockType: 101
+    _classId: 202
+    _cookTime: 3
+    _rawRecipeText: 1003 1004
+    _requirements:
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "\uC300"
+      _amount: 1
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "\uC0DD\uC120"
+      _amount: 1
+  - _recipeId: 2
+    _recipeName: "\uC0C8\uC6B0\uD280\uAE40"
+    _unlockType: 101
+    _classId: 203
+    _cookTime: 3
+    _rawRecipeText: 1003 1005
+    _requirements:
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "\uC300"
+      _amount: 1
+    - _ingredientId: 5
+      _recipeCode: 1005
+      _ingredientName: "\uC0C8\uC6B0"
+      _amount: 1
+  - _recipeId: 3
+    _recipeName: "\uBBF8\uC5ED\uBB34\uCE68"
+    _unlockType: 101
+    _classId: 202
+    _cookTime: 3
+    _rawRecipeText: 1001 1002
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "\uBBF8\uC5ED"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "\uCD08\uC7A5"
+      _amount: 1
+  - _recipeId: 4
+    _recipeName: "\uBBF8\uC5ED\uAD6D"
+    _unlockType: 101
+    _classId: 204
+    _cookTime: 5
+    _rawRecipeText: 1001 1006 1015
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "\uBBF8\uC5ED"
+      _amount: 1
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "\uC870\uAC1C"
+      _amount: 1
+    - _ingredientId: 15
+      _recipeCode: 1015
+      _ingredientName: "\uAC04\uC7A5"
+      _amount: 1
+  - _recipeId: 5
+    _recipeName: "\uC804\uBCF5 \uC8FD"
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 6
+    _rawRecipeText: 1003 1007 1013
+    _requirements:
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "\uC300"
+      _amount: 1
+    - _ingredientId: 7
+      _recipeCode: 1007
+      _ingredientName: "\uC804\uBCF5"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "\uC18C\uAE08"
+      _amount: 1
+  - _recipeId: 6
+    _recipeName: "\uD68C\uB36E\uBC25"
+    _unlockType: 103
+    _classId: 202
+    _cookTime: 10
+    _rawRecipeText: 1001 1002 1003 1004
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "\uBBF8\uC5ED"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "\uCD08\uC7A5"
+      _amount: 1
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "\uC300"
+      _amount: 1
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "\uC0DD\uC120"
+      _amount: 1
+  - _recipeId: 7
+    _recipeName: "\uC0DD\uC120\uAD6C\uC774"
+    _unlockType: 101
+    _classId: 201
+    _cookTime: 3
+    _rawRecipeText: 1004 1013
+    _requirements:
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "\uC0DD\uC120"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "\uC18C\uAE08"
+      _amount: 1
+  - _recipeId: 8
+    _recipeName: "\uD0C0\uCF54\uC57C\uB07C"
+    _unlockType: 101
+    _classId: 203
+    _cookTime: 5
+    _rawRecipeText: 1009 1010 1014
+    _requirements:
+    - _ingredientId: 9
+      _recipeCode: 1009
+      _ingredientName: "\uBB38\uC5B4"
+      _amount: 1
+    - _ingredientId: 10
+      _recipeCode: 1010
+      _ingredientName: "\uBC00"
+      _amount: 1
+    - _ingredientId: 14
+      _recipeCode: 1014
+      _ingredientName: "\uB2EC\uAC40"
+      _amount: 1
+  - _recipeId: 9
+    _recipeName: "\uC804\uBCF5\uCC1C"
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 6
+    _rawRecipeText: 1006 1007 1015
+    _requirements:
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "\uC870\uAC1C"
+      _amount: 1
+    - _ingredientId: 7
+      _recipeCode: 1007
+      _ingredientName: "\uC804\uBCF5"
+      _amount: 1
+    - _ingredientId: 15
+      _recipeCode: 1015
+      _ingredientName: "\uAC04\uC7A5"
+      _amount: 1
+  - _recipeId: 10
+    _recipeName: "\uC57C\uCC44\uAF2C\uCE58"
+    _unlockType: 101
+    _classId: 201
+    _cookTime: 5
+    _rawRecipeText: 1008 1011 1012
+    _requirements:
+    - _ingredientId: 8
+      _recipeCode: 1008
+      _ingredientName: "\uC624\uC774"
+      _amount: 1
+    - _ingredientId: 11
+      _recipeCode: 1011
+      _ingredientName: "\uB300\uD30C"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "\uB2F9\uADFC"
+      _amount: 1

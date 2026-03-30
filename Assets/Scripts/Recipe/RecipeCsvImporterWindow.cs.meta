@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b63e6b2c9e3edab4aa473ebe9d571814
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_ViewDataDictionary: {instanceID: 0}
+  - _menuCsv: {fileID: 4900000, guid: 2b8eeda879c579c47996f558426ea70b, type: 3}
+  - _ingredientCsv: {fileID: 4900000, guid: d1d152a4dddbe0142a23007dd5eaf5b9, type: 3}
+  - _targetDatabase: {fileID: 11400000, guid: 9d0d1fac30b25824b8ebec2ac5080d43, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
