@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
 
-public class TaskManager : MonoBehaviour
+public class HallSystem : MonoBehaviour
 {
-    public static TaskManager Instance;
+    public static HallSystem Instance;
     public event Action OnTaskAvailable;
     private ServingTaskQueue taskQueue = new ServingTaskQueue();
 
@@ -33,14 +33,14 @@ public class TaskManager : MonoBehaviour
     public void RegisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived += HandleOrderReceived;
-        customer.OnFoodReceived += HandleFoodReceived;
+        customer.OnOrderTaken += HandleOrderTaken;
         customer.OnExited += UnregisterCustomer;
     }
 
     private void UnregisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived -= HandleOrderReceived;
-        customer.OnFoodReceived -= HandleFoodReceived;
+        customer.OnOrderTaken -= HandleOrderTaken;
         customer.OnExited -= UnregisterCustomer;
     }
 
@@ -49,9 +49,14 @@ public class TaskManager : MonoBehaviour
         taskQueue.Enqueue(new ServingTask(ServingTaskType.TakeOrder, customer));
     }
 
-    private void HandleFoodReceived(CustomerAgent customer)
+    private void HandleOrderTaken(CustomerAgent customer)
     {
-        taskQueue.Enqueue(new ServingTask(ServingTaskType.DeliverFood, customer));
+        KitchenSystem.Instance.HandleOrderReceived(customer);
+    }
+
+    public void HandleFoodReceived(CookingTask task)
+    {
+        taskQueue.Enqueue(new ServingTask(ServingTaskType.DeliverFood, task.GetCustomerAgent()));
     }
 
     public void BoostCustomer(CustomerAgent customer)

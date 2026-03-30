@@ -38,7 +38,7 @@ public class ServingTaskQueue
         if (!tasks.Contains(task)) { return false; } // 이미 누군가 해당 주문을 처리하고 있는 중임
         
         task.State = TaskState.Claimed;
-        task.AssginedWorkder = worker;
+        task.AssginedWorker = worker;
         tasks.Remove(task);
         return true;
     }

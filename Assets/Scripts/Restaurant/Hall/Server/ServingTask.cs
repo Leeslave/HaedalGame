@@ -10,7 +10,7 @@ public enum ServingTaskType
 // 현재 작업의 상태
 public enum TaskState
 {
-    Wating,     // 주문을 접수받길 기다리는 중 / 요리가 전달되기를 기다리는 중
+    Waitng,     // 주문을 접수받길 기다리는 중 / 요리가 전달되기를 기다리는 중
     Claimed,    // 주문을 누군가 수주함 / 누군가 요리를 배달 중
     Done        // 끝
 }
@@ -20,7 +20,7 @@ public class ServingTask
     public ServingTaskType TypeTask { get; private set; }
     public CustomerAgent Customer { get; private set; }
     public TaskState State { get; set; }
-    public ServerAgent AssginedWorkder { get; set; }
+    public ServerAgent AssginedWorker { get; set; }
     public int Priority { get; set; }
     public float EnqueuedTime { get; private set; }
 
@@ -29,7 +29,7 @@ public class ServingTask
     {
         TypeTask = type;
         Customer = customer;
-        State = TaskState.Wating;
+        State = TaskState.Waitng;
         EnqueuedTime = Time.time;
     }
 }

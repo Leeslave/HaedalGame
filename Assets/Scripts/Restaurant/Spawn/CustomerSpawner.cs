@@ -20,7 +20,7 @@ public class CustomerSpawner : MonoBehaviour
 
     [ReadOnly][SerializeField] CustomerSpawnManager csm;
 
-
+    [SerializeField] private Transform customerParent;
     [Header("Test Customer")]
     [SerializeField] private bool isTest = false;
     public CustomerProperty[] customers;
@@ -66,7 +66,7 @@ public class CustomerSpawner : MonoBehaviour
             if (spawnQueue.Count > 0)
             {
                 float curPat = spawnQueue.Dequeue();
-                csm.SpawnCustomer(curPat);
+                csm.SpawnCustomer(curPat, customerParent);
                 yield return new WaitForSeconds(spawnInterval);
             }
             else
