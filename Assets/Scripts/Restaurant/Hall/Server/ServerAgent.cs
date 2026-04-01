@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 // ServerData로부터 받아온 서빙 알바의 정보를 나타내는 클래스
@@ -57,13 +58,22 @@ public class ServerAgent : PartTimerAgent
         if (task.TypeTask == ServingTaskType.TakeOrder)
         {
             target = task.Customer.transform.position;
+            PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+            PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+            List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
 
+            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            // {
+            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
+            //     yield return null;
+            // }
 
-            while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            if (path != null)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-                yield return null;
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
             }
+
+
             // 실제로 올바른 위치에 도달하면
             if (task.Customer == null)
             {
@@ -71,8 +81,6 @@ public class ServerAgent : PartTimerAgent
                 TryClaimTask();
                 yield break;
             }
-            //TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
-            //TaskLogger.Instance.LogCooking($"현재 {task.Customer.coc.GetOrderData().foodName}주문이 들어왔습니다.");
             task.Customer.ReceiveOrder();
         }
 
@@ -81,13 +89,21 @@ public class ServerAgent : PartTimerAgent
         {
             target = ServerManager.Instance.GetKitchenPosition();
 
-            while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+            PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+            List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            // {
+            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
+            //     yield return null;
+            // }
+
+            if (path != null)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-                yield return null;
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
             }
-            Debug.Log("음식을 수령 중입니다.");
-            //TaskLogger.Instance.LogServing($"현재 {positionNumber}번째 직원이 {task.Customer.coc.GetOrderData().foodName}음식을 받았습니다.");
+            
             yield return new WaitForSeconds(2f);
 
             if (task.Customer == null)
@@ -99,10 +115,19 @@ public class ServerAgent : PartTimerAgent
 
             target = task.Customer.transform.position;
 
-            while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+            endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+            path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+            // {
+            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
+            //     yield return null;
+            // }
+
+            if (path != null)
             {
-                transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-                yield return null;
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
             }
 
             if (task.Customer == null)

@@ -115,8 +115,30 @@ public class CustomerAgent : MonoBehaviour
             return;
         }
 
-        transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
+        //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
+        StartCoroutine(MoveToSeat(currentSeat));
         seatNumber = currentSeat.seatNumber;
+        
+    }
+
+    private IEnumerator MoveToSeat(Seat seat)
+    {
+        Vector3 target = seat.GetSeatPoint().position;
+        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+        if (path != null)
+        {
+            foreach (Vector3 waypoint in path)
+            {
+                while (Vector2.Distance(transform.position, waypoint) > 0.05f)
+                {
+                    transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                    yield return null;
+                }
+            }
+        }
         if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }

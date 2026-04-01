@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class PartTimerAgent : MonoBehaviour
 {
@@ -21,6 +22,18 @@ public class PartTimerAgent : MonoBehaviour
             yield return null;
         }
         returnCoroutine = null;
+    }
+
+    protected IEnumerator MoveAlongPath(List<Vector3> path, float speed)
+    {
+        foreach (Vector3 wayPoint in path)
+        {
+            while (Vector2.Distance(transform.position, wayPoint) < arrivalThreshold)
+            {
+                transform.position = Vector2.MoveTowards(transform.position, wayPoint, speed * Time.deltaTime);
+                yield return null;
+            }
+        }
     }
 
 }
