@@ -127,15 +127,21 @@ public class PopupManager : MonoBehaviour
         Action confirmAction = () =>
         {
             onConfirm?.Invoke();
-            ClosePopup(popup);
-            Destroy(popup.gameObject);
+            popup.PlayClose(() =>
+            {
+                ClosePopup(popup);
+                Destroy(popup.gameObject);
+            });
         };
 
         Action denyAction = () =>
         {
             onDeny?.Invoke();
-            ClosePopup(popup);
-            Destroy(popup.gameObject);
+            popup.PlayClose(() =>
+            {
+                ClosePopup(popup);
+                Destroy(popup.gameObject);
+            });
         };
 
         popup.Bind(content, confirmText, denyText, confirmAction, denyAction,subContentText);

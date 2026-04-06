@@ -1,6 +1,8 @@
 using System.IO;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 public sealed class RecipeCsvImporterWindow : EditorWindow
@@ -9,6 +11,9 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
     [SerializeField] private TextAsset _ingredientCsv;
     [SerializeField] private RecipeDatabaseSO _targetDatabase;
     [SerializeField] private string _createPath = "Assets/Data/Recipe/RecipeDatabaseSO.asset";
+
+    [SerializeField] private string _ingredientIconFolderPath = "Assets/Sprites/Icons/Ingredients";
+    [SerializeField] private string _recipeIconFolderPath = "Assets/Sprites/Icons/Recipes";
 
     [MenuItem("Tools/Recipe/CSV Importer")]
     public static void Open()
@@ -22,6 +27,11 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
         EditorGUILayout.LabelField("CSV Source", EditorStyles.boldLabel);
         _menuCsv = (TextAsset)EditorGUILayout.ObjectField("Menu CSV", _menuCsv, typeof(TextAsset), false);
         _ingredientCsv = (TextAsset)EditorGUILayout.ObjectField("Ingredient CSV", _ingredientCsv, typeof(TextAsset), false);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Icon Folders", EditorStyles.boldLabel);
+        _ingredientIconFolderPath = EditorGUILayout.TextField("Ingredient Icon Folder", _ingredientIconFolderPath);
+        _recipeIconFolderPath = EditorGUILayout.TextField("Recipe Icon Folder", _recipeIconFolderPath);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
@@ -40,8 +50,8 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
         EditorGUILayout.HelpBox(
             "menu.csv 필수 컬럼: menu_n, m_name, type_n, class_n, menu_t, recipe\n" +
             "ingredient.csv 필수 컬럼: ing_n, ing_name, rec_n\n" +
-            "recipe 예시: 1003 1004 1004\n" +
-            "중복되는 rec_n 값은 amount로 자동 합산됩니다.",
+            "재료 아이콘 파일명은 ing_n, 레시피 아이콘 파일명은 menu_n 으로 맞추세요.\n" +
+            "예: 1003.png, 1.png",
             MessageType.Info);
     }
 
@@ -50,9 +60,17 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
         CsvTable ingredientTable = CsvReader.Read(_ingredientCsv.text);
         CsvTable menuTable = CsvReader.Read(_menuCsv.text);
 
-        List<IngredientData> ingredients = RecipeCsvMapper.ToIngredients(ingredientTable);
-        Dictionary<int, IngredientData> ingredientByRecipeCode = RecipeCsvMapper.BuildIngredientMapByRecipeCode(ingredients);
-        List<RecipeData> recipes = RecipeCsvMapper.ToRecipes(menuTable, ingredientByRecipeCode);
+        List<IngredientData> ingredients = RecipeCsvMapper.ToIngredients(
+            ingredientTable,
+            _ingredientIconFolderPath);
+
+        Dictionary<int, IngredientData> ingredientByRecipeCode =
+            RecipeCsvMapper.BuildIngredientMapByRecipeCode(ingredients);
+
+        List<RecipeData> recipes = RecipeCsvMapper.ToRecipes(
+            menuTable,
+            ingredientByRecipeCode,
+            _recipeIconFolderPath);
 
         RecipeDatabaseSO database = _targetDatabase;
 
@@ -63,6 +81,7 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
             database = ScriptableObject.CreateInstance<RecipeDatabaseSO>();
             database.SetData(ingredients, recipes);
             AssetDatabase.CreateAsset(database, _createPath);
+            EditorUtility.SetDirty(database);
         }
         else
         {

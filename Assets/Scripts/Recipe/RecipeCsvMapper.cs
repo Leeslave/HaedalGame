@@ -1,9 +1,12 @@
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 
 public static class RecipeCsvMapper
 {
-    public static List<IngredientData> ToIngredients(CsvTable table)
+    public static List<IngredientData> ToIngredients(CsvTable table, string ingredientIconFolderPath)
     {
         table.RequireColumns("ing_n", "ing_name", "rec_n");
 
@@ -13,14 +16,24 @@ public static class RecipeCsvMapper
             string ingredientName = row.Get("ing_name");
             int recipeCode = row.GetInt("rec_n");
 
-            return new IngredientData(ingredientId, ingredientName, recipeCode);
+            Sprite icon = null;
+
+#if UNITY_EDITOR
+            icon = EditorSpriteFinder.FindSpriteById(ingredientIconFolderPath, ingredientId);
+            if (icon == null)
+                Debug.LogWarning($"Ingredient icon not found. ing_n={ingredientId}, name={ingredientName}");
+#endif
+
+            return new IngredientData(ingredientId, ingredientName, recipeCode, icon);
         });
     }
 
-    public static List<RecipeData> ToRecipes(CsvTable table, Dictionary<int, IngredientData> ingredientByRecipeCode)
+    public static List<RecipeData> ToRecipes(
+        CsvTable table,
+        Dictionary<int, IngredientData> ingredientByRecipeCode,
+        string recipeIconFolderPath)
     {
         table.RequireColumns("menu_n", "m_name", "type_n", "class_n", "menu_t", "recipe");
-
 
         return table.MapRows(row =>
         {
@@ -38,6 +51,14 @@ public static class RecipeCsvMapper
                 recipeName,
                 recipeId);
 
+            Sprite icon = null;
+
+#if UNITY_EDITOR
+            icon = EditorSpriteFinder.FindSpriteById(recipeIconFolderPath, recipeId);
+            if (icon == null)
+                Debug.LogWarning($"Recipe icon not found. menu_n={recipeId}, name={recipeName}");
+#endif
+
             return new RecipeData(
                 recipeId,
                 recipeName,
@@ -45,7 +66,8 @@ public static class RecipeCsvMapper
                 classId,
                 cookTime,
                 rawRecipeText,
-                requirements);
+                requirements,
+                icon);
         });
     }
 

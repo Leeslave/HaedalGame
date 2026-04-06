@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 303421394012235353}
   - component: {fileID: 6038100423645839689}
   - component: {fileID: 4491495200943259179}
+  - component: {fileID: 884292886536447989}
   m_Layer: 5
   m_Name: ConfirmPopup
   m_TagString: Untagged
@@ -92,12 +93,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 697a076cfa33f264eb5ec5b6084c6ed7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConfirmPopupUI
+  IsMenu: 0
   _confirmButton: {fileID: 1314100523024902656}
   _denyButton: {fileID: 598236958181223141}
   _contentText: {fileID: 1071694608924781904}
   _subContentText: {fileID: 8052946646773551984}
   _confirmButtonText: {fileID: 2918021753872393082}
   _denyButtonText: {fileID: 5620734218139343788}
+  _popupMotion: {fileID: 884292886536447989}
+--- !u!114 &884292886536447989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 883740870334696171}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ff9868dee489ba45922d832cabc8c4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIPopupMotion
+  _target: {fileID: 5709826639308419473}
+  _canvasGroup: {fileID: 0}
+  _openStartScale: 0.85
+  _openOvershootScale: 1.05
+  _openEndScale: 1
+  _openFirstDuration: 0.12
+  _openSecondDuration: 0.08
+  _closeEndScale: 0.92
+  _closeDuration: 0.12
+  _useMoveY: 0
+  _openStartOffsetY: -20
+  _closeEndOffsetY: -10
 --- !u!1 &1297173412385609596
 GameObject:
   m_ObjectHideFlags: 0

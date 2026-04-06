@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+
 [Serializable]
 public class RecipeData
 {
@@ -11,6 +12,11 @@ public class RecipeData
     [SerializeField] private float _cookTime;
     [SerializeField] private string _rawRecipeText;
     [SerializeField] private List<RecipeIngredientRequirement> _requirements = new List<RecipeIngredientRequirement>();
+    [SerializeField] private Sprite _icon;
+
+    [SerializeField] private bool _defaultUnlock;
+    [SerializeField] private float _price;
+
 
     public int RecipeId => _recipeId;
     public string RecipeName => _recipeName;
@@ -19,6 +25,10 @@ public class RecipeData
     public float CookTime => _cookTime;
     public string RawRecipeText => _rawRecipeText;
     public IReadOnlyList<RecipeIngredientRequirement> Requirements => _requirements;
+    public Sprite Icon => _icon;
+    public bool DefaultUnlock => _defaultUnlock;
+
+    public float Price => _price;
 
     public RecipeData(
         int recipeId,
@@ -27,7 +37,8 @@ public class RecipeData
         int classId,
         float cookTime,
         string rawRecipeText,
-        List<RecipeIngredientRequirement> requirements)
+        List<RecipeIngredientRequirement> requirements,
+        Sprite icon)
     {
         _recipeId = recipeId;
         _recipeName = recipeName;
@@ -36,5 +47,6 @@ public class RecipeData
         _cookTime = cookTime;
         _rawRecipeText = rawRecipeText;
         _requirements = requirements ?? new List<RecipeIngredientRequirement>();
+        _icon = icon;
     }
 }
