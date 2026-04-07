@@ -53,41 +53,64 @@ public class ServerAgent : PartTimerAgent
 
     private IEnumerator ExecuteTask(ServingTask task)
     {
-        Vector2 target = Vector2.zero;
+        // Vector2 target = Vector2.zero;
         // moving logic(non A*)
+        // if (task.TypeTask == ServingTaskType.TakeOrder)
+        // {
+        //     target = task.Customer.transform.position;
+        //     PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        //     PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+        //     List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+        //     // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+        //     // {
+        //     //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
+        //     //     yield return null;
+        //     // }
+
+        //     if (path != null)
+        //     {
+        //         yield return StartCoroutine(MoveAlongPath(path, status.serving));    
+        //     }
+
+
+        //     // 실제로 올바른 위치에 도달하면
+        //     if (task.Customer == null)
+        //     {
+        //         isIdle = true;
+        //         TryClaimTask();
+        //         yield break;
+        //     }
+        //     task.Customer.ReceiveOrder();
+        // }
         if (task.TypeTask == ServingTaskType.TakeOrder)
         {
-            target = task.Customer.transform.position;
+            // 손님 위치에서 한 칸 아래 타일을 목표로 이동
+            PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(task.Customer.transform.position);
+            Vector2Int belowPos = customerNode.gridPos + Vector2Int.down;
+            PathNode belowNode = PathfindingGrid.Instance.GetNode(belowPos);
+
+            Vector3 target = (belowNode != null && belowNode.walkable)
+                ? belowNode.worldPos
+                : task.Customer.transform.position; // fallback (거의 발생 안 함)
+
             PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
             PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
             List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
 
-            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
-            // {
-            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-            //     yield return null;
-            // }
-
             if (path != null)
             {
-                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));
             }
 
-
-            // 실제로 올바른 위치에 도달하면
-            if (task.Customer == null)
-            {
-                isIdle = true;
-                TryClaimTask();
-                yield break;
-            }
+            if (task.Customer == null) { isIdle = true; TryClaimTask(); yield break; }
             task.Customer.ReceiveOrder();
         }
 
 
         else if (task.TypeTask == ServingTaskType.DeliverFood)
         {
-            target = ServerManager.Instance.GetKitchenPosition();
+            Vector2 target = ServerManager.Instance.GetKitchenPosition();
 
             PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
             PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
@@ -101,9 +124,9 @@ public class ServerAgent : PartTimerAgent
 
             if (path != null)
             {
-                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));
             }
-            
+
             yield return new WaitForSeconds(2f);
 
             if (task.Customer == null)
@@ -127,7 +150,7 @@ public class ServerAgent : PartTimerAgent
 
             if (path != null)
             {
-                yield return StartCoroutine(MoveAlongPath(path, status.serving));    
+                yield return StartCoroutine(MoveAlongPath(path, status.serving));
             }
 
             if (task.Customer == null)

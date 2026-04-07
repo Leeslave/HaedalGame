@@ -63,5 +63,10 @@ public class TableManager : MonoBehaviour
         RestaurantGameManager.instance.seatManager.RegisterSeats(sorted);
     }
 
+    public int GetPlacedTableCount()
+    {
+        return tables.Count;
+    }
+
 
 }

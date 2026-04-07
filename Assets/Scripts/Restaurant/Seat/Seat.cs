@@ -10,6 +10,11 @@ public class Seat : MonoBehaviour
     public int seatNumber = 0;
 
     private bool isOccupied = false;                            // 현재 누군가 자리를 점유하고 있는지를 보여주는 flag
+    
+    private Vector2Int gridPos;
+    private bool hasGridPos = false;
+
+
     public bool GetIsOccupied() { return isOccupied; }          // 현재 누군가 자리를 점유하고 있는지 리턴
     public CustomerAgent GetOccupant() { return occupant; }     // 그럼 누가 점유하고 있는지 리턴
 
@@ -35,6 +40,25 @@ public class Seat : MonoBehaviour
     {
         occupant = null;                                        // 그 고객은 이제 없고
         isOccupied = false;                                     // 다시 공석임을 나타내줌
+
+        // 퇴장 시 타일 walkable 복원
+        if (hasGridPos)
+        {
+            PathfindingGrid.Instance.SetWalkable(gridPos, true);
+        }
+    }
+
+    public void SetGridPos(Vector2Int pos)
+    {
+        gridPos = pos;
+        hasGridPos = true;
+    }
+
+    // 손님이 착석 완료 후 호출 ->  해당 타일을 장애물화
+    public void OnCustomerSeated()
+    {
+        if (!hasGridPos) { return; }
+        PathfindingGrid.Instance.SetWalkable(gridPos, false);
     }
 
 

@@ -28,7 +28,7 @@ public class PartTimerAgent : MonoBehaviour
     {
         foreach (Vector3 wayPoint in path)
         {
-            while (Vector2.Distance(transform.position, wayPoint) < arrivalThreshold)
+            while (Vector2.Distance(transform.position, wayPoint) > arrivalThreshold)
             {
                 transform.position = Vector2.MoveTowards(transform.position, wayPoint, speed * Time.deltaTime);
                 yield return null;
