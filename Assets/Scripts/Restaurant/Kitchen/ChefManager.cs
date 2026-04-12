@@ -14,10 +14,12 @@ public class ChefManager : MonoBehaviour
     [SerializeField] private Transform rawArea;
     [SerializeField] private Transform potArea;
 
+    [SerializeField] private GameObject parent;
+
 
     public Vector2 GetKitchenPosition() { return kitchen.position; }
     public Vector2 GetInitPosition(int n) { return chefInitposition[n - 1].position; }
-    [ReadOnly][SerializeField] private List<ServerAgent> activeServers;
+    [ReadOnly][SerializeField] private List<ChefAgent> activeChefs;
 
     private Dictionary<CookingType, bool> toolOccupied = new Dictionary<CookingType, bool>();
 
@@ -61,14 +63,13 @@ public class ChefManager : MonoBehaviour
         toolOccupied[CookingType.Pot] = false;
     }
 
-    void Start()
-    {
-        //InitializeServers();
-    }
+    void Start() { }
 
-    private void InitializeServers()
+    public void InitializeAgents()
     {
-
+        activeChefs = new List<ChefAgent>(parent.GetComponentsInChildren<ChefAgent>());
+        foreach (ChefAgent agent in activeChefs)
+            agent.Initialize();
     }
 
     public void HireServer(PartTimerData target)

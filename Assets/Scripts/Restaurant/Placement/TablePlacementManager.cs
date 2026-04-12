@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 
 public enum PlacementState { Idle, PlacingGhost, Moving }
@@ -33,6 +34,7 @@ public class TablePlacementManager : MonoBehaviour
         CancelGhost();
         state = PlacementState.Idle;
         if (placementUI != null) { placementUI.SetActive(false); }
+        PreOperationUIManager.Instance.ShowUI();
     }
 
     // ─── 배치 버튼 ───────────────────────────────────
@@ -118,5 +120,34 @@ public class TablePlacementManager : MonoBehaviour
     {
         if (state == PlacementState.Idle) { return; }
         if (Input.GetKeyDown(KeyCode.Escape)) { OnCancelClicked(); }
+        if (Input.GetMouseButton(0)) { OnClickWhilePlacing(); }
+    }
+
+    private void OnClickWhilePlacing()
+    {
+        if (EventSystem.current.IsPointerOverGameObject()) { return; }
+        if (activeGhost == null || !activeGhost.IsPlaceable ) { return; }
+
+        activeGhost.Freeze();
+
+        PopupManager.Instance.ShowConfirmPopup
+        (
+            "이 위치에 테이블을 설치하겠습니까?",
+            "설치",
+            "취소",
+            OnPlaceConfirmed,
+            OnPlaceDenied
+        );
+    }
+
+    private void OnPlaceConfirmed()
+    {
+        OnConfirmClicked();
+    }
+
+    private void OnPlaceDenied()
+    {
+        Debug.Log("설치 취소");
+        if (activeGhost != null) {activeGhost.Unfreeze(); }
     }
 }

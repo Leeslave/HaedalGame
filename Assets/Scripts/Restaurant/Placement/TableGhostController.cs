@@ -17,6 +17,7 @@ public class TableGhostController : MonoBehaviour
     private static readonly Color GhostValid   = new Color(1f, 1f, 1f, 0.5f);
     private static readonly Color GhostInvalid = new Color(1f, 0.3f, 0.3f, 0.5f);
 
+    private bool frozen = false;
     public void Initialize(TableData data, Tilemap tilemap, OverlayPool pool)
     {
         TableData       = data;
@@ -28,6 +29,7 @@ public class TableGhostController : MonoBehaviour
 
     private void Update()
     {
+        if (frozen) { return; }
         Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorld.z = 0f;
 
@@ -104,4 +106,7 @@ public class TableGhostController : MonoBehaviour
         }
         return false;
     }
+
+    public void Freeze() { frozen = true; }
+    public void Unfreeze() { frozen = false; }
 }

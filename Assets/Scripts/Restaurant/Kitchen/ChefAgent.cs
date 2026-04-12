@@ -8,7 +8,9 @@ public class ChefAgent : PartTimerAgent
     private CookingTask curTask;
     [ReadOnly][SerializeField] private Transform target;
 
-    void Start()
+    void Start() { }
+
+    public void Initialize()
     {
         isIdle = true;
         KitchenSystem.Instance.OnTaskAvailable += OnTaskAvailable;

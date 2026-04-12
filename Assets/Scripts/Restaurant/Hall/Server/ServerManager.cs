@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ public class ServerManager : MonoBehaviour
     [SerializeField] private PartTimerData[] servers;
     [SerializeField] private Transform[] serverInitposition;
     [SerializeField] private Transform kitchen;
+    [SerializeField] private GameObject parent;
     public Vector2 GetKitchenPosition() { return kitchen.position; }
     public Vector2 GetInitPosition(int n) { return serverInitposition[n-1].position; }
     [ReadOnly][SerializeField] private List<ServerAgent> activeServers;
@@ -19,14 +21,13 @@ public class ServerManager : MonoBehaviour
         Instance = this;
     }
 
-    void Start()
-    {
-        //InitializeServers();
-    }
+    void Start() { }
 
-    private void InitializeServers()
+    public void InitializeAgents()
     {
-        
+        activeServers = new List<ServerAgent>(parent.GetComponentsInChildren<ServerAgent>());
+        foreach (ServerAgent agent in activeServers)
+            agent.Initialize();
     }
 
     public void HireServer(PartTimerData target)

@@ -9,7 +9,9 @@ public class ServerAgent : PartTimerAgent
     [SerializeField] private PartTimerStatus status;
     private ServingTask curTask;
 
-    void Start()
+    void Start() { }
+
+    public void Initialize()
     {
         isIdle = true;
         HallSystem.Instance.OnTaskAvailable += OnTaskAvailable;
@@ -18,6 +20,7 @@ public class ServerAgent : PartTimerAgent
 
     private void OnTaskAvailable()
     {
+        Debug.LogWarning("알바가 움직입니다.");
         if (!isIdle) { return; }
         TryClaimTask();
     }
@@ -27,6 +30,7 @@ public class ServerAgent : PartTimerAgent
         ServingTask task = HallSystem.Instance.ClaimTask(this);
         if (task == null)
         {
+            Debug.LogWarning("Task가 없습니다.");
             if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold && returnCoroutine == null)
             {
                 returnCoroutine = StartCoroutine(ReturnToBase(status.serving)); // 서빙 속도에 따라서 스피드 변경
@@ -40,6 +44,8 @@ public class ServerAgent : PartTimerAgent
             StopCoroutine(returnCoroutine);
             returnCoroutine = null;
         }
+
+        Debug.LogWarning("Task를 수주했습니다..");
 
         if (task.Customer.cbc.GetCheckBoost())
         {
@@ -85,23 +91,23 @@ public class ServerAgent : PartTimerAgent
         // }
         if (task.TypeTask == ServingTaskType.TakeOrder)
         {
-            // 손님 위치에서 한 칸 아래 타일을 목표로 이동
             PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(task.Customer.transform.position);
-            Vector2Int belowPos = customerNode.gridPos + Vector2Int.down;
-            PathNode belowNode = PathfindingGrid.Instance.GetNode(belowPos);
+            if (customerNode == null) { isIdle = true; TryClaimTask(); yield break; }
 
-            Vector3 target = (belowNode != null && belowNode.walkable)
-                ? belowNode.worldPos
-                : task.Customer.transform.position; // fallback (거의 발생 안 함)
+            PathNode approachNode = FindApproachNode(customerNode);
 
-            PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-            PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
-            List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
-
-            if (path != null)
+            if (approachNode != null)
             {
-                yield return StartCoroutine(MoveAlongPath(path, status.serving));
+                PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+                if (startNode == null) { isIdle = true; TryClaimTask(); yield break; }
+
+                List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, approachNode.gridPos);
+                if (path != null)
+                {
+                    yield return StartCoroutine(MoveAlongPath(path, status.serving));
+                }
             }
+            // approachNode == null이면 이동 생략하고 바로 주문 처리
 
             if (task.Customer == null) { isIdle = true; TryClaimTask(); yield break; }
             task.Customer.ReceiveOrder();
@@ -175,6 +181,18 @@ public class ServerAgent : PartTimerAgent
         status = data.status;
         positionNumber = number;
         initPosition = ServerManager.Instance.GetInitPosition(number);
+    }
+
+    // 손님 주변에서 접근 가능한 인접 타일 탐색 (아래 → 좌 → 우 → 위 순)
+    private PathNode FindApproachNode(PathNode customerNode)
+    {
+        Vector2Int[] directions = { Vector2Int.down, Vector2Int.left, Vector2Int.right, Vector2Int.up };
+        foreach (Vector2Int dir in directions)
+        {
+            PathNode neighbor = PathfindingGrid.Instance.GetNode(customerNode.gridPos + dir);
+            if (neighbor != null && neighbor.walkable) { return neighbor; }
+        }
+        return null;
     }
 
 

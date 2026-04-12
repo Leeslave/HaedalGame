@@ -17,7 +17,6 @@ MonoBehaviour:
   gridWidth: 3
   gridHeight: 3
   tableTiles:
-  - {x: 1, y: 0}
   - {x: 1, y: 1}
   - {x: 1, y: 2}
   chairTiles:

@@ -5,26 +5,29 @@ using UnityEngine;
 [RequireComponent(typeof(TableGroup))]
 public class PlacedTable : MonoBehaviour
 {
-    public TableData  tableData  { get; private set; }
+    public TableData tableData { get; private set; }
     public Vector2Int anchorCell { get; private set; }
 
     private List<Vector2Int> obstacleCells = new List<Vector2Int>(); // "테" 타일 위치
-    private Seat[]            seats;
+    private Seat[] seats;
 
     public void Initialize(TableData data, Vector2Int anchor)
     {
-        tableData  = data;
+        tableData = data;
         anchorCell = anchor;
 
         seats = GetComponentsInChildren<Seat>();
 
-        // 의자별 gridPos 설정
         for (int i = 0; i < data.chairTiles.Length && i < seats.Length; i++)
         {
-            seats[i].SetGridPos(anchorCell + data.chairTiles[i]);
+            Vector2Int chairGridPos = anchorCell + data.chairTiles[i];
+            seats[i].SetGridPos(chairGridPos);
+
+            // seatPoint를 그리드 셀 중심 위치로 강제 설정 → chairTile과 일치 보장
+            Vector3 exactWorldPos = PathfindingGrid.Instance.GetWorldPos(chairGridPos);
+            seats[i].GetSeatPoint().position = exactWorldPos;
         }
 
-        // "테" 타일 장애물 등록
         obstacleCells.Clear();
         foreach (Vector2Int offset in data.tableTiles)
         {

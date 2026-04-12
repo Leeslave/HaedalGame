@@ -161,6 +161,7 @@ public class CustomerAgent : MonoBehaviour
                 }
             }
         }
+        else { Debug.LogWarning("경로가 없습니다.");}
 
         // 도착 후 해당 타일을 장애물로 전환
         seat.OnCustomerSeated();

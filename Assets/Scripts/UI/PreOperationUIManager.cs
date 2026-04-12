@@ -2,10 +2,24 @@ using UnityEngine;
 
 public class PreOperationUIManager : MonoBehaviour
 {
+    public static PreOperationUIManager Instance;
     [SerializeField] private GameObject uiRoot;
 
-    public void ShowUI() { uiRoot.SetActive(true);  }
-    public void HideUI() { uiRoot.SetActive(false); }
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    public void ShowUI() 
+    { 
+        uiRoot.SetActive(true);
+        Canvas.ForceUpdateCanvases();   
+    }
+    public void HideUI() 
+    { 
+        uiRoot.SetActive(false);
+        Canvas.ForceUpdateCanvases(); 
+    }
 
     // 하단 "자리 배치 하러가기" 버튼
     public void OnTablePlacementButtonClicked()
@@ -27,6 +41,6 @@ public class PreOperationUIManager : MonoBehaviour
 
         CameraController.Instance.MoveToZone(CameraZone.Restaurant);
         HideUI();
-        // TODO: GameManager.Instance.StartOperation()
+        RestaurantGameManager.instance.StartOperation();
     }
 }

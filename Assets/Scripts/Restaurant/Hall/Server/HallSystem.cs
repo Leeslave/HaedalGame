@@ -12,7 +12,9 @@ public class HallSystem : MonoBehaviour
         Instance = this;
     }
 
-    void Start()
+    void Start() { }
+
+    public void Initialize()
     {
         taskQueue.OnTaskEnqueue += RelayTaskEnqueue;
     }
