@@ -50,23 +50,20 @@ public class TableGhostController : MonoBehaviour
         overlayPool.ReturnAll();
         IsPlaceable = true;
 
-        for (int y = 0; y < TableData.gridHeight; y++)
+        foreach (Vector2Int offset in TableData.tableTiles)
         {
-            for (int x = 0; x < TableData.gridWidth; x++)
-            {
-                Vector2Int local     = new Vector2Int(x, y);
-                Vector2Int worldCell = anchor + local;
-                bool       isTable   = IsTile(local, TableData.tableTiles);
-                bool       isChair   = IsTile(local, TableData.chairTiles);
+            Vector2Int worldCell = anchor + offset;
+            bool valid = CheckTileValid(worldCell, false);
+            if (!valid) { IsPlaceable = false; }
+            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(worldCell), valid);
+        }
 
-                if (!isTable && !isChair) { continue; } // "빈" 타일은 검사 생략
-
-                bool valid = CheckTileValid(worldCell, isChair);
-                if (!valid) { IsPlaceable = false; }
-
-                Vector3 overlayPos = PathfindingGrid.Instance.GetWorldPos(worldCell);
-                overlayPool.ShowOverlay(overlayPos, valid);
-            }
+        foreach (Vector2Int offset in TableData.chairTiles)
+        {
+            Vector2Int worldCell = anchor + offset;
+            bool valid = CheckTileValid(worldCell, true);
+            if (!valid) { IsPlaceable = false; }
+            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(worldCell), valid);
         }
 
         // Ghost 전체 색상 갱신

@@ -120,14 +120,9 @@ public class ServerAgent : PartTimerAgent
 
             PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
             PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+            if (startNode == null || endNode == null) { isIdle = true; TryClaimTask(); yield break; }
+
             List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
-
-            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
-            // {
-            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-            //     yield return null;
-            // }
-
             if (path != null)
             {
                 yield return StartCoroutine(MoveAlongPath(path, status.serving));
@@ -145,18 +140,16 @@ public class ServerAgent : PartTimerAgent
             target = task.Customer.transform.position;
 
             startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-            endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
-            path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+            PathNode approachNode = FindApproachNode(PathfindingGrid.Instance.GetNodeFromWorld(target));
+            if (startNode == null) { isIdle = true; TryClaimTask(); yield break; }
 
-            // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
-            // {
-            //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-            //     yield return null;
-            // }
-
-            if (path != null)
+            if (approachNode != null)
             {
-                yield return StartCoroutine(MoveAlongPath(path, status.serving));
+                path = Pathfinder.Instance.FindPath(startNode.gridPos, approachNode.gridPos);
+                if (path != null)
+                {
+                    yield return StartCoroutine(MoveAlongPath(path, status.serving));
+                }
             }
 
             if (task.Customer == null)

@@ -14,13 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TableData
   tableName: 2
   tableType: 0
-  gridWidth: 3
-  gridHeight: 3
+  gridWidth: 4
+  gridHeight: 4
   tableTiles:
-  - {x: 1, y: 1}
-  - {x: 1, y: 2}
+  - {x: 0, y: 0}
   chairTiles:
-  - {x: 0, y: 1}
-  - {x: 2, y: 1}
+  - {x: -1, y: 0}
+  - {x: 1, y: 0}
   placedPrefab: {fileID: 7186909959724740063, guid: 3f8584628a4763e488a05561dda81646, type: 3}
   ghostPrefab: {fileID: 7186909959724740063, guid: fc38315bba5a4ac44a26e05239b06fbe, type: 3}

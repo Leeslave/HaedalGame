@@ -147,21 +147,36 @@ public class CustomerAgent : MonoBehaviour
     {
         Vector3 target = seat.GetSeatPoint().position;
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+        PathNode endNode   = PathfindingGrid.Instance.GetNodeFromWorld(target);
+
+        if (startNode == null || endNode == null)
+        {
+            Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
+            gm.seatManager.ReleaseSeat(seat, false);
+            currentSeat = null;
+            TrySeat();
+            yield break;
+        }
+
         List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
 
-        if (path != null)
+        if (path == null)
         {
-            foreach (Vector3 waypoint in path)
+            Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
+            gm.seatManager.ReleaseSeat(seat, false);
+            currentSeat = null;
+            TrySeat();
+            yield break;
+        }
+
+        foreach (Vector3 waypoint in path)
+        {
+            while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
-                while (Vector2.Distance(transform.position, waypoint) > 0.05f)
-                {
-                    transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
-                    yield return null;
-                }
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                yield return null;
             }
         }
-        else { Debug.LogWarning("경로가 없습니다.");}
 
         // 도착 후 해당 타일을 장애물로 전환
         seat.OnCustomerSeated();
