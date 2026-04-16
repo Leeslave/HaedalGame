@@ -199,6 +199,33 @@ public class MenuRecipeService : MonoBehaviour
     {
         return _recipes != null && slotIndex >= 0 && slotIndex < _recipes.Length;
     }
+
+    public void ClearAllRecipes()
+    {
+        if (_recipes == null)
+            return;
+
+        bool changed = false;
+
+        for (int i = 0; i < _recipes.Length; i++)
+        {
+            RecipeData currentRecipe = _recipes[i];
+            if (currentRecipe == null)
+                continue;
+
+            RefundRecipeIngredients(currentRecipe);
+            _recipes[i] = null;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            if (_inventoryService != null)
+                _inventoryService.NotifyChanged();
+
+            OnChanged?.Invoke();
+        }
+    }
 }
 
 public enum MenuRecipeSetResult

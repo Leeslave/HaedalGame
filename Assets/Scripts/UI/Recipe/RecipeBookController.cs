@@ -28,6 +28,7 @@ public class RecipeBookController : MonoBehaviour
 
     private RecipeData _selectedRecipe;
     private RecipeSortType _currentSortType = RecipeSortType.AcquireOrder;
+    private bool _isAscending = false;
 
     public RecipeData SelectedRecipe => _selectedRecipe;
     public bool HasSelectedRecipe => _selectedRecipe != null;
@@ -107,18 +108,37 @@ public class RecipeBookController : MonoBehaviour
         {
             case RecipeSortType.AcquireOrder:
                 recipes.Sort((a, b) =>
-                    _recipeBookState.GetAcquireOrder(a.RecipeId).CompareTo(
-                        _recipeBookState.GetAcquireOrder(b.RecipeId)));
+                {
+                    int compare = _recipeBookState.GetAcquireOrder(a.RecipeId)
+                        .CompareTo(_recipeBookState.GetAcquireOrder(b.RecipeId));
+
+                    return _isAscending ? compare : -compare;
+                });
                 break;
 
             case RecipeSortType.Name:
-                recipes.Sort((a, b) => string.Compare(a.RecipeName, b.RecipeName, StringComparison.Ordinal));
+                recipes.Sort((a, b) =>
+                {
+                    int compare = string.Compare(a.RecipeName, b.RecipeName, StringComparison.Ordinal);
+                    return _isAscending ? compare : -compare;
+                });
                 break;
 
             case RecipeSortType.Price:
-                recipes.Sort((a, b) => b.Price.CompareTo(a.Price));
+                recipes.Sort((a, b) =>
+                {
+                    int compare = a.Price.CompareTo(b.Price);
+                    return _isAscending ? compare : -compare;
+                });
                 break;
         }
+    }
+
+    public void ToggleSortOrder()
+    {
+        _isAscending = !_isAscending;
+
+        RefreshList();
     }
 
     private void OnClickRecipe(RecipeData recipe)

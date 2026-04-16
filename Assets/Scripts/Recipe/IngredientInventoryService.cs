@@ -4,19 +4,29 @@ using UnityEngine;
 
 public class IngredientInventoryService : MonoBehaviour
 {
-    [SerializeField] private List<IngredientAmount> _initialIngredients = new List<IngredientAmount>();
+    [SerializeField] private List<Ingredient> _initialIngredients = new List<Ingredient>();
 
     private readonly Dictionary<int, int> _countsByIngredientId = new Dictionary<int, int>();
 
     public event Action OnChanged;
 
+    public static IngredientInventoryService Instance { get; private set; }
+
     private void Awake()
     {
-        _countsByIngredientId.Clear();
+        if(Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+            Destroy(gameObject);
+
+            _countsByIngredientId.Clear();
 
         for (int i = 0; i < _initialIngredients.Count; i++)
         {
-            IngredientAmount data = _initialIngredients[i];
+            Ingredient data = _initialIngredients[i];
 
             if (_countsByIngredientId.ContainsKey(data.IngredientId))
                 _countsByIngredientId[data.IngredientId] += data.Amount;
@@ -108,11 +118,15 @@ public class IngredientInventoryService : MonoBehaviour
 }
 
 [Serializable]
-public class IngredientAmount
+public class Ingredient
 {
     [SerializeField] private int _ingredientId;
     [SerializeField] private int _amount;
+    [SerializeField] private string _source;
+
 
     public int IngredientId => _ingredientId;
     public int Amount => _amount;
+
+    public string Source => _source;
 }
