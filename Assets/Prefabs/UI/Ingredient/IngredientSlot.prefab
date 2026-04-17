@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4144865956593715147
 RectTransform:
   m_ObjectHideFlags: 0
@@ -243,9 +243,9 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 4144865956593715147}
   - {fileID: 2623912834058910056}
   - {fileID: 5051119784376242137}
+  - {fileID: 4144865956593715147}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -304,8 +304,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IngredientSlotUI
   _iconImage: {fileID: 2181259139879532791}
+  _countText: {fileID: 6368026420707269653}
   _selectedObject: {fileID: 1413009418229856131}
-  _cntText: {fileID: 6368026420707269653}
 --- !u!1 &3888014513074602192
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,7 +323,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5051119784376242137
 RectTransform:
   m_ObjectHideFlags: 0

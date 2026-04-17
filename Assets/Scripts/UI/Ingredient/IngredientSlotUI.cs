@@ -7,35 +7,50 @@ using UnityEngine.UI;
 public class IngredientSlotUI : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] private Image _iconImage;
+    [SerializeField] private TMP_Text _countText;
     [SerializeField] private GameObject _selectedObject;
 
-    [SerializeField] private TMP_Text _cntText;
+    private Action<Ingredient> _onClick;
+    private Ingredient _ingredient;
 
-    private Action<IngredientData> _onClick;
-    private IngredientData _ingredient;
+    public Ingredient Ingredient => _ingredient;
 
-
-    public IngredientData Ingredient => _ingredient;
-
-    void Bind(IngredientData ingredient, Action<IngredientData> onClick, bool selected)
+    public void Bind(RecipeDatabaseSO database, Ingredient ingredient, Action<Ingredient> onClick, bool selected)
     {
         _ingredient = ingredient;
         _onClick = onClick;
-        
-        _iconImage.sprite = ingredient != null ? ingredient.Icon : null;
-        _iconImage.enabled = ingredient != null && ingredient.Icon != null;
 
-        _cntText.text = IngredientInventoryService.Instance.GetCount(_ingredient.IngredientId).ToString();
+        IngredientData ingredientData = null;
+        if (database != null)
+            database.TryGetIngredientById(ingredient.IngredientId, out ingredientData);
+
+        if (_iconImage != null)
+        {
+            _iconImage.sprite = ingredientData != null ? ingredientData.Icon : null;
+            _iconImage.enabled = ingredientData != null && ingredientData.Icon != null;
+        }
+
+        if (_countText != null)
+            _countText.text = ingredient.Amount.ToString();
 
         SetSelected(selected);
+        gameObject.SetActive(true);
     }
 
     public void SetEmpty()
     {
         _ingredient = null;
-        _iconImage.enabled = false;
-        _cntText.text = string.Empty;
         _onClick = null;
+
+        if (_iconImage != null)
+        {
+            _iconImage.sprite = null;
+            _iconImage.enabled = false;
+        }
+
+        if (_countText != null)
+            _countText.text = string.Empty;
+
         SetSelected(false);
     }
 

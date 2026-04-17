@@ -4,22 +4,44 @@ using UnityEngine.UI;
 
 public class IngredientDetailPanelUI : MonoBehaviour
 {
-    [SerializeField] private Image _ingredientIconImage;
-
+    [SerializeField] private GameObject _root;
+    [SerializeField] private Image _iconImage;
     [SerializeField] private TMP_Text _nameText;
+    [SerializeField] private TMP_Text _countText;
     [SerializeField] private TMP_Text _sourceText;
-    [SerializeField] private TMP_Text _amountText;
-    [SerializeField] private TMP_Text _detailText;
+    [SerializeField] private TMP_Text _unselectedText;
 
     public void Bind(RecipeDatabaseSO database, Ingredient ingredient)
     {
-        database.TryGetIngredientById(ingredient.IngredientId, out IngredientData data);
-        _nameText.text = data.IngredientName;
-        _sourceText.text = ingredient.Source;
-        _amountText.text = ingredient.Amount.ToString();
-        
-        //Todo detail Text
+        if (_root != null)
+            _root.SetActive(ingredient != null);
+
+        if (ingredient == null)
+        {
+            _unselectedText.gameObject.SetActive(true);
+            return;
+        }
+
+        _unselectedText.gameObject.SetActive(false);
+
+        IngredientData ingredientData = null;
+        if (database != null)
+            database.TryGetIngredientById(ingredient.IngredientId, out ingredientData);
+
+        if (_iconImage != null)
+        {
+            _iconImage.sprite = ingredientData != null ? ingredientData.Icon : null;
+            _iconImage.enabled = ingredientData != null && ingredientData.Icon != null;
+        }
+
+        if (_nameText != null)
+            _nameText.text = ingredientData != null ? ingredientData.IngredientName : $"Ingredient {ingredient.IngredientId}";
+
+        if (_countText != null)
+            _countText.text = ingredient.Amount.ToString();
+
+        if (_sourceText != null)
+            _sourceText.text = string.IsNullOrWhiteSpace(ingredient.Source) ? "-" : ingredient.Source;
 
     }
-
 }
