@@ -129,6 +129,30 @@ public class RecipeBookState : MonoBehaviour
         return result;
     }
 
+    public List<RecipeData> GetRecipesWithIngredients(int ingredientId)
+    {
+        List<RecipeData> result = new List<RecipeData>();
+
+        if (_database == null)
+            return result;
+
+        for (int i = 0; i < _database.Recipes.Count; i++)
+        {
+            RecipeData recipe = _database.Recipes[i];
+            
+            foreach (var ingredient in recipe.Requirements)
+            {
+                if (ingredient.IngredientId == ingredientId)
+                {
+                    result.Add(recipe);
+                }
+            }
+        }
+
+        return result;
+    }
+
+
     public void Save()
     {
         if (_saveService == null)
