@@ -17,10 +17,15 @@ public class ConfirmPopupUI : UIPopup
     [SerializeField] private TMP_Text _confirmButtonText;
     [SerializeField] private TMP_Text _denyButtonText;
 
+    [SerializeField] private UIPopupMotion _popupMotion;
+
     private void OnEnable()
     {
         _confirmButton.onClick.AddListener(HandleClickConfirm);
         _denyButton.onClick.AddListener(HandleClickDeny);
+
+        if (_popupMotion != null)
+            _popupMotion.PlayOpen();
     }
 
     private void OnDisable()
@@ -41,6 +46,18 @@ public class ConfirmPopupUI : UIPopup
 
         _onClickConfirmButton = onConfirm;
         _onClickDenyButton = onDeny;
+    }
+
+
+    public void PlayClose(Action onClosed)
+    {
+        if (_popupMotion == null)
+        {
+            onClosed?.Invoke();
+            return;
+        }
+
+        _popupMotion.PlayClose(onClosed);
     }
 
     private void HandleClickConfirm()
