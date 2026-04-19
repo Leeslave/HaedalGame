@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class ChefAgent : PartTimerAgent
 {
@@ -7,7 +8,9 @@ public class ChefAgent : PartTimerAgent
     private CookingTask curTask;
     [ReadOnly][SerializeField] private Transform target;
 
-    void Start()
+    void Start() { }
+
+    public void Initialize()
     {
         isIdle = true;
         KitchenSystem.Instance.OnTaskAvailable += OnTaskAvailable;
@@ -70,10 +73,19 @@ public class ChefAgent : PartTimerAgent
 
 
 
-        while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
+        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target.position);
+        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+        // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
+        // {
+        //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
+        //     yield return null;
+        // }
+
+        if (path != null)
         {
-            transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
-            yield return null;
+            yield return StartCoroutine(MoveAlongPath(path, status.serving));
         }
 
         if (task.Customer == null)
