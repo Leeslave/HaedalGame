@@ -10,6 +10,7 @@ public class RestaurantGameManager : MonoBehaviour
     public RatingSystem ratingSystem;
     public CustomerSpawner customerSpawner;
     public KitchenSystem kitchenSystem;
+    public HallSystem hallSystem;
 
     [SerializeField] public FoodDatabase foodDatabase;
     public MenuData menuData = new MenuData();
@@ -27,5 +28,15 @@ public class RestaurantGameManager : MonoBehaviour
         ratingSystem = GetComponentInChildren<RatingSystem>();
         customerSpawner = GetComponentInChildren<CustomerSpawner>();
         kitchenSystem = GetComponentInChildren<KitchenSystem>();
+        hallSystem = GetComponentInChildren<HallSystem>();
+    }
+
+    public void StartOperation()
+    {
+        hallSystem.Initialize();
+        kitchenSystem.Initialize();
+        ServerManager.Instance.InitializeAgents();
+        ChefManager.Instance.InitializeAgents();
+        customerSpawner.StartGame();
     }
 }

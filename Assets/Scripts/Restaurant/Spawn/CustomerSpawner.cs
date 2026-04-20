@@ -34,7 +34,7 @@ public class CustomerSpawner : MonoBehaviour
         csm = GetComponent<CustomerSpawnManager>();
     }
 
-    void Start()
+    public void StartGame()
     {
         // 테스트든 아니든 큐에 입력
         if (isTest)
@@ -49,6 +49,11 @@ public class CustomerSpawner : MonoBehaviour
         StartCoroutine(ManageQueue());
     }
 
+    void Start()
+    {
+        
+    }
+
     private void CustomerSpawnForTest()
     {
         foreach (var dc in customers) { spawnQueue.Enqueue(dc.patience); }
@@ -61,6 +66,7 @@ public class CustomerSpawner : MonoBehaviour
 
     private IEnumerator ManageQueue()
     {
+        yield return new WaitForSeconds(1f);
         while (true)
         {
             if (spawnQueue.Count > 0)

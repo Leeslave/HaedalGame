@@ -115,12 +115,75 @@ public class CustomerAgent : MonoBehaviour
             return;
         }
 
-        transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
+        //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
+        StartCoroutine(MoveToSeat(currentSeat));
         seatNumber = currentSeat.seatNumber;
+
+    }
+
+    // private IEnumerator MoveToSeat(Seat seat)
+    // {
+    //     Vector3 target = seat.GetSeatPoint().position;
+    //     PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+    //     PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+    //     List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+    //     if (path != null)
+    //     {
+    //         foreach (Vector3 waypoint in path)
+    //         {
+    //             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
+    //             {
+    //                 transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+    //                 yield return null;
+    //             }
+    //         }
+    //     }
+    //     if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
+    //     else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
+    // }
+
+    private IEnumerator MoveToSeat(Seat seat)
+    {
+        Vector3 target = seat.GetSeatPoint().position;
+        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        PathNode endNode   = PathfindingGrid.Instance.GetNodeFromWorld(target);
+
+        if (startNode == null || endNode == null)
+        {
+            Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
+            gm.seatManager.ReleaseSeat(seat, false);
+            currentSeat = null;
+            TrySeat();
+            yield break;
+        }
+
+        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+        if (path == null)
+        {
+            Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
+            gm.seatManager.ReleaseSeat(seat, false);
+            currentSeat = null;
+            TrySeat();
+            yield break;
+        }
+
+        foreach (Vector3 waypoint in path)
+        {
+            while (Vector2.Distance(transform.position, waypoint) > 0.05f)
+            {
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                yield return null;
+            }
+        }
+
+        // 도착 후 해당 타일을 장애물로 전환
+        seat.OnCustomerSeated();
+
         if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
     }
-
 
     public void PromoteToSeat(Seat newSeat)
     {
