@@ -706,6 +706,7 @@ GameObject:
   - component: {fileID: 1734181659383113222}
   - component: {fileID: 7002030305197210208}
   - component: {fileID: 5162792767199139151}
+  - component: {fileID: 6943207990063241568}
   m_Layer: 5
   m_Name: AvailableMenuInfo
   m_TagString: Untagged
@@ -772,3 +773,21 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6943207990063241568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8591795175481537910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf6147a33c36fa64e8bc2c04f367aaa0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AvailableMenuInfo
+  _recipeIconImage: {fileID: 4676865037229552858}
+  _unknownSprite: {fileID: 4037689656878812957, guid: edefbb03d2418fa458e66598500d6d84, type: 3}
+  _requiredGoldText: {fileID: 1947422036313526887}
+  _gradeText: {fileID: 0}
+  _availableMenuInfos: []
+  _recipeBookState: {fileID: 0}
