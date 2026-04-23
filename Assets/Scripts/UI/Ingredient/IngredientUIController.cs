@@ -188,4 +188,10 @@ public class IngredientUIController : MonoBehaviour
                 _slots[i].SetEmpty();
         }
     }
+
+    public void ClickdescendingButton()
+    {
+        _descendingByDefault = !_descendingByDefault;
+        RefreshList();
+    }
 }
