@@ -12,7 +12,6 @@ public class RestaurantGameManager : MonoBehaviour
     public KitchenSystem kitchenSystem;
     public HallSystem hallSystem;
 
-    [SerializeField] public FoodDatabase foodDatabase;
     public MenuData menuData = new MenuData();
 
     void Awake()

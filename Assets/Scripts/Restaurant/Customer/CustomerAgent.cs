@@ -217,7 +217,7 @@ public class CustomerAgent : MonoBehaviour
         yield return new WaitForSeconds(3f); // 이 값은 랜덤으로 줘도 됨
         coc.GenerateOrder();
         Debug.Log("메뉴를 골랏습니다");
-        cuc.ShowBubble(0, coc.GetOrderData().image);
+        cuc.ShowBubble(0, coc.GetOrderData().Icon);
         cpc.ResetGraceTimer();
         OnOrderReceived?.Invoke(this);
     }

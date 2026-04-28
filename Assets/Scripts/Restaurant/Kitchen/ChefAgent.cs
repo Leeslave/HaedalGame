@@ -51,7 +51,7 @@ public class ChefAgent : PartTimerAgent
         Transform target = null;
         CookingType curType = task.GetCookingType();
 
-        if (curType != CookingType.none)
+        if (curType != CookingType.None)
         {
             target = ChefManager.Instance.GetCookingToolTransform(curType);
         }
@@ -68,7 +68,7 @@ public class ChefAgent : PartTimerAgent
 
 
         yield return new WaitForSeconds(1f);
-        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
+        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().RecipeName}주문을 받았습니다.");
 
 
 
