@@ -3,6 +3,7 @@ using UnityEngine;
 
 public enum IslandType
 {
+    All,
     StartIsland,      // 시작 섬 (기본 재료, 어패류)
     FairyIsland,      // 요정 섬 (버섯, 채소, 과일)
     DolphinIsland,    // 돌고래 섬 (해산물, 해조류)
@@ -16,7 +17,7 @@ public class IngredientData
     [SerializeField] private string _ingredientName;
     [SerializeField] private int _recipeCode;
     [SerializeField] private int _price;
-
+    [SerializeField] private IslandType _belongIsland;
     [SerializeField] private Sprite _icon;
 
     public int IngredientId => _ingredientId;
@@ -24,9 +25,9 @@ public class IngredientData
     public int RecipeCode => _recipeCode;
     public Sprite Icon => _icon;
 
-    public int Pirce => _price;
+    public int Price => _price;
 
-    public IslandType belongIsland;      
+    public IslandType BelongIsland => _belongIsland;
 
     public IngredientData(int ingredientId, string ingredientName, int recipeCode, Sprite icon)
     {

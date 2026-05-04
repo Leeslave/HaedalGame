@@ -83,6 +83,34 @@ public class RecipeDatabaseSO : ScriptableObject
         return _recipeById.TryGetValue(recipeId, out recipe);
     }
 
+    public List<IngredientData> GetIngredientsByIslandType(IslandType islandType)
+    {
+        EnsureCache();
+
+        List<IngredientData> result = new List<IngredientData>();
+
+        if (_ingredients == null)
+            return result;
+
+        for (int i = 0; i < _ingredients.Count; i++)
+        {
+            IngredientData ingredient = _ingredients[i];
+
+            if (ingredient == null)
+                continue;
+
+            if (islandType == IslandType.All || ingredient.BelongIsland == islandType)
+                result.Add(ingredient);
+        }
+
+        return result;
+    }
+
+    public IReadOnlyList<IngredientData> GetIngredientsByIslandTypeReadonly(IslandType islandType)
+    {
+        return GetIngredientsByIslandType(islandType);
+    }
+
     private void OnEnable()
     {
         if (_ingredients == null)

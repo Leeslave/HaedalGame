@@ -5,31 +5,31 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Currency", menuName = "Scriptable Objects/GameData/Currency")]
 public class Currency : ScriptableObject
 {
-    [Header("½Äº° ¹× ±âº» Á¤º¸")]
-    [Tooltip("Key·Î »ç¿ëÇÒ ID")]
+    [Header("ï¿½Äºï¿½ ï¿½ï¿½ ï¿½âº» ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("Keyï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ID")]
     public string CurrencyID;
-    [Tooltip("°ÔÀÓ È­¸é¿¡ Ç¥½ÃµÉ ½ÇÁ¦ ÀÌ¸§")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ È­ï¿½é¿¡ Ç¥ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½")]
     public string DisplayName;
     [TextArea]
-    public string Description; // »óÁ¡ÀÌ³ª ÀÎº¥Åä¸®¿¡¼­ º¸¿©ÁÙ ¼³¸í
+    public string Description; // ï¿½ï¿½ï¿½ï¿½ï¿½Ì³ï¿½ ï¿½Îºï¿½ï¿½ä¸®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-    [Header("½Ã°¢ ¿ä¼Ò (UI)")]
-    [Tooltip("UI¿¡ Ç¥½ÃµÉ ¾ÆÀÌÄÜ")]
+    [Header("ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ (UI)")]
+    [Tooltip("UIï¿½ï¿½ Ç¥ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Sprite Icon;
 
-    [Tooltip("ÃÖ´ë ¼ÒÁö ÇÑµµ")]
+    [Tooltip("ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ñµï¿½")]
     public int MaxCapacity = Int32.MaxValue;
 
-    [Tooltip("ÃÖ¼Ò ¼ÒÁö ÇÑµµ")]
+    [Tooltip("ï¿½Ö¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ñµï¿½")]
     public int MinCapacity = Int32.MinValue;
 }
 #endregion 
 
 #region CurrencyTransaction
 /// <summary>
-/// ÀçÈ­ÀÇ È¹µæ/¼Òºñ ÃâÃ³
+/// ï¿½ï¿½È­ï¿½ï¿½ È¹ï¿½ï¿½/ï¿½Òºï¿½ ï¿½ï¿½Ã³
 /// </summary>
-public enum TransactionSource{TestGet, TestUse ,GotchaUse}
+public enum TransactionSource{TestGet, TestUse, GotchaUse, ShopPurchase}
 public struct CurrencyTransaction
 {
     [Header("Data")]
@@ -47,7 +47,7 @@ public struct CurrencyTransaction
         this.Multiplier = multiplier;
     }
 
-    // ÃÖÁ¾ °è»ê ±Ý¾× (±âº»±Ý¾× * ¹èÀ²)
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ý¾ï¿½ (ï¿½âº»ï¿½Ý¾ï¿½ * ï¿½ï¿½ï¿½ï¿½)
     public int FinalAmount => Mathf.RoundToInt(Amount * Multiplier);
 }
 #endregion
