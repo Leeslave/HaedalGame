@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 // 이 코드는 좌석 오브젝트에 붙어야 하는 코드
@@ -13,6 +14,7 @@ public class Seat : MonoBehaviour
     
     private Vector2Int gridPos;
     private bool hasGridPos = false;
+    [SerializeField] private Vector2 facingDirection;
 
 
     public bool GetIsOccupied() { return isOccupied; }          // 현재 누군가 자리를 점유하고 있는지 리턴
@@ -61,6 +63,10 @@ public class Seat : MonoBehaviour
         PathfindingGrid.Instance.SetWalkable(gridPos, false);
     }
 
+    public Vector2 GetFacingDirection()
+    {
+        return facingDirection;
+    }
 
 
 }

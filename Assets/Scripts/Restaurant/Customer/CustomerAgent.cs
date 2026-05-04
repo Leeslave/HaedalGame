@@ -11,6 +11,7 @@ public class CustomerAgent : MonoBehaviour
     public CustomerOrderComponent coc;
     public CustomerUIComponent cuc;
     public CustomerBoostComponent cbc;
+    public NPCMovement nm;
 
     [Header("Timings")]
     [SerializeField] private float eatDuration = 8f;
@@ -47,6 +48,7 @@ public class CustomerAgent : MonoBehaviour
         coc = GetComponent<CustomerOrderComponent>();
         cuc = GetComponent<CustomerUIComponent>();
         cbc = GetComponent<CustomerBoostComponent>();
+        nm = GetComponent<NPCMovement>();
 
         cpc.OnPatienceExhausted += PatienceExhausted;
         cpc.OnWaitingProgress += cuc.ChangeEmotion;
@@ -121,38 +123,16 @@ public class CustomerAgent : MonoBehaviour
 
     }
 
-    // private IEnumerator MoveToSeat(Seat seat)
-    // {
-    //     Vector3 target = seat.GetSeatPoint().position;
-    //     PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-    //     PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
-    //     List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
-
-    //     if (path != null)
-    //     {
-    //         foreach (Vector3 waypoint in path)
-    //         {
-    //             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
-    //             {
-    //                 transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
-    //                 yield return null;
-    //             }
-    //         }
-    //     }
-    //     if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
-    //     else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
-    // }
-
     private IEnumerator MoveToSeat(Seat seat)
     {
         Vector3 target = seat.GetSeatPoint().position;
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-        PathNode endNode   = PathfindingGrid.Instance.GetNodeFromWorld(target);
+        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
 
         if (startNode == null || endNode == null)
         {
             Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, false);
+            gm.seatManager.ReleaseSeat(seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
@@ -163,21 +143,27 @@ public class CustomerAgent : MonoBehaviour
         if (path == null)
         {
             Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, false);
+            gm.seatManager.ReleaseSeat(seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
         }
+
+        nm.SetMoving(true);
 
         foreach (Vector3 waypoint in path)
         {
             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
                 transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                Vector2 dir = (waypoint - transform.position).normalized;
+                nm.SetDirection(dir);
                 yield return null;
             }
         }
 
+        nm.SetMoving(false);
+        nm.ArriveDirection(currentSeat.GetFacingDirection());
         // 도착 후 해당 타일을 장애물로 전환
         seat.OnCustomerSeated();
 
@@ -189,13 +175,13 @@ public class CustomerAgent : MonoBehaviour
     {
         currentSeat = newSeat;
         indoor = true;
-        cpc.SetIsWaiting(false);
         isWaiting = false;
+        cpc.SetIsWaiting(false);
+        nm.SetMoving(false);
         cuc.CloseBubble();
-        transform.position = newSeat.GetSeatPoint().position;
-        TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
         StopAllCoroutines();
-        StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder));
+        TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
+        StartCoroutine(MoveToSeat(newSeat));
     }
 
     public void MoveWaitingSeat(Seat newSeat)
@@ -207,6 +193,7 @@ public class CustomerAgent : MonoBehaviour
     // CustomerState.WaitingForOrder
     private void TryOrder()
     {
+        if (!indoor) { return; }
         StartCoroutine(ChoosingMenu());
     }
 
@@ -276,7 +263,6 @@ public class CustomerAgent : MonoBehaviour
         if (ratingFlag == RatingFlag.None)
         {
             ratingFlag = RatingFlag.Perfect; // 이건 나중에 RatingSysyem 구현 후 수정
-
         }
 
         if (currentSeat != null)
@@ -285,9 +271,52 @@ public class CustomerAgent : MonoBehaviour
             currentSeat = null;
         }
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
-        OnExited?.Invoke(this);
+        nm.SetMoving(false);
         StopAllCoroutines();
-        Destroy(gameObject);
+        StartCoroutine(MoveToExit());
+    }
+
+    private IEnumerator MoveToExit()
+    {
+        Vector3 target = gm.exitPoint.position;
+
+        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
+
+        if (startNode == null || endNode == null)
+        {
+            transform.position = target;
+            OnExited?.Invoke(this);
+            Destroy(gameObject);
+            yield break;
+        }
+
+        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
+
+        if (path == null)
+        {
+            transform.position = target;
+            OnExited?.Invoke(this);
+            Destroy(gameObject);
+            yield break;
+        }
+
+        nm.SetMoving(true);
+
+        foreach (Vector3 waypoint in path)
+        {
+            while (Vector2.Distance(transform.position, waypoint) > 0.05f)
+            {
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                Vector2 dir = (waypoint - transform.position).normalized;
+                nm.SetDirection(dir);
+                yield return null;
+            }
+        }
+
+        nm.SetMoving(false);
+        OnExited?.Invoke(this); // ← OnCustomerSeated() 대신 퇴장 이벤트
+        Destroy(gameObject);    // ← 상태 전환 대신 오브젝트 제거
     }
 
 
@@ -298,6 +327,7 @@ public class CustomerAgent : MonoBehaviour
     {
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
+        nm.SetMoving(false);
         StopAllCoroutines();
         StartCoroutine(WaitStateChange(CustomerState.Exit));
     }

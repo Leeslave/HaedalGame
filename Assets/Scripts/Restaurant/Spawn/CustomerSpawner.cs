@@ -69,7 +69,7 @@ public class CustomerSpawner : MonoBehaviour
         yield return new WaitForSeconds(1f);
         while (true)
         {
-            if (spawnQueue.Count > 0)
+            if (spawnQueue.Count > 0 && RestaurantGameManager.instance.seatManager.HasAvailableSeat())
             {
                 float curPat = spawnQueue.Dequeue();
                 csm.SpawnCustomer(curPat, customerParent);
@@ -77,7 +77,7 @@ public class CustomerSpawner : MonoBehaviour
             }
             else
             {
-                yield return null; // 큐가 비면 매 프레임 대기
+                yield return null;
             }
         }
     }

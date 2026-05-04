@@ -44,6 +44,15 @@ public class SeatManager : MonoBehaviour
     }
 
 
+    public bool HasAvailableSeat()
+    {
+        for (int i = 0; i < seats.Count; i++)
+            if (!seats[i].GetIsOccupied()) return true;
+        for (int i = 0; i < waitingSeats.Count; i++)
+            if (!waitingSeats[i].GetIsOccupied()) return true;
+        return false;
+    }
+
     // 손님 오브젝트가 좌석을 앉으려고 시도하는 함수
     public Seat TryAssignSeat(CustomerAgent customer, out bool indoor)
     {

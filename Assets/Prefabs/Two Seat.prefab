@@ -46,6 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 8519697906799851940}
   seatNumber: 2
+  facingDirection: {x: -1, y: 0}
 --- !u!1 &4686549397425405199
 GameObject:
   m_ObjectHideFlags: 0
@@ -246,3 +247,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 4470478622586514576}
   seatNumber: 1
+  facingDirection: {x: 1, y: 0}

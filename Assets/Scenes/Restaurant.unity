@@ -755,9 +755,9 @@ MonoBehaviour:
   - {fileID: 153700032}
   - {fileID: 846431555}
   kitchen: {fileID: 1801828119}
-  grillArea: {fileID: 211388436}
-  mixArea: {fileID: 1391993521}
-  rawArea: {fileID: 1815518061}
+  panArea: {fileID: 211388436}
+  chopArea: {fileID: 1391993521}
+  fryArea: {fileID: 1815518061}
   potArea: {fileID: 2084352349}
   parent: {fileID: 102231011}
   activeChefs: []
@@ -1362,6 +1362,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 216400912}
   seatNumber: 0
+  facingDirection: {x: 0, y: 0}
 --- !u!1 &236589893
 GameObject:
   m_ObjectHideFlags: 0
@@ -1998,6 +1999,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 336851907}
   seatNumber: 0
+  facingDirection: {x: 0, y: 0}
 --- !u!1 &344478069
 GameObject:
   m_ObjectHideFlags: 0
@@ -3782,7 +3784,7 @@ MonoBehaviour:
   customerSpawner: {fileID: 0}
   kitchenSystem: {fileID: 0}
   hallSystem: {fileID: 0}
-  foodDatabase: {fileID: 0}
+  exitPoint: {fileID: 1924779883}
 --- !u!4 &652301892
 Transform:
   m_ObjectHideFlags: 0
@@ -7315,6 +7317,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 1237784908}
   seatNumber: 0
+  facingDirection: {x: 0, y: 0}
 --- !u!1 &1268199945
 GameObject:
   m_ObjectHideFlags: 0
@@ -15040,6 +15043,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 1654768748}
   seatNumber: 0
+  facingDirection: {x: 0, y: 0}
 --- !u!1 &1713875608
 GameObject:
   m_ObjectHideFlags: 0
@@ -15084,7 +15088,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ae12ec066c3993489f398ad9b83b700, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MenuManager
-  foodDatabase: {fileID: 11400000, guid: 5f72916352735b64099f697e4e1cae10, type: 2}
+  recipeDatabase: {fileID: 11400000, guid: 9d0d1fac30b25824b8ebec2ac5080d43, type: 2}
   unlockedFoods: []
   dailyFoods: []
 --- !u!1 &1725906072
