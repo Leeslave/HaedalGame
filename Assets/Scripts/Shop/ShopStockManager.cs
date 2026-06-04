@@ -7,8 +7,8 @@ public class ShopStockManager : MonoBehaviour
 {
     public static ShopStockManager Instance;
 
-    [SerializeField] private RecipeDatabaseSO _database;
-    [SerializeField] private Currency _gold;
+    [SerializeField] protected RecipeDatabaseSO _database;
+    [SerializeField] protected Currency _gold;
 
     [SerializeField] private int defaultQuantity;
 
@@ -17,7 +17,7 @@ public class ShopStockManager : MonoBehaviour
 
     public Dictionary<IslandType,List<StockData>> IslandStocks => _islandStocks;
 
-    private void Awake()
+    protected virtual void Awake()
     {
         if (Instance == null)
         {
@@ -25,12 +25,15 @@ public class ShopStockManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
         }
         else
+        {
             Destroy(gameObject);
+            return;
+        }
 
         InitStocks();
     }
 
-    public void InitStocks()
+    public virtual void InitStocks()
     {
        foreach(IslandType island in Enum.GetValues(typeof(IslandType)))
        {
@@ -58,7 +61,7 @@ public class ShopStockManager : MonoBehaviour
         return stock;
     }
 
-    public bool Purchase(int ingredientId, int quantity, int unitPrice)
+    public virtual bool Purchase(int ingredientId, int quantity, int unitPrice)
     {
         int totalCost = unitPrice * quantity;
 

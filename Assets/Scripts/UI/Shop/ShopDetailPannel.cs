@@ -4,38 +4,38 @@ using UnityEngine.UI;
 
 public class ShopDetailPannel : MonoBehaviour
 {
-    [SerializeField] private Image _iconImage;
-    [SerializeField] private TMP_Text _titleText;
-    [SerializeField] private TMP_Text _nameText;
-    [SerializeField] private TMP_Text _detialText;
-    [SerializeField] private TMP_Text _pricteText;
-    [SerializeField] private TMP_Text _discountPriceText;
-    [SerializeField] private TMP_Text _totalPriceText;
-    [SerializeField] private TMP_Text _stockText;
-    [SerializeField] private TMP_Text _countText;
+    [SerializeField] protected Image _iconImage;
+    [SerializeField] protected TMP_Text _titleText;
+    [SerializeField] protected TMP_Text _nameText;
+    [SerializeField] protected TMP_Text _detialText;
+    [SerializeField] protected TMP_Text _pricteText;
+    [SerializeField] protected TMP_Text _discountPriceText;
+    [SerializeField] protected TMP_Text _totalPriceText;
+    [SerializeField] protected TMP_Text _stockText;
+    [SerializeField] protected TMP_Text _countText;
 
 
-    [SerializeField] private GameObject _originalPriceSection;
-    [SerializeField] private GameObject _discountPriceSection;
-    [SerializeField] private GameObject _Xobejct;
+    [SerializeField] protected GameObject _originalPriceSection;
+    [SerializeField] protected GameObject _discountPriceSection;
+    [SerializeField] protected GameObject _Xobejct;
 
 
-    [SerializeField] private Button _minusButton;
-    [SerializeField] private Button _plusButton;
-    [SerializeField] private Button _maxButton;
-    [SerializeField] private Button _buyButton;
-    [SerializeField] private Button _cancelButton;
+    [SerializeField] protected Button _minusButton;
+    [SerializeField] protected Button _plusButton;
+    [SerializeField] protected Button _maxButton;
+    [SerializeField] protected Button _buyButton;
+    [SerializeField] protected Button _cancelButton;
 
-    [SerializeField] [Range(0f, 1f)] private float _discountRate = 0f;
+    [SerializeField] [Range(0f, 1f)] protected float _discountRate = 0f;
 
-    private StockData _currentStock;
-    private IngredientData _currentIngredient;
-    private int _currentBuyAmount;
-    private int _unitPrice;
+    protected StockData _currentStock;
+    protected IngredientData _currentIngredient;
+    protected int _currentBuyAmount;
+    protected int _unitPrice;
 
     public int CurrentBuyAmount => _currentBuyAmount;
 
-    public void Bind(RecipeDatabaseSO database, StockData stock)
+    public virtual void Bind(RecipeDatabaseSO database, StockData stock)
     {
         if (stock == null || database == null)
         {
@@ -90,7 +90,7 @@ public class ShopDetailPannel : MonoBehaviour
             gameObject.SetActive(false);
     }
 
-    private void RefreshBuyAmount()
+    protected virtual void RefreshBuyAmount()
     {
         _detialText.text = $"설명: 재헌입니다. 조재현아닙니다. 최재현도 아닙니다. 물론 정재현도 아닙니다. ";
         _totalPriceText.text = $"{_unitPrice * _currentBuyAmount}G";

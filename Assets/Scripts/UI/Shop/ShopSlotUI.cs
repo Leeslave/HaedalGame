@@ -6,17 +6,17 @@ using UnityEngine.UI;
 
 public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
 {
-    [SerializeField] private Image _iconImage;
-    [SerializeField] private TMP_Text _priceText;
-    [SerializeField] private GameObject _selectedObject;
-    [SerializeField] private GameObject _soldOutObject;
+    [SerializeField] protected Image _iconImage;
+    [SerializeField] protected TMP_Text _priceText;
+    [SerializeField] protected GameObject _selectedObject;
+    [SerializeField] protected GameObject _soldOutObject;
 
-    private StockData _stockData;
+    protected StockData _stockData;
 
-    private Action<StockData> _onClick;
+    protected Action<StockData> _onClick;
 
     public StockData StockData => _stockData;
-    public void Bind(RecipeDatabaseSO database, StockData stockData, Action<StockData> onClick, bool selected)
+    public virtual void Bind(RecipeDatabaseSO database, StockData stockData, Action<StockData> onClick, bool selected)
     {
         _stockData = stockData;
         _onClick = onClick;
@@ -39,7 +39,7 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
         gameObject.SetActive(true);
     }
 
-    public void SetEmpty()
+    public virtual void SetEmpty()
     {
         _stockData = null;
         _onClick = null;

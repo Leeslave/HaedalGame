@@ -3,21 +3,27 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-
 public class ShopUIController : MonoBehaviour
 {
-    [SerializeField] private RecipeDatabaseSO _database;
-    [SerializeField] private Transform _slotRoot;
+    [SerializeField]
+    protected RecipeDatabaseSO _database;
 
-    [SerializeField] private ShopSlotUI _slotPrefab;
-    [SerializeField] List<Button> _sortButtons;
-    [SerializeField] private ShopDetailPannel _detailPanel;
+    [SerializeField]
+    protected Transform _slotRoot;
 
-    private List<ShopSlotUI> _spawnedSlots = new List<ShopSlotUI>();
-    private IslandType _currentSortType = IslandType.All;
-    private StockData _selectedStock;
+    [SerializeField]
+    private ShopSlotUI _slotPrefab;
+
+    [SerializeField]
+    List<Button> _sortButtons;
+
+    [SerializeField]
+    private ShopDetailPannel _detailPanel;
+
+    protected List<ShopSlotUI> _spawnedSlots = new List<ShopSlotUI>();
+    protected IslandType _currentSortType = IslandType.All;
+    protected StockData _selectedStock;
     public StockData SelectedStock => _selectedStock;
-
 
     private void Awake()
     {
@@ -25,7 +31,7 @@ public class ShopUIController : MonoBehaviour
         RefreshList();
     }
 
-    private void OnEnable()
+    protected virtual void OnEnable()
     {
         if (_sortButtons != null)
         {
@@ -48,14 +54,16 @@ public class ShopUIController : MonoBehaviour
         RefreshList();
     }
 
-    public void RefreshList()
+    public virtual void RefreshList()
     {
         ClearSlots();
 
         if (ShopStockManager.Instance == null)
             return;
 
-        Dictionary<IslandType, List<StockData>> islandStocks = ShopStockManager.Instance.IslandStocks;
+        Dictionary<IslandType, List<StockData>> islandStocks = ShopStockManager
+            .Instance
+            .IslandStocks;
         if (islandStocks == null)
             return;
 
@@ -77,7 +85,10 @@ public class ShopUIController : MonoBehaviour
         }
         else
         {
-            if (islandStocks.TryGetValue(_currentSortType, out List<StockData> stocks) && stocks != null)
+            if (
+                islandStocks.TryGetValue(_currentSortType, out List<StockData> stocks)
+                && stocks != null
+            )
             {
                 for (int i = 0; i < stocks.Count; i++)
                 {
@@ -95,10 +106,14 @@ public class ShopUIController : MonoBehaviour
         {
             if (_spawnedSlots[i] == null)
                 continue;
-            if (_selectedStock != null && displayStocks[i].IngredientID == _selectedStock.IngredientID)
+            if (
+                _selectedStock != null
+                && displayStocks[i].IngredientID == _selectedStock.IngredientID
+            )
                 stillHasSelectedStock = true;
 
-            _spawnedSlots[i].Bind(_database,displayStocks[i], OnClickStock, IsSelected(displayStocks[i]));
+            _spawnedSlots[i]
+                .Bind(_database, displayStocks[i], OnClickStock, IsSelected(displayStocks[i]));
         }
 
         for (int i = displayStocks.Count; i < _spawnedSlots.Count; i++)
