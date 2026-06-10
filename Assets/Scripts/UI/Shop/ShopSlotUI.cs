@@ -24,17 +24,24 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
         
         if (_iconImage != null)
         {
-            _iconImage.sprite = ingredientData != null ? ingredientData.Icon : null;
+            _iconImage.sprite = ingredientData?.Icon;
             _iconImage.enabled = ingredientData != null && ingredientData.Icon != null;
         }
 
         if (_priceText != null)
-            _priceText.text = ingredientData.Price.ToString() + "G";
+            _priceText.text = ingredientData != null
+                ? ingredientData.Price.ToString() + "G"
+                : string.Empty;
 
         SetSelected(selected);
 
         if (_soldOutObject != null)
+        {
+            Debug.Log($"[ShopSlotUI] _soldOutObject.SetActive({stockData.IsSoldOut}) on {gameObject.name}");
             _soldOutObject.SetActive(stockData.IsSoldOut);
+        }
+        else
+            Debug.LogWarning($"[ShopSlotUI] _soldOutObject is NULL on {gameObject.name}");
 
         gameObject.SetActive(true);
     }

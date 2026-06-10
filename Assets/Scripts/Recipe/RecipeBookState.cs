@@ -4,8 +4,11 @@ using UnityEngine;
 
 public class RecipeBookState : MonoBehaviour
 {
-    [SerializeField] private RecipeDatabaseSO _database;
-    [SerializeField] private RecipeUnlockSaveService _saveService;
+    [SerializeField]
+    private RecipeDatabaseSO _database;
+
+    [SerializeField]
+    private RecipeUnlockSaveService _saveService;
 
     private readonly HashSet<int> _unlockedRecipeIds = new HashSet<int>();
     private readonly List<int> _unlockedRecipeIdsInOrder = new List<int>();
@@ -16,6 +19,7 @@ public class RecipeBookState : MonoBehaviour
     private void Awake()
     {
         Initialize();
+        Debug.Log(Application.persistentDataPath);
     }
 
     public void Initialize()
@@ -26,7 +30,11 @@ public class RecipeBookState : MonoBehaviour
 
         RecipeUnlockSaveData saveData = _saveService != null ? _saveService.Load() : null;
 
-        if (saveData != null && saveData.unlockedRecipeIdsInOrder != null && saveData.unlockedRecipeIdsInOrder.Count > 0)
+        if (
+            saveData != null
+            && saveData.unlockedRecipeIdsInOrder != null
+            && saveData.unlockedRecipeIdsInOrder.Count > 0
+        )
         {
             for (int i = 0; i < saveData.unlockedRecipeIdsInOrder.Count; i++)
             {
@@ -38,7 +46,6 @@ public class RecipeBookState : MonoBehaviour
                 AddUnlockedRecipeInternal(recipeId);
             }
 
-            // 새로 추가된 기본 해금 레시피가 있으면 뒤에 보강
             AddDefaultUnlockedRecipesIfMissing();
         }
         else
@@ -106,9 +113,7 @@ public class RecipeBookState : MonoBehaviour
 
     public int GetAcquireOrder(int recipeId)
     {
-        return _acquireOrderByRecipeId.TryGetValue(recipeId, out int order)
-            ? order
-            : int.MaxValue;
+        return _acquireOrderByRecipeId.TryGetValue(recipeId, out int order) ? order : int.MaxValue;
     }
 
     public List<RecipeData> GetUnlockedRecipes()
@@ -139,7 +144,7 @@ public class RecipeBookState : MonoBehaviour
         for (int i = 0; i < _database.Recipes.Count; i++)
         {
             RecipeData recipe = _database.Recipes[i];
-            
+
             foreach (var ingredient in recipe.Requirements)
             {
                 if (ingredient.IngredientId == ingredientId)
@@ -151,7 +156,6 @@ public class RecipeBookState : MonoBehaviour
 
         return result;
     }
-
 
     public void Save()
     {

@@ -120,7 +120,7 @@ MonoBehaviour:
       _ingredientName: "\uC0DD\uC120"
       _amount: 1
     _icon: {fileID: 21300000, guid: 805639cf91777d641aa923d58a27c0e6, type: 3}
-    _defaultUnlock: 0
+    _defaultUnlock: 1
     _price: 0
   - _recipeId: 2
     _recipeName: "\uC0C8\uC6B0\uD280\uAE40"
@@ -138,7 +138,7 @@ MonoBehaviour:
       _ingredientName: "\uC0C8\uC6B0"
       _amount: 1
     _icon: {fileID: 0}
-    _defaultUnlock: 0
+    _defaultUnlock: 1
     _price: 0
   - _recipeId: 3
     _recipeName: "\uBBF8\uC5ED\uBB34\uCE68"

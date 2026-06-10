@@ -7,8 +7,9 @@ using UnityEngine;
 public class ElfShopDetailPanel : ShopDetailPannel
 {
     private ElfShopStockData _elfStock;
+    private System.Action _onAfterPurchase;
 
-    public void Bind(RecipeDatabaseSO database, ElfShopStockData stock)
+    public void Bind(RecipeDatabaseSO database, ElfShopStockData stock, System.Action onAfterPurchase = null)
     {
         if (stock == null || database == null)
         {
@@ -17,13 +18,14 @@ public class ElfShopDetailPanel : ShopDetailPannel
         }
 
         _elfStock = stock;
+        _onAfterPurchase = onAfterPurchase;
 
         if (stock.ItemType == ElfShopItemType.Ingredient)
         {
-            // 할인율을 엘프 고정값으로 설정 후 부모 Bind 활용
-            // _discountRate을 적용하면 부모가 unitPrice = basePrice * (1 - 0.2) 로 계산
             _discountRate = 1f - ElfShopManager.ELF_PRICE_MULTIPLIER;
             base.Bind(database, stock);
+            _buyButton.onClick.RemoveAllListeners();
+            _buyButton.onClick.AddListener(OnBuyIngredient);
         }
         else
         {
@@ -84,13 +86,30 @@ public class ElfShopDetailPanel : ShopDetailPannel
         base.RefreshBuyAmount();
     }
 
+    private void OnBuyIngredient()
+    {
+        if (ElfShopManager.Instance == null || _elfStock == null) return;
+
+        bool success = ElfShopManager.Instance.PurchaseFromElf(_elfStock, _currentBuyAmount);
+        if (success)
+        {
+            _onAfterPurchase?.Invoke();
+            gameObject.SetActive(false);
+        }
+        else
+            Debug.Log("[ElfShop] 구매 실패: 골드 부족 또는 재고 없음");
+    }
+
     private void OnBuyRecipe()
     {
         if (ElfShopManager.Instance == null || _elfStock == null) return;
 
         bool success = ElfShopManager.Instance.PurchaseFromElf(_elfStock, 1);
         if (success)
+        {
+            _onAfterPurchase?.Invoke();
             gameObject.SetActive(false);
+        }
         else
             Debug.Log("[ElfShop] 구매 실패: 골드 부족 또는 품절");
     }

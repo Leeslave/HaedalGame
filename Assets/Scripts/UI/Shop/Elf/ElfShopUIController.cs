@@ -33,32 +33,37 @@ public class ElfShopUIController : ShopUIController
 
     private List<ElfShopSlotUI> _elfSlots = new List<ElfShopSlotUI>();
     private ElfShopStockData _selectedElfStock;
-    private bool _started = false;
 
-    // OnEnable은 Awake 이전에도 호출될 수 있으므로 최초 초기화는 Start에서 처리
+    public override void RefreshList()
+    {
+        // 엘프 상점은 IslandStocks를 사용하지 않으므로 부모의 RefreshList를 차단
+    }
+
+    private void Awake()
+    {
+        // ShopUIController.Awake(private)를 차단하고,
+        // 씬에 미리 배치된 ElfShopSlotUI를 _elfSlots에 등록
+        if (_slotRoot != null)
+        {
+            foreach (ElfShopSlotUI slot in _slotRoot.GetComponentsInChildren<ElfShopSlotUI>(true))
+                _elfSlots.Add(slot);
+        }
+    }
+
     protected override void OnEnable()
     {
-        if (!_started)
-            return;
-
-        if (ElfShopManager.Instance != null)
-        {
-            ElfShopManager.Instance.OnElfShopRefreshed += RefreshElfShop;
-            RefreshElfShop();
-        }
+        RefreshElfShop();
     }
 
     private void Start()
     {
-        _started = true;
         if (ElfShopManager.Instance != null)
-        {
             ElfShopManager.Instance.OnElfShopRefreshed += RefreshElfShop;
-            RefreshElfShop();
-        }
+
+        RefreshElfShop();
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         if (ElfShopManager.Instance != null)
             ElfShopManager.Instance.OnElfShopRefreshed -= RefreshElfShop;
@@ -173,7 +178,7 @@ public class ElfShopUIController : ShopUIController
         if (_selectedElfStock == null)
             _elfDetailPanel.gameObject.SetActive(false);
         else
-            _elfDetailPanel.Bind(_database, _selectedElfStock);
+            _elfDetailPanel.Bind(_database, _selectedElfStock, RefreshElfShop);
     }
 
     private void RefreshElfSelectionVisuals()
