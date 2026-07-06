@@ -44,6 +44,11 @@ public static class RecipeCsvMapper
             float cookTime = row.GetFloat("menu_t");
             string rawRecipeText = row.Get("recipe");
 
+            List<RecipeCategory> categories = BuildCategories(row);
+
+            string grade = row.Get("grade");
+            string description = row.Get("description");
+
             List<RecipeIngredientRequirement> requirements = BuildRequirements(
                 row,
                 rawRecipeText,
@@ -67,8 +72,33 @@ public static class RecipeCsvMapper
                 cookTime,
                 rawRecipeText,
                 requirements,
-                icon);
+                icon,
+                categories,
+                grade,
+                description);
         });
+    }
+
+    private static List<RecipeCategory> BuildCategories(CsvRow row)
+    {
+        List<RecipeCategory> result = new List<RecipeCategory>();
+
+        IReadOnlyList<string> tokens = row.GetTokens("category", '|', ',', ' ', ';');
+
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            if (System.Enum.TryParse(tokens[i], true, out RecipeCategory category))
+            {
+                if (!result.Contains(category))
+                    result.Add(category);
+            }
+            else
+            {
+                Debug.LogWarning($"Unknown recipe category token: '{tokens[i]}' / Row:{row.RowNumber}");
+            }
+        }
+
+        return result;
     }
 
     public static Dictionary<int, IngredientData> BuildIngredientMapByRecipeCode(List<IngredientData> ingredients)
@@ -124,7 +154,7 @@ public static class RecipeCsvMapper
             if (!ingredientByRecipeCode.TryGetValue(recipeCode, out IngredientData ingredient))
             {
                 Debug.LogWarning(
-                    $"Recipe Parse Warning - ingredient.csv ¿¡ rec_n={recipeCode} °¡ ¾øÀ½ / Row:{row.RowNumber} / Recipe:{recipeName}({recipeId})");
+                    $"Recipe Parse Warning - ingredient.csv ï¿½ï¿½ rec_n={recipeCode} ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ / Row:{row.RowNumber} / Recipe:{recipeName}({recipeId})");
                 continue;
             }
 

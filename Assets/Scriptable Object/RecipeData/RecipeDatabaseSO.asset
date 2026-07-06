@@ -16,93 +16,108 @@ MonoBehaviour:
   - _ingredientId: 1
     _ingredientName: "\uBBF8\uC5ED"
     _recipeCode: 1001
-    _price: 100
-    _belongIsland: 1
+    _price: 0
+    _belongIsland: 0
     _icon: {fileID: 21300000, guid: d698aacb0604a7a4db02725a8b9a2e69, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 2
     _ingredientName: "\uCD08\uC7A5"
     _recipeCode: 1002
-    _price: 100
-    _belongIsland: 1
+    _price: 0
+    _belongIsland: 0
     _icon: {fileID: 6937817954938267909, guid: d996659f638553847a8afb4628b93b9e, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 3
     _ingredientName: "\uC300"
     _recipeCode: 1003
-    _price: 100
-    _belongIsland: 2
+    _price: 0
+    _belongIsland: 0
     _icon: {fileID: -6470460504253458178, guid: 8a52579509c40ac498ff28c2fe6d4f43, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 4
     _ingredientName: "\uC0DD\uC120"
     _recipeCode: 1004
-    _price: 100
-    _belongIsland: 2
+    _price: 0
+    _belongIsland: 0
     _icon: {fileID: -4178046375966092550, guid: 390d42b3b0d202b468f70f8cffe38cb7, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 5
     _ingredientName: "\uC0C8\uC6B0"
     _recipeCode: 1005
     _price: 0
-    _belongIsland: 3
+    _belongIsland: 0
     _icon: {fileID: 4130640169021434097, guid: dbaca64ae47d17b4380cfa3e3b4a93af, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 6
     _ingredientName: "\uC870\uAC1C"
     _recipeCode: 1006
     _price: 0
-    _belongIsland: 3
+    _belongIsland: 0
     _icon: {fileID: 3465286685962602723, guid: 145655dfa7ff9a740b6b3a94189784f1, type: 3}
+    _defaultUnlock: 0
   - _ingredientId: 7
     _ingredientName: "\uC804\uBCF5"
     _recipeCode: 1007
     _price: 0
-    _belongIsland: 1
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 8
     _ingredientName: "\uC624\uC774"
     _recipeCode: 1008
     _price: 0
-    _belongIsland: 2
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 9
     _ingredientName: "\uBB38\uC5B4"
     _recipeCode: 1009
     _price: 0
-    _belongIsland: 3
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 10
     _ingredientName: "\uBC00"
     _recipeCode: 1010
     _price: 0
-    _belongIsland: 1
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 11
     _ingredientName: "\uB300\uD30C"
     _recipeCode: 1011
     _price: 0
-    _belongIsland: 2
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 12
     _ingredientName: "\uB2F9\uADFC"
     _recipeCode: 1012
     _price: 0
-    _belongIsland: 3
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 13
     _ingredientName: "\uC18C\uAE08"
     _recipeCode: 1013
     _price: 0
-    _belongIsland: 1
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 14
     _ingredientName: "\uB2EC\uAC40"
     _recipeCode: 1014
     _price: 0
-    _belongIsland: 2
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   - _ingredientId: 15
     _ingredientName: "\uAC04\uC7A5"
     _recipeCode: 1015
     _price: 0
-    _belongIsland: 3
+    _belongIsland: 0
     _icon: {fileID: 0}
+    _defaultUnlock: 0
   _recipes:
   - _recipeId: 1
     _recipeName: "\uCD08\uBC25"
@@ -120,8 +135,12 @@ MonoBehaviour:
       _ingredientName: "\uC0DD\uC120"
       _amount: 1
     _icon: {fileID: 21300000, guid: 805639cf91777d641aa923d58a27c0e6, type: 3}
-    _defaultUnlock: 1
+    _defaultUnlock: 0
     _price: 0
+    _categories: 0200000006000000
+    _grade: A
+    _description: "\uC2E0\uC120\uD55C \uC0DD\uC120\uC744 \uC5B9\uC740 \uAE30\uBCF8
+      \uCD08\uBC25"
   - _recipeId: 2
     _recipeName: "\uC0C8\uC6B0\uD280\uAE40"
     _unlockType: 101
@@ -137,9 +156,12 @@ MonoBehaviour:
       _recipeCode: 1005
       _ingredientName: "\uC0C8\uC6B0"
       _amount: 1
-    _icon: {fileID: 0}
-    _defaultUnlock: 1
+    _icon: {fileID: 6937817954938267909, guid: c7b67b4a03c7b574388d6455e3767c30, type: 3}
+    _defaultUnlock: 0
     _price: 0
+    _categories: 02000000
+    _grade: B
+    _description: "\uBC14\uC0AD\uD558\uAC8C \uD280\uAE34 \uC0C8\uC6B0 \uC694\uB9AC"
   - _recipeId: 3
     _recipeName: "\uBBF8\uC5ED\uBB34\uCE68"
     _unlockType: 101
@@ -155,9 +177,12 @@ MonoBehaviour:
       _recipeCode: 1002
       _ingredientName: "\uCD08\uC7A5"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: -6470460504253458178, guid: bf69fdc60dd7887418996d20806847dc, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 01000000
+    _grade: C
+    _description: "\uC0C8\uCF64\uD558\uAC8C \uBB34\uCE5C \uBBF8\uC5ED \uBC18\uCC2C"
   - _recipeId: 4
     _recipeName: "\uBBF8\uC5ED\uAD6D"
     _unlockType: 101
@@ -177,9 +202,12 @@ MonoBehaviour:
       _recipeCode: 1015
       _ingredientName: "\uAC04\uC7A5"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: -4178046375966092550, guid: d31ecd1b4b603ee43980b26f9864ecb7, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 01000000
+    _grade: B
+    _description: "\uBAB8\uC744 \uB370\uC6CC\uC8FC\uB294 \uB530\uB73B\uD55C \uBBF8\uC5ED\uAD6D"
   - _recipeId: 5
     _recipeName: "\uC804\uBCF5 \uC8FD"
     _unlockType: 102
@@ -199,9 +227,12 @@ MonoBehaviour:
       _recipeCode: 1013
       _ingredientName: "\uC18C\uAE08"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: 4130640169021434097, guid: b3cc11451baec014985317ca3f8f4016, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 0300000006000000
+    _grade: S
+    _description: "\uC804\uBCF5\uC744 \uB123\uC5B4 \uB053\uC778 \uBCF4\uC591 \uC8FD"
   - _recipeId: 6
     _recipeName: "\uD68C\uB36E\uBC25"
     _unlockType: 103
@@ -225,9 +256,12 @@ MonoBehaviour:
       _recipeCode: 1004
       _ingredientName: "\uC0DD\uC120"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: 3465286685962602723, guid: a861906349a29c341a089c67c9b7b07a, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 0200000006000000
+    _grade: A
+    _description: "\uC2F1\uC2F1\uD55C \uD68C\uB97C \uC62C\uB9B0 \uB36E\uBC25"
   - _recipeId: 7
     _recipeName: "\uC0DD\uC120\uAD6C\uC774"
     _unlockType: 101
@@ -243,9 +277,12 @@ MonoBehaviour:
       _recipeCode: 1013
       _ingredientName: "\uC18C\uAE08"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: 7028616704906629411, guid: 75c62188d1df45d458230a066eb11141, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 02000000
+    _grade: C
+    _description: "\uB178\uB987\uD558\uAC8C \uAD6C\uC6B4 \uC0DD\uC120\uAD6C\uC774"
   - _recipeId: 8
     _recipeName: "\uD0C0\uCF54\uC57C\uB07C"
     _unlockType: 101
@@ -265,9 +302,12 @@ MonoBehaviour:
       _recipeCode: 1014
       _ingredientName: "\uB2EC\uAC40"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: 8288426215254106694, guid: 26ad4e74529b1f746ada0796aca60e32, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 02000000
+    _grade: B
+    _description: "\uBB38\uC5B4\uAC00 \uB4E4\uC5B4\uAC04 \uC778\uAE30 \uAC04\uC2DD"
   - _recipeId: 9
     _recipeName: "\uC804\uBCF5\uCC1C"
     _unlockType: 102
@@ -287,9 +327,12 @@ MonoBehaviour:
       _recipeCode: 1015
       _ingredientName: "\uAC04\uC7A5"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: 4113829005332862926, guid: 36d17c823b564f14fa96690bd3b05720, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 03000000
+    _grade: S
+    _description: "\uBD80\uB4DC\uB7FD\uAC8C \uCA84\uB0B8 \uACE0\uAE09 \uC804\uBCF5\uCC1C"
   - _recipeId: 10
     _recipeName: "\uC57C\uCC44\uAF2C\uCE58"
     _unlockType: 101
@@ -309,6 +352,9 @@ MonoBehaviour:
       _recipeCode: 1012
       _ingredientName: "\uB2F9\uADFC"
       _amount: 1
-    _icon: {fileID: 0}
+    _icon: {fileID: -5099292496197868168, guid: 1a9de3cc2ac00854899ef50444a0073c, type: 3}
     _defaultUnlock: 0
     _price: 0
+    _categories: 04000000
+    _grade: C
+    _description: "\uC5EC\uB7EC \uC57C\uCC44\uB97C \uAFF4 \uB2F4\uBC31\uD55C \uAF2C\uCE58"

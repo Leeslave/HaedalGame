@@ -31,9 +31,6 @@ public class ElfShopUIController : ShopUIController
     [SerializeField]
     private Color _yellowElfColor = Color.yellow;
 
-    [SerializeField]
-    private RecipeBookState _recipeBookState;
-
     private List<ElfShopSlotUI> _elfSlots = new List<ElfShopSlotUI>();
     private ElfShopStockData _selectedElfStock;
 

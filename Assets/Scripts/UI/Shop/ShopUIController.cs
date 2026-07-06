@@ -21,7 +21,7 @@ public class ShopUIController : MonoBehaviour
     private ShopDetailPannel _detailPanel;
 
     [SerializeField]
-    private RecipeBookState _recipeBookState;
+    protected RecipeBookState _recipeBookState;
 
     protected List<ShopSlotUI> _spawnedSlots = new List<ShopSlotUI>();
     protected IslandType _currentSortType = IslandType.All;

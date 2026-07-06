@@ -3,6 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
+public enum RecipeCategory
+{
+    All,
+    Seaweed,
+    Seafood,
+    PremiumSeafood,
+    Mushroom,
+    Fruit,
+    Grain,
+    Dairy
+}
+
+[Serializable]
 public class RecipeData
 {
     [SerializeField] private int _recipeId;
@@ -17,7 +30,10 @@ public class RecipeData
     [SerializeField] private bool _defaultUnlock;
     [SerializeField] private float _price;
 
+    [SerializeField] private List<RecipeCategory>_categories;
 
+    [SerializeField] private string _grade;
+    [SerializeField] private string _description;
     public int RecipeId => _recipeId;
     public string RecipeName => _recipeName;
     public int UnlockType => _unlockType;
@@ -29,7 +45,9 @@ public class RecipeData
     public bool DefaultUnlock => _defaultUnlock;
 
     public float Price => _price;
-
+    public List<RecipeCategory>Categories => _categories;
+    public string Grade => _grade;
+    public string Description => _description;
     public RecipeData(
         int recipeId,
         string recipeName,
@@ -38,7 +56,10 @@ public class RecipeData
         float cookTime,
         string rawRecipeText,
         List<RecipeIngredientRequirement> requirements,
-        Sprite icon)
+        Sprite icon,
+        List<RecipeCategory> categories = null,
+        string grade = null,
+        string description = null)
     {
         _recipeId = recipeId;
         _recipeName = recipeName;
@@ -48,5 +69,8 @@ public class RecipeData
         _rawRecipeText = rawRecipeText;
         _requirements = requirements ?? new List<RecipeIngredientRequirement>();
         _icon = icon;
+        _categories = categories ?? new List<RecipeCategory>();
+        _grade = grade ?? string.Empty;
+        _description = description ?? string.Empty;
     }
 }

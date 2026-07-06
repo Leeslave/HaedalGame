@@ -149,6 +149,7 @@ GameObject:
   - component: {fileID: 7054660166256623607}
   - component: {fileID: 3259322471003836182}
   - component: {fileID: 1485864488667226562}
+  - component: {fileID: 1551959246116650598}
   m_Layer: 5
   m_Name: CategoryButton
   m_TagString: Untagged
@@ -258,3 +259,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1551959246116650598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8889834533466688275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e347541ee2ac5440861ebdf804ba597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RecipeCategoryTabUI
+  _category: 0
+  _selectedObject: {fileID: 6230665002438189838}
+  _selectedColor:
+    serializedVersion: 2
+    rgba: 4294130247
+  _unSelectedColor:
+    serializedVersion: 2
+    rgba: 4278190080
