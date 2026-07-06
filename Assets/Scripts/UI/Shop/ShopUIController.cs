@@ -20,6 +20,9 @@ public class ShopUIController : MonoBehaviour
     [SerializeField]
     private ShopDetailPannel _detailPanel;
 
+    [SerializeField]
+    private RecipeBookState _recipeBookState;
+
     protected List<ShopSlotUI> _spawnedSlots = new List<ShopSlotUI>();
     protected IslandType _currentSortType = IslandType.All;
     protected StockData _selectedStock;
@@ -44,6 +47,9 @@ public class ShopUIController : MonoBehaviour
 
         if (IngredientInventoryService.Instance != null)
             IngredientInventoryService.Instance.OnChanged += RefreshList;
+
+        if (_recipeBookState != null)
+            _recipeBookState.OnChanged += RefreshList;
 
         RefreshList();
     }
@@ -98,6 +104,14 @@ public class ShopUIController : MonoBehaviour
             }
         }
 
+        // 레시피 재고는 항상 목록에 포함
+        if (ShopStockManager.Instance != null)
+        {
+            List<StockData> recipeStocks = ShopStockManager.Instance.RecipeStocks;
+            if (recipeStocks != null)
+                displayStocks.AddRange(recipeStocks);
+        }
+
         EnsureSlotCount(displayStocks.Count);
 
         bool stillHasSelectedStock = false;
@@ -112,8 +126,12 @@ public class ShopUIController : MonoBehaviour
             )
                 stillHasSelectedStock = true;
 
+            bool isUnlocked = displayStocks[i].IsRecipe
+                && _recipeBookState != null
+                && _recipeBookState.IsUnlocked(displayStocks[i].IngredientID);
+
             _spawnedSlots[i]
-                .Bind(_database, displayStocks[i], OnClickStock, IsSelected(displayStocks[i]));
+                .Bind(_database, displayStocks[i], OnClickStock, IsSelected(displayStocks[i]), isUnlocked);
         }
 
         for (int i = displayStocks.Count; i < _spawnedSlots.Count; i++)

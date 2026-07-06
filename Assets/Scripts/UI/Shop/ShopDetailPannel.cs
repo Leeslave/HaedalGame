@@ -43,6 +43,12 @@ public class ShopDetailPannel : MonoBehaviour
             return;
         }
 
+        if (stock.IsRecipe)
+        {
+            BindRecipe(database, stock);
+            return;
+        }
+
         if (!database.TryGetIngredientById(stock.IngredientID, out _currentIngredient))
         {
             gameObject.SetActive(false);
@@ -84,6 +90,42 @@ public class ShopDetailPannel : MonoBehaviour
         RefreshBuyAmount();
     }
 
+    private void BindRecipe(RecipeDatabaseSO database, StockData stock)
+    {
+        if (!database.TryGetRecipe(stock.IngredientID, out RecipeData recipe))
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        _currentStock     = stock;
+        _currentBuyAmount = 1;
+        _unitPrice        = (int)recipe.Price;
+
+        if (_iconImage != null) _iconImage.sprite = recipe.Icon;
+        if (_titleText != null) _titleText.text   = $"레시피 : {recipe.RecipeName}";
+        if (_nameText  != null) _nameText.text    = recipe.RecipeName;
+        if (_pricteText != null) _pricteText.text = $"{_unitPrice}G";
+        if (_Xobejct != null) _Xobejct.SetActive(false);
+        if (_discountPriceSection != null) _discountPriceSection.SetActive(false);
+
+        _minusButton.interactable = false;
+        _plusButton.interactable  = false;
+        _maxButton.interactable   = false;
+
+        _minusButton.onClick.RemoveAllListeners();
+        _plusButton.onClick.RemoveAllListeners();
+        _maxButton.onClick.RemoveAllListeners();
+        _buyButton.onClick.RemoveAllListeners();
+        _cancelButton.onClick.RemoveAllListeners();
+
+        _buyButton.onClick.AddListener(OnClickBuy);
+        _cancelButton.onClick.AddListener(OnClickCancel);
+
+        RefreshBuyAmount();
+        gameObject.SetActive(true);
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -92,6 +134,14 @@ public class ShopDetailPannel : MonoBehaviour
 
     protected virtual void RefreshBuyAmount()
     {
+        if (_currentStock != null && _currentStock.IsRecipe)
+        {
+            if (_totalPriceText != null) _totalPriceText.text = $"{_unitPrice}G";
+            if (_stockText != null) _stockText.text = _currentStock.IsSoldOut ? "품절" : "구매 가능 (1개 한정)";
+            if (_countText != null) _countText.text = "1";
+            return;
+        }
+
         _detialText.text = $"설명: 재헌입니다. 조재현아닙니다. 최재현도 아닙니다. 물론 정재현도 아닙니다. ";
         _totalPriceText.text = $"{_unitPrice * _currentBuyAmount}G";
         _stockText.text = $"구매 수량: {_currentBuyAmount} (재고 {_currentStock.CurrentStock}개 남음)";

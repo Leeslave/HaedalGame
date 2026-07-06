@@ -127,16 +127,16 @@ public class ElfShopManager : MonoBehaviour
                 : 1;
         int slotCount = GetSlotCount(level);
 
-        List<int> pool = GetItemPool(_currentElfType);
+        IReadOnlyList<ElfShopItemEntry> pool = GetItemPool(_currentElfType);
         if (pool == null || pool.Count == 0)
             return;
 
-        List<int> shuffled = pool.OrderBy(_ => UnityEngine.Random.value).ToList();
+        List<ElfShopItemEntry> shuffled = pool.OrderBy(_ => UnityEngine.Random.value).ToList();
         int count = Mathf.Min(slotCount, shuffled.Count);
 
         for (int i = 0; i < count; i++)
         {
-            ElfShopStockData stock = CreateStock(_currentElfType, shuffled[i]);
+            ElfShopStockData stock = CreateStock(shuffled[i]);
             if (stock != null)
                 _elfStocks.Add(stock);
         }
@@ -149,29 +149,18 @@ public class ElfShopManager : MonoBehaviour
         return 4;
     }
 
-    private List<int> GetItemPool(ElfType elfType)
+    private IReadOnlyList<ElfShopItemEntry> GetItemPool(ElfType elfType)
     {
         if (_elfConfig == null)
-            return new List<int>();
+            return new List<ElfShopItemEntry>();
 
-        return elfType switch
-        {
-            ElfType.Red => _elfConfig.RedElfIngredientIds.ToList(),
-            ElfType.Blue => _elfConfig.BlueElfRecipeIds.ToList(),
-            ElfType.Yellow => _elfConfig.YellowElfIngredientIds.ToList(),
-            _ => new List<int>(),
-        };
+        return _elfConfig.GetItems(elfType);
     }
 
-    private ElfShopStockData CreateStock(ElfType elfType, int itemId)
+    private ElfShopStockData CreateStock(ElfShopItemEntry entry)
     {
-        return elfType switch
-        {
-            ElfType.Red => new ElfShopStockData(ElfShopItemType.Ingredient, itemId, 50),
-            ElfType.Blue => new ElfShopStockData(ElfShopItemType.Recipe, itemId, 1),
-            ElfType.Yellow => new ElfShopStockData(ElfShopItemType.Ingredient, itemId, 10),
-            _ => null,
-        };
+        int maxQty = entry.ItemType == ElfShopItemType.Recipe ? 1 : 50;
+        return new ElfShopStockData(entry.ItemType, entry.ItemId, maxQty);
     }
 
     // ───── 구매 ─────
@@ -345,8 +334,16 @@ public class ElfShopManager : MonoBehaviour
         if (_elfConfig == null)
             return;
 
-        List<int> validPool = GetItemPool(_currentElfType);
-        _elfStocks.RemoveAll(stock => !validPool.Contains(stock.IngredientID));
+        IReadOnlyList<ElfShopItemEntry> validPool = GetItemPool(_currentElfType);
+        _elfStocks.RemoveAll(stock =>
+        {
+            for (int i = 0; i < validPool.Count; i++)
+            {
+                if (validPool[i].ItemId == stock.IngredientID && validPool[i].ItemType == stock.ItemType)
+                    return false;
+            }
+            return true;
+        });
     }
 
     private void SaveElfState()

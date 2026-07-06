@@ -10,28 +10,50 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
     [SerializeField] protected TMP_Text _priceText;
     [SerializeField] protected GameObject _selectedObject;
     [SerializeField] protected GameObject _soldOutObject;
+    [SerializeField] protected GameObject _unlockedObject;
 
     protected StockData _stockData;
+    protected bool _isUnlocked;
 
     protected Action<StockData> _onClick;
 
     public StockData StockData => _stockData;
-    public virtual void Bind(RecipeDatabaseSO database, StockData stockData, Action<StockData> onClick, bool selected)
+    public virtual void Bind(RecipeDatabaseSO database, StockData stockData, Action<StockData> onClick, bool selected, bool isUnlocked = false)
     {
         _stockData = stockData;
         _onClick = onClick;
-        database.TryGetIngredientById(stockData.IngredientID, out IngredientData ingredientData);
-        
-        if (_iconImage != null)
-        {
-            _iconImage.sprite = ingredientData?.Icon;
-            _iconImage.enabled = ingredientData != null && ingredientData.Icon != null;
-        }
+        _isUnlocked = isUnlocked;
 
-        if (_priceText != null)
-            _priceText.text = ingredientData != null
-                ? ingredientData.Price.ToString() + "G"
-                : string.Empty;
+        if (stockData.IsRecipe)
+        {
+            database.TryGetRecipe(stockData.IngredientID, out RecipeData recipeData);
+
+            if (_iconImage != null)
+            {
+                _iconImage.sprite = recipeData?.Icon;
+                _iconImage.enabled = recipeData?.Icon != null;
+            }
+
+            if (_priceText != null)
+                _priceText.text = recipeData != null
+                    ? ((int)recipeData.Price).ToString() + "G"
+                    : string.Empty;
+        }
+        else
+        {
+            database.TryGetIngredientById(stockData.IngredientID, out IngredientData ingredientData);
+
+            if (_iconImage != null)
+            {
+                _iconImage.sprite = ingredientData?.Icon;
+                _iconImage.enabled = ingredientData != null && ingredientData.Icon != null;
+            }
+
+            if (_priceText != null)
+                _priceText.text = ingredientData != null
+                    ? ingredientData.Price.ToString() + "G"
+                    : string.Empty;
+        }
 
         SetSelected(selected);
 
@@ -43,6 +65,9 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
         else
             Debug.LogWarning($"[ShopSlotUI] _soldOutObject is NULL on {gameObject.name}");
 
+        if (_unlockedObject != null)
+            _unlockedObject.SetActive(_isUnlocked);
+
         gameObject.SetActive(true);
     }
 
@@ -50,6 +75,7 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
     {
         _stockData = null;
         _onClick = null;
+        _isUnlocked = false;
 
         if (_iconImage != null)
         {
@@ -63,6 +89,9 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
         if (_soldOutObject != null)
             _soldOutObject.SetActive(false);
 
+        if (_unlockedObject != null)
+            _unlockedObject.SetActive(false);
+
         SetSelected(false);
     }
 
@@ -74,7 +103,7 @@ public class ShopSlotUI : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (_stockData == null || _stockData.IsSoldOut)
+        if (_stockData == null || _stockData.IsSoldOut || _isUnlocked)
             return;
 
         _onClick?.Invoke(_stockData);

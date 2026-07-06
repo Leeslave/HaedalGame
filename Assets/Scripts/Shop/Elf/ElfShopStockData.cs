@@ -8,7 +8,7 @@ public class ElfShopStockData : StockData
     public ElfShopItemType ItemType;
 
     public ElfShopStockData(ElfShopItemType itemType, int itemId, int maxQty)
-        : base(itemId, maxQty, maxQty, 0)
+        : base(itemId, maxQty, maxQty, 0, isRecipe: itemType == ElfShopItemType.Recipe)
     {
         ItemType = itemType;
     }

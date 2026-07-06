@@ -9,13 +9,17 @@ public class ShopStockManager : MonoBehaviour
 
     [SerializeField] protected RecipeDatabaseSO _database;
     [SerializeField] protected Currency _gold;
+    [SerializeField] private RecipeBookState _recipeBookState;
+    [SerializeField] private ShopConfigSO _shopConfig;
 
     [SerializeField] private int defaultQuantity;
 
 
     private Dictionary<IslandType, List<StockData>> _islandStocks = new Dictionary<IslandType, List<StockData>>();
+    private List<StockData> _recipeStocks = new List<StockData>();
 
     public Dictionary<IslandType,List<StockData>> IslandStocks => _islandStocks;
+    public List<StockData> RecipeStocks => _recipeStocks;
 
     protected virtual void Awake()
     {
@@ -39,7 +43,7 @@ public class ShopStockManager : MonoBehaviour
        {
             if (island == IslandType.All) continue;
 
-            List<IngredientData> ingredients = _database.GetIngredientsByIslandType(island);      
+            List<IngredientData> ingredients = _database.GetIngredientsByIslandType(island);
             List<StockData> stocks = new List<StockData>();
             foreach(var ingredient in ingredients)
             {
@@ -50,7 +54,18 @@ public class ShopStockManager : MonoBehaviour
             }
 
             if (stocks.Count > 0)
-            _islandStocks.Add(island, stocks);   
+            _islandStocks.Add(island, stocks);
+       }
+
+       // 레시피 재고 초기화 (ShopConfig에 등록된 레시피만)
+       _recipeStocks.Clear();
+       if (_database != null && _shopConfig != null)
+       {
+           foreach (int recipeId in _shopConfig.ShopRecipeIds)
+           {
+               if (!_database.TryGetRecipe(recipeId, out _)) continue;
+               _recipeStocks.Add(new StockData(recipeId, 1, 1, 0, isRecipe: true));
+           }
        }
     }
 
@@ -82,6 +97,18 @@ public class ShopStockManager : MonoBehaviour
             if (target != null) break;
         }
 
+        if (target == null)
+        {
+            foreach (StockData s in _recipeStocks)
+            {
+                if (s.IngredientID == ingredientId)
+                {
+                    target = s;
+                    break;
+                }
+            }
+        }
+
         if (target == null || target.CurrentStock < quantity)
             return false;
 
@@ -90,7 +117,17 @@ public class ShopStockManager : MonoBehaviour
         CurrencyManager.Instance.ProcessTransaction(
             new CurrencyTransaction(_gold, -totalCost, TransactionSource.ShopPurchase));
 
-        IngredientInventoryService.Instance.Add(ingredientId, quantity, "Shop");
+        if (target.IsRecipe)
+        {
+            RecipeBookState recipeBook = _recipeBookState != null
+                ? _recipeBookState
+                : FindFirstObjectByType<RecipeBookState>();
+            recipeBook?.UnlockRecipe(ingredientId);
+        }
+        else
+        {
+            IngredientInventoryService.Instance.Add(ingredientId, quantity, "Shop");
+        }
 
         return true;
     }

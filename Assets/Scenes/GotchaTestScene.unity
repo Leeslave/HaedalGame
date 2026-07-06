@@ -3143,7 +3143,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: "\uC5D8\uD504\uC0C1\uC810 \uB9AC\uB864\uBC84\uD2BC"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3258225c41474634ea41c77d1f306195, type: 2}
   m_sharedMaterial: {fileID: 7290943592532776341, guid: 3258225c41474634ea41c77d1f306195, type: 2}
@@ -3170,8 +3170,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -9491,6 +9491,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShopStockManager
   _database: {fileID: 11400000, guid: 9d0d1fac30b25824b8ebec2ac5080d43, type: 2}
   _gold: {fileID: 11400000, guid: 762340d2ff562f1419503c14bb4fd85f, type: 2}
+  _recipeBookState: {fileID: 1732299753}
+  _shopConfig: {fileID: 0}
   defaultQuantity: 10
 --- !u!4 &595670147
 Transform:
@@ -10407,6 +10409,7 @@ MonoBehaviour:
   - {fileID: 807954653}
   - {fileID: 1083571402}
   _detailPanel: {fileID: 1793178911}
+  _recipeBookState: {fileID: 1732299753}
   _elfSlotPrefab: {fileID: 5695244062845369629}
   _elfDetailPanel: {fileID: 1793178911}
   _elfColorIndicator: {fileID: 0}
@@ -10414,6 +10417,7 @@ MonoBehaviour:
   _redElfColor: {r: 1, g: 0, b: 0, a: 1}
   _blueElfColor: {r: 0, g: 0, b: 1, a: 1}
   _yellowElfColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _recipeBookState: {fileID: 0}
 --- !u!114 &687300860
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12600,6 +12604,7 @@ MonoBehaviour:
   - {fileID: 1139814132}
   - {fileID: 1344414515}
   _detailPanel: {fileID: 2033618261}
+  _recipeBookState: {fileID: 1732299753}
 --- !u!1001 &862141218
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -24338,7 +24343,7 @@ GameObject:
   - component: {fileID: 1750042649}
   - component: {fileID: 1750042648}
   m_Layer: 5
-  m_Name: elfshop button
+  m_Name: ElfShopTestButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

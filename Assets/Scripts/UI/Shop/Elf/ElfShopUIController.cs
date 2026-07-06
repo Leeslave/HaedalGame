@@ -31,6 +31,9 @@ public class ElfShopUIController : ShopUIController
     [SerializeField]
     private Color _yellowElfColor = Color.yellow;
 
+    [SerializeField]
+    private RecipeBookState _recipeBookState;
+
     private List<ElfShopSlotUI> _elfSlots = new List<ElfShopSlotUI>();
     private ElfShopStockData _selectedElfStock;
 
@@ -129,7 +132,11 @@ public class ElfShopUIController : ShopUIController
             if (isSelected)
                 selectedExists = true;
 
-            _elfSlots[i].Bind(_database, stocks[i], OnClickElfSlot, isSelected);
+            bool isUnlocked = stocks[i].ItemType == ElfShopItemType.Recipe
+                && _recipeBookState != null
+                && _recipeBookState.IsUnlocked(stocks[i].IngredientID);
+
+            _elfSlots[i].Bind(_database, stocks[i], OnClickElfSlot, isSelected, isUnlocked);
         }
 
         for (int i = stocks.Count; i < _elfSlots.Count; i++)
