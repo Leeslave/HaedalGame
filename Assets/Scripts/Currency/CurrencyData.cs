@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 #region Currency SO
-[CreateAssetMenu(fileName = "Currency", menuName = "Scriptable Objects/GameData/Currency")]
+[CreateAssetMenu(fileName = "Currency", menuName = "Game Data/Currency/Currency")]
 public class Currency : ScriptableObject
 {
     [Header("�ĺ� �� �⺻ ����")]

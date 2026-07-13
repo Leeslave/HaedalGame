@@ -12,7 +12,7 @@ public struct ElfShopItemEntry
     public ElfShopItemType ItemType;
 }
 
-[CreateAssetMenu(fileName = "ElfShopConfig", menuName = "Game Data/Elf Shop Config")]
+[CreateAssetMenu(fileName = "ElfShopConfig", menuName = "Game Data/Shop/Elf Shop Config")]
 public class ElfShopConfigSO : ScriptableObject
 {
     [Header("붉은 엘프 - 판매 아이템 목록")]

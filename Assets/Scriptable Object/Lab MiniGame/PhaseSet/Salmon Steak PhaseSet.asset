@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a32a956867b3ac4a9183521b52b7cf6, type: 3}
+  m_Name: Salmon Steak PhaseSet
+  m_EditorClassIdentifier: Assembly-CSharp::RecipePhaseSetSO
+  _recipeId: 11
+  _phases:
+  - {fileID: 11400000, guid: dbd0b3247fe17ef4aaccd81798538a9d, type: 2}
+  - {fileID: 11400000, guid: d727a500975538a4b93bd90dd040ddeb, type: 2}
+  - {fileID: 11400000, guid: 5b572ee3df778df41ab6d4bebcb80322, type: 2}
+  - {fileID: 11400000, guid: e57220a3ddbfd434e9ff6673284241f0, type: 2}

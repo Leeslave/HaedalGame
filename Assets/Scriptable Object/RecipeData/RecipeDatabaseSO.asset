@@ -20,6 +20,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 21300000, guid: d698aacb0604a7a4db02725a8b9a2e69, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 2
     _ingredientName: "\uCD08\uC7A5"
     _recipeCode: 1002
@@ -27,6 +28,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 6937817954938267909, guid: d996659f638553847a8afb4628b93b9e, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 3
     _ingredientName: "\uC300"
     _recipeCode: 1003
@@ -34,6 +36,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: -6470460504253458178, guid: 8a52579509c40ac498ff28c2fe6d4f43, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 4
     _ingredientName: "\uC0DD\uC120"
     _recipeCode: 1004
@@ -41,6 +44,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: -4178046375966092550, guid: 390d42b3b0d202b468f70f8cffe38cb7, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 5
     _ingredientName: "\uC0C8\uC6B0"
     _recipeCode: 1005
@@ -48,6 +52,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 4130640169021434097, guid: dbaca64ae47d17b4380cfa3e3b4a93af, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 6
     _ingredientName: "\uC870\uAC1C"
     _recipeCode: 1006
@@ -55,6 +60,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 3465286685962602723, guid: 145655dfa7ff9a740b6b3a94189784f1, type: 3}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 7
     _ingredientName: "\uC804\uBCF5"
     _recipeCode: 1007
@@ -62,6 +68,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 8
     _ingredientName: "\uC624\uC774"
     _recipeCode: 1008
@@ -69,6 +76,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 9
     _ingredientName: "\uBB38\uC5B4"
     _recipeCode: 1009
@@ -76,6 +84,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 10
     _ingredientName: "\uBC00"
     _recipeCode: 1010
@@ -83,6 +92,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 11
     _ingredientName: "\uB300\uD30C"
     _recipeCode: 1011
@@ -90,6 +100,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 12
     _ingredientName: "\uB2F9\uADFC"
     _recipeCode: 1012
@@ -97,6 +108,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 13
     _ingredientName: "\uC18C\uAE08"
     _recipeCode: 1013
@@ -104,6 +116,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 1
   - _ingredientId: 14
     _ingredientName: "\uB2EC\uAC40"
     _recipeCode: 1014
@@ -111,6 +124,7 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 0
   - _ingredientId: 15
     _ingredientName: "\uAC04\uC7A5"
     _recipeCode: 1015
@@ -118,6 +132,39 @@ MonoBehaviour:
     _belongIsland: 0
     _icon: {fileID: 0}
     _defaultUnlock: 0
+    _isBasicSeasoning: 1
+  - _ingredientId: 16
+    _ingredientName: "\uC5F0\uC5B4"
+    _recipeCode: 1016
+    _price: 0
+    _belongIsland: 0
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _isBasicSeasoning: 0
+  - _ingredientId: 17
+    _ingredientName: "\uD6C4\uCD94"
+    _recipeCode: 1017
+    _price: 0
+    _belongIsland: 0
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _isBasicSeasoning: 1
+  - _ingredientId: 18
+    _ingredientName: "\uC62C\uB9AC\uBE0C\uC624\uC77C"
+    _recipeCode: 1018
+    _price: 0
+    _belongIsland: 0
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _isBasicSeasoning: 1
+  - _ingredientId: 19
+    _ingredientName: "\uD30C\uC2AC\uB9AC"
+    _recipeCode: 1019
+    _price: 0
+    _belongIsland: 0
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _isBasicSeasoning: 0
   _recipes:
   - _recipeId: 1
     _recipeName: "\uCD08\uBC25"
@@ -358,3 +405,40 @@ MonoBehaviour:
     _categories: 04000000
     _grade: C
     _description: "\uC5EC\uB7EC \uC57C\uCC44\uB97C \uAFF4 \uB2F4\uBC31\uD55C \uAF2C\uCE58"
+  - _recipeId: 11
+    _recipeName: "\uC5F0\uC5B4\uAD6C\uC774"
+    _unlockType: 101
+    _classId: 201
+    _cookTime: 5
+    _rawRecipeText: 1016 1016 1012 1019 1013 1017 1018
+    _requirements:
+    - _ingredientId: 16
+      _recipeCode: 1016
+      _ingredientName: "\uC5F0\uC5B4"
+      _amount: 2
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "\uB2F9\uADFC"
+      _amount: 1
+    - _ingredientId: 19
+      _recipeCode: 1019
+      _ingredientName: "\uD30C\uC2AC\uB9AC"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "\uC18C\uAE08"
+      _amount: 1
+    - _ingredientId: 17
+      _recipeCode: 1017
+      _ingredientName: "\uD6C4\uCD94"
+      _amount: 1
+    - _ingredientId: 18
+      _recipeCode: 1018
+      _ingredientName: "\uC62C\uB9AC\uBE0C\uC624\uC77C"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 0
+    _categories: 02000000
+    _grade: A
+    _description: "\uB178\uB987\uD558\uAC8C \uAD6C\uC6B4 \uC5F0\uC5B4 \uC2A4\uD14C\uC774\uD06C"

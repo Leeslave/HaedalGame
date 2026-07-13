@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce4d772a42226e24fb20ee2daab196bb, type: 3}
+  m_Name: "\uC5F0\uC5B4\uAD6C\uC774_MixPhaseSO"
+  m_EditorClassIdentifier: Assembly-CSharp::MixPhaseSO
+  _phaseName: "\uC11E\uAE30"
+  _cookware: {fileID: 11400000, guid: 78e19810bbbcad849a7d3a5da0faba74, type: 2}
+  _requiredIngredientIds: 100000000d00000011000000
+  _baseScore: 5
+  _wrongIngredientPenalty: 0.5

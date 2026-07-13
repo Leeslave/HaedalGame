@@ -31,16 +31,20 @@ public class RecipeDetailPanelUI : MonoBehaviour
         {
             RecipeIngredientRequirement requirement = recipe.Requirements[i];
 
-            RecipeIngredientRequirementSlotUI slot =
-                Instantiate(_ingredientSlotPrefab, _ingredientSlotRoot);
-
             IngredientData ingredient = null;
             if (database != null)
                 database.TryGetIngredientById(requirement.IngredientId, out ingredient);
 
+            // 소금/오일 등 기본 양념은 레시피북 재료 목록에 표시하지 않는다 (조리/차감에는 그대로 포함).
+            if (ingredient != null && ingredient.IsBasicSeasoning)
+                continue;
+
             int ownedCount = inventoryService != null
                 ? inventoryService.GetCount(requirement.IngredientId)
                 : 0;
+
+            RecipeIngredientRequirementSlotUI slot =
+                Instantiate(_ingredientSlotPrefab, _ingredientSlotRoot);
 
             slot.Bind(ingredient, requirement.Amount, ownedCount);
             _spawnedSlots.Add(slot);

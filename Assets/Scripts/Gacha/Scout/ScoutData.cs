@@ -2,10 +2,10 @@ using UnityEngine;
 using System.Collections.Generic;
 using AYellowpaper.SerializedCollections;
 
-[CreateAssetMenu(fileName = "Scout", menuName = "Scriptable Objects/GameData/Scout")]
+[CreateAssetMenu(fileName = "Scout", menuName = "Game Data/Gacha/Scout")]
 public class ScoutData : ScriptableObject
 {
-    [Header("½Äº° ¹× ±âº» Á¤º¸")]
+    [Header("ï¿½Äºï¿½ ï¿½ï¿½ ï¿½âº» ï¿½ï¿½ï¿½ï¿½")]
     public int RequiredCurrencyCount;
     public SerializedDictionary<GradeData, float> GradeDistribution;
     public int ApplicantCount;

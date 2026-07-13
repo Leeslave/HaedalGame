@@ -2,7 +2,7 @@ using UnityEngine;
 
 public enum TableType { TwoSeat, FourSeat }
 
-[CreateAssetMenu(fileName = "NewTableData", menuName = "Game/Table Data")]
+[CreateAssetMenu(fileName = "TableData", menuName = "Game Data/Restaurant/Table Data")]
 public class TableData : ScriptableObject
 {
     [Header("기본 설정")]

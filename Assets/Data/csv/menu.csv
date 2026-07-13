@@ -1,4 +1,4 @@
-menu_n,m_name,type_n,class_n,menu_t,recipe,category,grade,description
+﻿menu_n,m_name,type_n,class_n,menu_t,recipe,category,grade,description
 1,초밥,101,202,3,1003 1004,Seafood|Grain,A,신선한 생선을 얹은 기본 초밥
 2,새우튀김,101,203,3,1003 1005,Seafood,B,바삭하게 튀긴 새우 요리
 3,미역무침,101,202,3,1001 1002,Seaweed,C,새콤하게 무친 미역 반찬
@@ -9,3 +9,4 @@ menu_n,m_name,type_n,class_n,menu_t,recipe,category,grade,description
 8,타코야끼,101,203,5,1009 1010 1014,Seafood,B,문어가 들어간 인기 간식
 9,전복찜,102,204,6,1006 1007 1015,PremiumSeafood,S,부드럽게 쪄낸 고급 전복찜
 10,야채꼬치,101,201,5,1008 1011 1012,Mushroom,C,여러 야채를 꿴 담백한 꼬치
+11,연어구이,101,201,5,1016 1016 1012 1019 1013 1017 1018,Seafood,A,노릇하게 구운 연어 스테이크

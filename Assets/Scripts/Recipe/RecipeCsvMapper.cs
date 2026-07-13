@@ -15,6 +15,7 @@ public static class RecipeCsvMapper
             int ingredientId = row.GetInt("ing_n");
             string ingredientName = row.Get("ing_name");
             int recipeCode = row.GetInt("rec_n");
+            bool isBasicSeasoning = row.GetBool("basic");
 
             Sprite icon = null;
 
@@ -24,7 +25,7 @@ public static class RecipeCsvMapper
                 Debug.LogWarning($"Ingredient icon not found. ing_n={ingredientId}, name={ingredientName}");
 #endif
 
-            return new IngredientData(ingredientId, ingredientName, recipeCode, icon);
+            return new IngredientData(ingredientId, ingredientName, recipeCode, icon, isBasicSeasoning);
         });
     }
 

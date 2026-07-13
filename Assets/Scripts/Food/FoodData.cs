@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "food Data", menuName ="Game/Food Data")]
+[CreateAssetMenu(fileName = "FoodData", menuName = "Game Data/Food/Food Data")]
 public class FoodData : ScriptableObject
 {
     public int id;                  // 음식의 넘버링

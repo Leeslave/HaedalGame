@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "GradeData", menuName = "Scriptable Objects/GameData/Grade")]
+[CreateAssetMenu(fileName = "GradeData", menuName = "Game Data/Gacha/Grade")]
 public class GradeData : ScriptableObject
 {
     public string GradeName; 

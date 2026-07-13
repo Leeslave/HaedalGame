@@ -3,7 +3,7 @@ using UnityEngine;
 
 
 // 구현한 모든 음식을 저장하는 SO
-[CreateAssetMenu(fileName = "food Database", menuName = "Game/Food Database")]
+[CreateAssetMenu(fileName = "FoodDatabase", menuName = "Game Data/Food/Food Database")]
 public class FoodDatabase : ScriptableObject
 {
     [SerializeField] private FoodData[] allFoods;    // 모든 음식 SO

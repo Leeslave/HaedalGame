@@ -93,6 +93,10 @@ public class RecipeLabDetailPanelUI : MonoBehaviour
             if (database != null)
                 database.TryGetIngredientById(requirement.IngredientId, out ingredient);
 
+            // 소금/오일 등 기본 양념은 재료 목록에 표시하지 않는다 (조리/차감에는 그대로 포함).
+            if (ingredient != null && ingredient.IsBasicSeasoning)
+                continue;
+
             int ownedCount = inventoryService != null
                 ? inventoryService.GetCount(requirement.IngredientId)
                 : 0;
