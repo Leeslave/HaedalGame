@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16183aff84620b741a8d7e3b30a7913e, type: 3}
+  m_Name: PotUpgradeSO
+  m_EditorClassIdentifier: Assembly-CSharp::CookwareUpgradeSO
+  _toolName: "\uB0C4\uBE44"
+  _description: "\uB450\uD23C\uD55C \uBB34\uC1E0 \uC1A5\uC73C\uB85C, \uC624\uB798
+    \uB053\uC5EC\uB3C4 \uAE4A\uACE0 \uC9C4\uD55C \uB9DB\uC744 \uADF8\uB300\uB85C
+    \uB2F4\uC544\uB0C5\uB2C8\uB2E4."
+  _icon: {fileID: 0}
+  _levels:
+  - _maxIngredientCount: 2
+    _upgradeConditions: []
+  - _maxIngredientCount: 3
+    _upgradeConditions:
+    - _type: 0
+      _amount: 1000
+    - _type: 1
+      _amount: 2
+    - _type: 2
+      _amount: 10
+  - _maxIngredientCount: 4
+    _upgradeConditions:
+    - _type: 0
+      _amount: 2000
+    - _type: 1
+      _amount: 3
+    - _type: 2
+      _amount: 20
