@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// [임시 스텁] 식당 레벨 강화 조건에 쓰이는 좌석 수 / 주간 평점 / 직원 등급 제공자.
-/// 해당 시스템(좌석 배치, 평점, 직원 등급)이 구현되면 이 값을 실제 시스템에서 읽도록 교체한다.
+/// [임시 스텁] 식당 레벨 강화 조건에 쓰이는 전체 평점 제공자.
+/// 평점 시스템이 구현되면 이 값을 실제 시스템에서 읽도록 교체한다.
 /// 그 전까지는 인스펙터 값으로 테스트한다.
 /// </summary>
 public class RestaurantStatsStub : MonoBehaviour
@@ -11,16 +11,15 @@ public class RestaurantStatsStub : MonoBehaviour
     public static RestaurantStatsStub Instance { get; private set; }
 
     [Header("스텁 값 (실제 시스템 연결 전 테스트용)")]
-    [SerializeField] private int _currentSeatCount = 12;
-    [SerializeField] private float _weeklyRating = 3.0f;
-
-    // 요구 등급 이상 직원 보유 수 (직원 등급 시스템 연결 전 단순화)
-    [SerializeField] private int _staffCountAtOrAboveRequiredGrade = 0;
+    [SerializeField] private float _rating = 3.0f;
+    [SerializeField] private int _salesAmount = 0;    // 판매 금액
+    [SerializeField] private int _seatCount = 0;      // 현재 좌석 개수
 
     public event Action OnChanged;
 
-    public int CurrentSeatCount => _currentSeatCount;
-    public float WeeklyRating => _weeklyRating;
+    public float Rating => _rating;
+    public int SalesAmount => _salesAmount;
+    public int SeatCount => _seatCount;
 
     private void Awake()
     {
@@ -30,28 +29,21 @@ public class RestaurantStatsStub : MonoBehaviour
             Destroy(gameObject);
     }
 
-    /// <summary>요구 등급(grade) 이상 직원을 count명 이상 보유했는가. 등급 비교는 시스템 연결 시 구현.</summary>
-    public bool HasStaff(string grade, int count)
+    public void SetRating(float value)
     {
-        return _staffCountAtOrAboveRequiredGrade >= count;
+        _rating = Mathf.Max(0f, value);
+        OnChanged?.Invoke();
     }
 
-    // 테스트/추후 시스템 연결용 세터
+    public void SetSalesAmount(int value)
+    {
+        _salesAmount = Mathf.Max(0, value);
+        OnChanged?.Invoke();
+    }
+
     public void SetSeatCount(int value)
     {
-        _currentSeatCount = Mathf.Max(0, value);
-        OnChanged?.Invoke();
-    }
-
-    public void SetWeeklyRating(float value)
-    {
-        _weeklyRating = Mathf.Max(0f, value);
-        OnChanged?.Invoke();
-    }
-
-    public void SetStaffCount(int value)
-    {
-        _staffCountAtOrAboveRequiredGrade = Mathf.Max(0, value);
+        _seatCount = Mathf.Max(0, value);
         OnChanged?.Invoke();
     }
 }

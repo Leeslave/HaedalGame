@@ -13,93 +13,113 @@ MonoBehaviour:
   m_Name: RestaurantLevelTableSO
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLevelTableSO
   _levels:
-  - _maxSeatCount: 2
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
+  - _customerSeats: 2
+    _cookingSpace: 1
+    _waitingQueue: 2
+    _recipeGradeMin: F
+    _recipeGradeMax: D
+    _dailyVisitors: 10
     _goldCost: 0
+    _requiredRating: 0
+    _requiredSalesAmount: 0
     _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
-  - _maxSeatCount: 0
-    _weeklyRatingCap: 0
-    _maxStaffCount: 0
-    _gradeCap: 
-    _goldCost: 0
-    _requiredSeatCount: 0
-    _requiredWeeklyRating: 0
-    _requiredStaffGrade: 
-    _requiredStaffCount: 0
+    _constructionDays: 0
+  - _customerSeats: 4
+    _cookingSpace: 1
+    _waitingQueue: 3
+    _recipeGradeMin: F
+    _recipeGradeMax: D
+    _dailyVisitors: 15
+    _goldCost: 500
+    _requiredRating: 2.5
+    _requiredSalesAmount: 1000
+    _requiredSeatCount: 2
+    _constructionDays: 1
+  - _customerSeats: 6
+    _cookingSpace: 2
+    _waitingQueue: 4
+    _recipeGradeMin: F
+    _recipeGradeMax: C
+    _dailyVisitors: 25
+    _goldCost: 1200
+    _requiredRating: 3
+    _requiredSalesAmount: 2500
+    _requiredSeatCount: 4
+    _constructionDays: 1
+  - _customerSeats: 8
+    _cookingSpace: 2
+    _waitingQueue: 6
+    _recipeGradeMin: E
+    _recipeGradeMax: C
+    _dailyVisitors: 35
+    _goldCost: 3000
+    _requiredRating: 3
+    _requiredSalesAmount: 6000
+    _requiredSeatCount: 6
+    _constructionDays: 1
+  - _customerSeats: 10
+    _cookingSpace: 3
+    _waitingQueue: 8
+    _recipeGradeMin: E
+    _recipeGradeMax: C
+    _dailyVisitors: 50
+    _goldCost: 6500
+    _requiredRating: 3
+    _requiredSalesAmount: 13000
+    _requiredSeatCount: 8
+    _constructionDays: 1
+  - _customerSeats: 12
+    _cookingSpace: 3
+    _waitingQueue: 10
+    _recipeGradeMin: E
+    _recipeGradeMax: B
+    _dailyVisitors: 60
+    _goldCost: 12000
+    _requiredRating: 3.5
+    _requiredSalesAmount: 24000
+    _requiredSeatCount: 10
+    _constructionDays: 1
+  - _customerSeats: 15
+    _cookingSpace: 4
+    _waitingQueue: 12
+    _recipeGradeMin: D
+    _recipeGradeMax: B
+    _dailyVisitors: 80
+    _goldCost: 25000
+    _requiredRating: 3.5
+    _requiredSalesAmount: 50000
+    _requiredSeatCount: 12
+    _constructionDays: 1
+  - _customerSeats: 18
+    _cookingSpace: 4
+    _waitingQueue: 15
+    _recipeGradeMin: D
+    _recipeGradeMax: B
+    _dailyVisitors: 100
+    _goldCost: 45000
+    _requiredRating: 3.5
+    _requiredSalesAmount: 90000
+    _requiredSeatCount: 15
+    _constructionDays: 1
+  - _customerSeats: 21
+    _cookingSpace: 5
+    _waitingQueue: 18
+    _recipeGradeMin: D
+    _recipeGradeMax: A
+    _dailyVisitors: 135
+    _goldCost: 80000
+    _requiredRating: 4
+    _requiredSalesAmount: 160000
+    _requiredSeatCount: 18
+    _constructionDays: 1
+  - _customerSeats: 26
+    _cookingSpace: 6
+    _waitingQueue: 22
+    _recipeGradeMin: C
+    _recipeGradeMax: A
+    _dailyVisitors: 180
+    _goldCost: 150000
+    _requiredRating: 4
+    _requiredSalesAmount: 300000
+    _requiredSeatCount: 21
+    _constructionDays: 1

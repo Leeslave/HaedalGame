@@ -14,16 +14,23 @@ public class BlacksmithTestHelper : MonoBehaviour
 
     [Header("지급량")]
     [SerializeField] private int _goldAmount = 100000;
-    [SerializeField] private int _restaurantLevel = 10;
     [SerializeField] private int _blacksmithLevel = 10;
     [SerializeField] private int _useCountAmount = 100;
 
+    [Tooltip("식당 레벨을 이 값'까지'만 올린다(이미 높으면 유지). 식당 탭 테스트를 위해 낮게 두는 걸 권장")]
+    [SerializeField] private int _restaurantLevelUpTo = 3;
+
+    [Header("키")]
     [SerializeField] private KeyCode _fulfillKey = KeyCode.F2;
+    [SerializeField] private KeyCode _resetKey = KeyCode.F3;
 
     private void Update()
     {
         if (Input.GetKeyDown(_fulfillKey))
             FulfillAllConditions();
+
+        if (Input.GetKeyDown(_resetKey))
+            ResetBlacksmithState();
     }
 
     /// <summary>골드 지급 + 식당/대장간 레벨 상승 + 모든 도구 사용횟수 지급.</summary>
@@ -37,9 +44,12 @@ public class BlacksmithTestHelper : MonoBehaviour
                 new CurrencyTransaction(_goldCurrency, _goldAmount, TransactionSource.TestGet));
         }
 
-        // 식당 레벨
-        if (RestaurantLevelManager.Instance != null)
-            RestaurantLevelManager.Instance.SetLevel(_restaurantLevel);
+        // 식당 레벨: 목표치까지만, 이미 그 이상이면 유지 (식당 탭을 최대로 밀지 않도록)
+        if (RestaurantLevelManager.Instance != null
+            && RestaurantLevelManager.Instance.CurrentLevel < _restaurantLevelUpTo)
+        {
+            RestaurantLevelManager.Instance.SetLevel(_restaurantLevelUpTo);
+        }
 
         // 대장간 레벨
         if (BlacksmithLevelManager.Instance != null)
@@ -55,7 +65,7 @@ public class BlacksmithTestHelper : MonoBehaviour
             }
         }
 
-        Debug.Log($"[BlacksmithTest] 조건 충족 지급 완료: 골드+{_goldAmount}, 식당 Lv.{_restaurantLevel}, " +
+        Debug.Log($"[BlacksmithTest] 조건 충족 지급 완료: 골드+{_goldAmount}, 식당 Lv.{_restaurantLevelUpTo}까지, " +
                   $"대장간 Lv.{_blacksmithLevel}, 사용횟수+{_useCountAmount} × {_upgrades.Count}개 도구");
     }
 
@@ -67,11 +77,11 @@ public class BlacksmithTestHelper : MonoBehaviour
             CookwareLevelState.Instance.ResetAll(_upgrades);
 
         if (BlacksmithLevelManager.Instance != null)
-            BlacksmithLevelManager.Instance.SetLevel(1);
+            BlacksmithLevelManager.Instance.ResetToDefault();
 
         if (RestaurantLevelManager.Instance != null)
             RestaurantLevelManager.Instance.SetLevel(1);
 
-        Debug.Log("[BlacksmithTest] 대장간 상태 초기화 완료 (도구 Lv.1, 사용횟수 0, 대장간/식당 Lv.1)");
+        Debug.Log("[BlacksmithTest] 대장간 상태 초기화 완료 (도구 Lv.1, 사용횟수 0, 대장간/식당 Lv.1) — F3");
     }
 }
