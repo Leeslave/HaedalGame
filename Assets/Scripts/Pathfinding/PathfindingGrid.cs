@@ -40,6 +40,13 @@ public class PathfindingGrid : MonoBehaviour
         return node;
     }
 
+    // 월드 좌표가 속한 그리드 좌표만 역산 (테이블 크기에 비례해 옮겨진 Seat이 실제로 어느 타일에 속하는지 계산할 때 사용)
+    public Vector2Int WorldToGridPos(Vector3 worldPos)
+    {
+        Vector3Int cellPos = floorMap.WorldToCell(worldPos);
+        return new Vector2Int(cellPos.x, cellPos.y);
+    }
+
     public PathNode GetNodeFromWorld(Vector3 worldPos)
     {
         Vector3Int cellPos = floorMap.WorldToCell(worldPos);

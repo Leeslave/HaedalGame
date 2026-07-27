@@ -16,6 +16,12 @@ public class Seat : MonoBehaviour
     private bool hasGridPos = false;
     [SerializeField] private Vector2 facingDirection;
 
+    [Header("Sprite Sorting")]
+    [Tooltip("이 좌석에 손님이 앉았을 때 적용할 정렬 순서 오프셋. 같은 테이블의 좌석은 보통 다 같은 값을 쓰므로, 테이블에 속한 좌석이라면 TableGroup의 값이 여기로 자동 전달됩니다. (독립된 웨이팅 좌석 등은 여기서 직접 설정)")]
+    [SerializeField] private int seatedSortingOrderOffset = 0;
+
+    public int GetSeatedSortingOrderOffset() { return seatedSortingOrderOffset; }
+    public void SetSeatedSortingOrderOffset(int offset) { seatedSortingOrderOffset = offset; }
 
     public bool GetIsOccupied() { return isOccupied; }          // 현재 누군가 자리를 점유하고 있는지 리턴
     public CustomerAgent GetOccupant() { return occupant; }     // 그럼 누가 점유하고 있는지 리턴

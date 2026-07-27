@@ -60,8 +60,20 @@ public class CustomerAgent : MonoBehaviour
         if (null == gm) { gm = RestaurantGameManager.instance; }
         state = CustomerState.None;
         cpc.SetPatience(patienceValue);
-        currentSeat = null;
         HallSystem.Instance.RegisterCustomer(this);
+
+        // 스폰 시점에 즉시 좌석을 예약함 (2초 뒤 Seating 단계에서 잡으면 그 사이 다른 손님에게 마지막 자리를 뺏겨
+        // 생성되었다가 바로 퇴장하는 문제가 생김). 스포너가 미리 자리 유무를 확인하므로 여기서 실패하는 것은
+        // 정상 케이스가 아니지만, 안전장치로 처리해둠.
+        currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
+        if (currentSeat == null)
+        {
+            ratingFlag = RatingFlag.Low;
+            ChangeState(CustomerState.Exit);
+            return;
+        }
+        seatNumber = currentSeat.seatNumber;
+
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
 
@@ -107,20 +119,22 @@ public class CustomerAgent : MonoBehaviour
     // CustomerState.Seating 
     private void TrySeat()
     {
-        if (currentSeat != null) { return; } // 이미 자리를 점유하고 있다면 -> 근데 이 코드에 걸릴 일은 없을 듯
-        currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
-
-        if (currentSeat == null) // 만약 입장했는데 자리가 없는 경우 <- 이 함수는 어느정도 개선이 필요함
+        // 좌석은 InitPatience에서 스폰과 동시에 이미 예약됨. 여기서 null이라면 MoveToSeat 중
+        // 경로 탐색 실패로 자리를 반납하고 재시도하는 경우이므로 다시 잡아본다.
+        if (currentSeat == null)
         {
-            ratingFlag = RatingFlag.Low;
-            ChangeState(CustomerState.Exit);
-            return;
+            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
+            if (currentSeat == null) // 만약 재시도했는데도 자리가 없는 경우
+            {
+                ratingFlag = RatingFlag.Low;
+                ChangeState(CustomerState.Exit);
+                return;
+            }
+            seatNumber = currentSeat.seatNumber;
         }
 
         //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
         StartCoroutine(MoveToSeat(currentSeat));
-        seatNumber = currentSeat.seatNumber;
-
     }
 
     private IEnumerator MoveToSeat(Seat seat)
@@ -162,10 +176,21 @@ public class CustomerAgent : MonoBehaviour
             }
         }
 
+        // A* 경로는 타일 중심까지만 안내하므로, 테이블 크기에 비례해 옮겨진 실제 좌석 좌표까지 마지막으로 미세 이동
+        while (Vector2.Distance(transform.position, target) > 0.05f)
+        {
+            transform.position = Vector2.MoveTowards(transform.position, target, 3f * Time.deltaTime);
+            Vector2 dir = (target - transform.position).normalized;
+            nm.SetDirection(dir);
+            yield return null;
+        }
+
         nm.SetMoving(false);
         nm.ArriveDirection(currentSeat.GetFacingDirection());
         // 도착 후 해당 타일을 장애물로 전환
         seat.OnCustomerSeated();
+        // 좌석별로 인스펙터에서 조절 가능한 정렬 순서 적용 (테이블과 겹침 방지)
+        nm.ApplySeatSortingOrder(seat.GetSeatedSortingOrderOffset());
 
         if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
@@ -188,6 +213,7 @@ public class CustomerAgent : MonoBehaviour
     {
         currentSeat = newSeat;
         transform.position = newSeat.GetSeatPoint().position;
+        nm.ApplySeatSortingOrder(newSeat.GetSeatedSortingOrderOffset());
     }
 
     // CustomerState.WaitingForOrder
@@ -271,6 +297,7 @@ public class CustomerAgent : MonoBehaviour
             currentSeat = null;
         }
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
+        nm.ResetSortingOrder();
         nm.SetMoving(false);
         StopAllCoroutines();
         StartCoroutine(MoveToExit());

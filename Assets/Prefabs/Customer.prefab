@@ -254,17 +254,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCMovement
   upSide:
-  - {fileID: 5000927251509650613, guid: a34e9bb9eeb810540b81ca9c60e15818, type: 3}
-  - {fileID: 5000927251509650613, guid: a34e9bb9eeb810540b81ca9c60e15818, type: 3}
+  - {fileID: -4112575184604631801, guid: 322c4d8a1bb969e45bfd41e945e62b5b, type: 3}
+  - {fileID: -4625357986648134619, guid: 7a8f3abea0ac9de43b4456b254889d1e, type: 3}
   leftSide:
-  - {fileID: -2218564838977048430, guid: 88ae686b858d0d844997859a2f477570, type: 3}
-  - {fileID: 8151624691047576910, guid: caaf8397ca5b4864585ef49d77cb1737, type: 3}
+  - {fileID: 5386897779698618035, guid: 02d2869a51b64844c89f3ed1cb2d5e7b, type: 3}
+  - {fileID: 469974826879180938, guid: ae69a5c61b5f55e44bbdcfa13697769c, type: 3}
   downSide:
-  - {fileID: 9040879190431018056, guid: 1b21ab079f95130449ef2d51996cf44e, type: 3}
-  - {fileID: 9040879190431018056, guid: 1b21ab079f95130449ef2d51996cf44e, type: 3}
+  - {fileID: -5657755021009286543, guid: 4e2c6ff9025e8ec47a3550263a5b883f, type: 3}
+  - {fileID: -7309081318845274832, guid: b457e316ddd6ac9418bf65093a140045, type: 3}
   rightSide:
-  - {fileID: 7191070798827658284, guid: 33888fa0e5c8014429669313e4575e6c, type: 3}
-  - {fileID: 7537522124148278266, guid: 9f984e32c55ba13488008205fa672d05, type: 3}
+  - {fileID: -5760701931397134231, guid: 741b23dc78a6e874f871f68082d0b781, type: 3}
+  - {fileID: -6382481446324982382, guid: b17ba2c3b52df6a42ae2e8307e59b06e, type: 3}
+  idleUp: {fileID: 0}
+  idleLeft: {fileID: -1293883783730593402, guid: 335964102ea1c164488ee6098bbdfa1f, type: 3}
+  idleDown: {fileID: 0}
+  idleRight: {fileID: 6617194716825078457, guid: 38b06a981079fec49b13882f7c264d01, type: 3}
+  spriteScale: 1.3
 --- !u!1 &5554515530244540230
 GameObject:
   m_ObjectHideFlags: 0
@@ -346,7 +351,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 9040879190431018056, guid: 1b21ab079f95130449ef2d51996cf44e, type: 3}
+  m_Sprite: {fileID: -6134859773371899143, guid: 61aa252527733df4ba517caeedf95270, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0

@@ -72,7 +72,14 @@ public class ChefAgent : PartTimerAgent
             }
             if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold)
             {
+                nm?.SetMoving(true);
                 transform.position = Vector2.MoveTowards(transform.position, initPosition, status.serving * Time.deltaTime);
+                Vector2 dir = (initPosition - (Vector2)transform.position).normalized;
+                nm?.SetDirection(dir);
+            }
+            else
+            {
+                nm?.SetMoving(false);
             }
             yield return null;
         }

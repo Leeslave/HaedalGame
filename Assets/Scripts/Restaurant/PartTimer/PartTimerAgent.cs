@@ -14,6 +14,13 @@ public class PartTimerAgent : MonoBehaviour
 
     protected Coroutine returnCoroutine;
 
+    protected PartTimerMovement nm;
+
+    protected void Awake()
+    {
+        nm = GetComponent<PartTimerMovement>();
+    }
+
     protected IEnumerator ReturnToBase(float speed)
     {
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
@@ -24,14 +31,7 @@ public class PartTimerAgent : MonoBehaviour
             List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
             if (path != null)
             {
-                foreach (Vector3 wayPoint in path)
-                {
-                    while (Vector2.Distance(transform.position, wayPoint) > arrivalThreshold)
-                    {
-                        transform.position = Vector2.MoveTowards(transform.position, wayPoint, speed * Time.deltaTime);
-                        yield return null;
-                    }
-                }
+                yield return StartCoroutine(MoveAlongPath(path, speed));
             }
         }
 
@@ -40,14 +40,18 @@ public class PartTimerAgent : MonoBehaviour
 
     protected IEnumerator MoveAlongPath(List<Vector3> path, float speed)
     {
+        nm?.SetMoving(true);
         foreach (Vector3 wayPoint in path)
         {
             while (Vector2.Distance(transform.position, wayPoint) > arrivalThreshold)
             {
                 transform.position = Vector2.MoveTowards(transform.position, wayPoint, speed * Time.deltaTime);
+                Vector2 dir = (wayPoint - transform.position).normalized;
+                nm?.SetDirection(dir);
                 yield return null;
             }
         }
+        nm?.SetMoving(false);
     }
 
 }
