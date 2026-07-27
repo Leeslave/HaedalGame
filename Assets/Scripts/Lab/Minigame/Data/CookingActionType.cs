@@ -12,5 +12,6 @@ public enum CookingActionType
     Boil,       // 끓이기 (타이밍 게이지)
     StirFry,    // 볶기 (타이밍 게이지)
     Fry,        // 튀기기 (타이밍 게이지)
-    Assembly    // 플레이팅 (드래그앤드롭)
+    Assembly,   // 플레이팅 (드래그앤드롭)
+    Measure     // 계량 (꾹 눌러 목표량까지 따르기)
 }
