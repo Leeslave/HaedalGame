@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class CustomerOrderComponent : MonoBehaviour
 {
-    private FoodData curData;
-    public FoodData GetOrderData()
+    private RecipeData curData;
+    public RecipeData GetOrderData()
     {
         if (curData != null) { return curData; }
         return null;
@@ -12,7 +12,7 @@ public class CustomerOrderComponent : MonoBehaviour
 
     public void GenerateOrder()
     {
-        IReadOnlyList<FoodData> menu = MenuManager.Instance.UnlockedFoods;
+        IReadOnlyList<RecipeData> menu = MenuManager.Instance.UnlockedFoods;
         if (menu == null || menu.Count == 0)
         {
             Debug.LogWarning("오늘의 메뉴가 없습니다.");

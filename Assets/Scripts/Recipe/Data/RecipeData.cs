@@ -20,6 +20,7 @@ public class RecipeData
 {
     [SerializeField] private int _recipeId;
     [SerializeField] private string _recipeName;
+    [SerializeField] private int _recipeGrade;
     [SerializeField] private int _unlockType;
     [SerializeField] private int _classId;
     [SerializeField] private float _cookTime;
@@ -36,6 +37,8 @@ public class RecipeData
     [SerializeField] private string _description;
     public int RecipeId => _recipeId;
     public string RecipeName => _recipeName;
+    public int RecipeGrade => _recipeGrade;
+
     public int UnlockType => _unlockType;
     public int ClassId => _classId;
     public float CookTime => _cookTime;

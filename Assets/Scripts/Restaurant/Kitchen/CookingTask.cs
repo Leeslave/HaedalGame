@@ -9,12 +9,11 @@ public enum CookingDiff
 
 public enum CookingType
 {
-    Grill,
-    Mix,
-    Pot,
-    raw,
-    dessert,
-    none
+    None    = 0,
+    Pan     = 201,  // 프라이팬 요리
+    Chop    = 202,  // 불을 쓰지 않는 요리
+    Fry     = 203,  // 튀김 요리
+    Pot     = 204   // 국, 죽 등의 냄비 요리
 }
 
 
@@ -32,7 +31,7 @@ public class CookingTask
     public CookingType GetCookingType() { return Type; }
     public CustomerAgent GetCustomerAgent() { return Customer; }
 
-    public CookingTask( CustomerAgent customer, CookingType type = CookingType.none, float time = 10.0f)
+    public CookingTask( CustomerAgent customer, CookingType type = CookingType.None, float time = 10.0f)
     {
         State = TaskState.Waitng;
         Type = type;

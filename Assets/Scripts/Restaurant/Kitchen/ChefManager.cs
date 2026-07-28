@@ -9,9 +9,9 @@ public class ChefManager : MonoBehaviour
     [SerializeField] private Transform kitchen;
 
 
-    [SerializeField] private Transform grillArea;
-    [SerializeField] private Transform mixArea;
-    [SerializeField] private Transform rawArea;
+    [SerializeField] private Transform panArea;
+    [SerializeField] private Transform chopArea;
+    [SerializeField] private Transform fryArea;
     [SerializeField] private Transform potArea;
 
     [SerializeField] private GameObject parent;
@@ -42,12 +42,12 @@ public class ChefManager : MonoBehaviour
     {
         switch (type)
         {
-            case CookingType.Grill:
-                return grillArea;
-            case CookingType.Mix:
-                return mixArea;
-            case CookingType.raw:
-                return rawArea;
+            case CookingType.Pan:
+                return panArea;
+            case CookingType.Chop:
+                return chopArea;
+            case CookingType.Fry:
+                return fryArea;
             case CookingType.Pot:
                 return potArea;
         }
@@ -57,10 +57,10 @@ public class ChefManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        toolOccupied[CookingType.Grill] = false;
-        toolOccupied[CookingType.Mix] = false;
-        toolOccupied[CookingType.raw] = false;
-        toolOccupied[CookingType.Pot] = false;
+        toolOccupied[CookingType.Pan]  = false;
+        toolOccupied[CookingType.Chop] = false;
+        toolOccupied[CookingType.Fry]  = false;
+        toolOccupied[CookingType.Pot]  = false;
     }
 
     void Start() { }

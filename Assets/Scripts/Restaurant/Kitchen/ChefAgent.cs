@@ -51,42 +51,55 @@ public class ChefAgent : PartTimerAgent
         Transform target = null;
         CookingType curType = task.GetCookingType();
 
-        if (curType != CookingType.none)
+        if (curType != CookingType.None)
         {
             target = ChefManager.Instance.GetCookingToolTransform(curType);
         }
-        if (target == null) { yield break; }
+        if (target == null)
+        {
+            isIdle = true;
+            TryClaimTask();
+            yield break;
+        }
 
         while (!ChefManager.Instance.TryOccupyTool(curType))
         {
+            if (task.Customer == null)
+            {
+                isIdle = true;
+                TryClaimTask();
+                yield break;
+            }
             if (Vector2.Distance(transform.position, initPosition) > arrivalThreshold)
             {
+                nm?.SetMoving(true);
                 transform.position = Vector2.MoveTowards(transform.position, initPosition, status.serving * Time.deltaTime);
+                Vector2 dir = (initPosition - (Vector2)transform.position).normalized;
+                nm?.SetDirection(dir);
+            }
+            else
+            {
+                nm?.SetMoving(false);
             }
             yield return null;
         }
 
-
         yield return new WaitForSeconds(1f);
-        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().foodName}주문을 받았습니다.");
-
-
-
+        TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {task.Customer.coc.GetOrderData().RecipeName}주문을 받았습니다.");
 
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
         PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target.position);
         List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
 
-        // while (Vector2.Distance(transform.position, target) > arrivalThreshold)
-        // {
-        //     transform.position = Vector2.MoveTowards(transform.position, target, status.serving * Time.deltaTime);
-        //     yield return null;
-        // }
-
-        if (path != null)
+        if (path == null)
         {
-            yield return StartCoroutine(MoveAlongPath(path, status.serving));
+            ChefManager.Instance.ReleaseTool(curType);
+            isIdle = true;
+            TryClaimTask();
+            yield break;
         }
+
+        yield return StartCoroutine(MoveAlongPath(path, status.serving));
 
         if (task.Customer == null)
         {
@@ -96,23 +109,16 @@ public class ChefAgent : PartTimerAgent
             yield break;
         }
 
-
-        // yield return StartCoroutine(ExecuteCooking(task));
-
-        // target.position = ChefManager.Instance.GetKitchenPosition();
-
-        // while (Vector2.Distance(transform.position, target.position) > arrivalThreshold)
-        // {
-        //     transform.position = Vector2.MoveTowards(transform.position, target.position, status.serving * Time.deltaTime);
-        //     yield return null;
         yield return StartCoroutine(ExecuteCooking(task));
         ChefManager.Instance.ReleaseTool(curType);
-        Vector2 kitchenPos = ChefManager.Instance.GetKitchenPosition();
 
-        while (Vector2.Distance(transform.position, kitchenPos) > arrivalThreshold)
+        PathNode returnStart = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
+        PathNode returnEnd = PathfindingGrid.Instance.GetNodeFromWorld(ChefManager.Instance.GetKitchenPosition());
+        List<Vector3> returnPath = Pathfinder.Instance.FindPath(returnStart.gridPos, returnEnd.gridPos);
+
+        if (returnPath != null)
         {
-            transform.position = Vector2.MoveTowards(transform.position, kitchenPos, status.serving * Time.deltaTime);
-            yield return null;
+            yield return StartCoroutine(MoveAlongPath(returnPath, status.serving));
         }
 
         if (task.Customer == null)

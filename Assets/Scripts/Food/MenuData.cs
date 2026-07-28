@@ -8,16 +8,16 @@ public class MenuData
 {
     private HashSet<int> OwnedMenuIds = new HashSet<int>();
 
-    public void AddMenu(FoodData foodData)
+    public void AddMenu(RecipeData foodData)
     {
         if (foodData == null) return;
-        OwnedMenuIds.Add(foodData.id);
+        OwnedMenuIds.Add(foodData.RecipeId);
     }
 
-    public bool HasMenu(FoodData foodData)
+    public bool HasMenu(RecipeData foodData)
     {
         if (foodData == null) return false;
-        return OwnedMenuIds.Contains(foodData.id);
+        return OwnedMenuIds.Contains(foodData.RecipeId);
     }
 
     public List<int> GetOwnedMenuIds()

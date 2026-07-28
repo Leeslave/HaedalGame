@@ -5,27 +5,27 @@ public class MenuManager : MonoBehaviour
 {
     public static MenuManager Instance;
     [Header("DB")]
-    [SerializeField] private FoodDatabase foodDatabase;
+    [SerializeField] private RecipeDatabaseSO recipeDatabase;
 
     [Header("디버그")]
-    [SerializeField] private List<FoodData> unlockedFoods = new List<FoodData>();
-    [SerializeField] private List<FoodData> dailyFoods = new List<FoodData>();
+    [SerializeField] private List<RecipeData> unlockedFoods = new List<RecipeData>();
+    [SerializeField] private List<RecipeData> dailyFoods = new List<RecipeData>();
 
     private HashSet<int> unlockedFoodIdSet = new HashSet<int>();
 
-    public IReadOnlyList<FoodData> UnlockedFoods => unlockedFoods;
-    public IReadOnlyList<FoodData> DailyFoods => dailyFoods;
+    public IReadOnlyList<RecipeData> UnlockedFoods => unlockedFoods;
+    public IReadOnlyList<RecipeData> DailyFoods => dailyFoods;
 
     private void Awake()
     {
         Instance = this;
-        if (foodDatabase == null)
+        if (recipeDatabase == null)
         {
-            Debug.LogError("MenuManager에 FoodDatabaseSO가 연결되지 않았습니다.");
+            Debug.LogError("MenuManager에 RecipeDatabaseSO가 연결되지 않았습니다.");
             return;
         }
 
-        foodDatabase.Initialize();
+        recipeDatabase.BuildCache();
         LoadMenuData();
     }
 
@@ -33,23 +33,23 @@ public class MenuManager : MonoBehaviour
     // 해금 관련
     // -------------------------
 
-    public bool HasUnlocked(FoodData foodData)
+    public bool HasUnlocked(RecipeData foodData)
     {
         if (foodData == null)
             return false;
 
-        return unlockedFoodIdSet.Contains(foodData.id);
+        return unlockedFoodIdSet.Contains(foodData.RecipeId);
     }
 
-    public bool UnlockMenu(FoodData foodData)
+    public bool UnlockMenu(RecipeData foodData)
     {
         if (foodData == null)
             return false;
 
-        if (unlockedFoodIdSet.Contains(foodData.id))
+        if (unlockedFoodIdSet.Contains(foodData.RecipeId))
             return false;
 
-        unlockedFoodIdSet.Add(foodData.id);
+        unlockedFoodIdSet.Add(foodData.RecipeId);
         unlockedFoods.Add(foodData);
 
         return true;
@@ -57,11 +57,9 @@ public class MenuManager : MonoBehaviour
 
     public bool UnlockMenuById(int foodId)
     {
-        FoodData foodData = foodDatabase.GetFoodById(foodId);
-
-        if (foodData == null)
+        if (!recipeDatabase.TryGetRecipe(foodId, out RecipeData foodData))
         {
-            Debug.LogWarning($"UnlockMenuById 실패: ID {foodId}에 해당하는 FoodData가 없습니다.");
+            Debug.LogWarning($"UnlockMenuById 실패: ID {foodId}에 해당하는 RecipeData가 없습니다.");
             return false;
         }
 
@@ -82,7 +80,7 @@ public class MenuManager : MonoBehaviour
             return;
         }
 
-        List<FoodData> candidates = new List<FoodData>(unlockedFoods);
+        List<RecipeData> candidates = new List<RecipeData>(unlockedFoods);
         Shuffle(candidates);
 
         int finalCount = Mathf.Min(count, candidates.Count);
@@ -102,11 +100,9 @@ public class MenuManager : MonoBehaviour
 
         foreach (int id in ids)
         {
-            FoodData food = foodDatabase.GetFoodById(id);
-
-            if (food == null)
+            if (!recipeDatabase.TryGetRecipe(id, out RecipeData food))
             {
-                Debug.LogWarning($"SetDailyFoodsFromIds: ID {id}에 해당하는 FoodData가 없습니다.");
+                Debug.LogWarning($"SetDailyFoodsFromIds: ID {id}에 해당하는 RecipeData가 없습니다.");
                 continue;
             }
 
@@ -121,7 +117,7 @@ public class MenuManager : MonoBehaviour
         }
     }
 
-    public bool IsDailyMenu(FoodData foodData)
+    public bool IsDailyMenu(RecipeData foodData)
     {
         if (foodData == null)
             return false;
@@ -142,7 +138,7 @@ public class MenuManager : MonoBehaviour
             if (food == null)
                 continue;
 
-            saveData.unlockedFoodIds.Add(food.id);
+            saveData.unlockedFoodIds.Add(food.RecipeId);
         }
 
         foreach (var food in dailyFoods)
@@ -150,7 +146,7 @@ public class MenuManager : MonoBehaviour
             if (food == null)
                 continue;
 
-            saveData.dailyFoodIds.Add(food.id);
+            saveData.dailyFoodIds.Add(food.RecipeId);
         }
 
         FoodSaveLoadManager.SaveMenu(saveData);
@@ -170,7 +166,7 @@ public class MenuManager : MonoBehaviour
             Debug.Log("메뉴 세이브 데이터가 없어서 기본 상태로 시작합니다.");
             
             //  테스트용 - 모든 음식 자동 해금
-            foreach (var food in foodDatabase.GetAllFoods())
+            foreach (var food in recipeDatabase.Recipes)
             {
                 UnlockMenu(food);
             }
@@ -181,9 +177,7 @@ public class MenuManager : MonoBehaviour
         {
             foreach (int id in saveData.unlockedFoodIds)
             {
-                FoodData food = foodDatabase.GetFoodById(id);
-
-                if (food == null)
+                if (!recipeDatabase.TryGetRecipe(id, out RecipeData food))
                 {
                     Debug.LogWarning($"LoadMenuData: 해금 메뉴 ID {id}를 찾을 수 없습니다.");
                     continue;
@@ -200,9 +194,7 @@ public class MenuManager : MonoBehaviour
         {
             foreach (int id in saveData.dailyFoodIds)
             {
-                FoodData food = foodDatabase.GetFoodById(id);
-
-                if (food == null)
+                if (!recipeDatabase.TryGetRecipe(id, out RecipeData food))
                 {
                     Debug.LogWarning($"LoadMenuData: 오늘의 메뉴 ID {id}를 찾을 수 없습니다.");
                     continue;
@@ -223,7 +215,7 @@ public class MenuManager : MonoBehaviour
     // 유틸
     // -------------------------
 
-    private void Shuffle(List<FoodData> list)
+    private void Shuffle(List<RecipeData> list)
     {
         for (int i = 0; i < list.Count; i++)
         {
