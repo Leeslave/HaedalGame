@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5061a1571ea45ec46a7e9b18c70b3b47, type: 3}
+  m_Name: DailyMissionSO
+  m_EditorClassIdentifier: Assembly-CSharp::DailyMissionSO
+  _missionName: "\uD574\uBB3C \uD30C\uC2A4\uD0C0\uB97C 20\uBC88 \uD310\uB9E4\uD558\uAE30"
+  _targetCount: 20
+  _rewardCurrency: {fileID: 0}
+  _rewardAmount: 20
