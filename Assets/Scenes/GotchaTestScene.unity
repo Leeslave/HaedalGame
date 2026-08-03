@@ -11463,6 +11463,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: CurrencyTestUI
       objectReference: {fileID: 0}
+    - target: {fileID: 8540940140530146946, guid: 923b794aafece8c4b94a7f5b4f649e38, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
