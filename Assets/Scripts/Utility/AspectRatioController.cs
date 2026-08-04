@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class AspectRatioComtroller : MonoBehaviour
+public class AspectRatioController : MonoBehaviour
 {
     public Camera targetCamera;
     public float targetAspect = 16f / 9f;

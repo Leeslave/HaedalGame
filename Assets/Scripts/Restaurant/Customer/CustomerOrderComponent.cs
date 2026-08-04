@@ -12,7 +12,7 @@ public class CustomerOrderComponent : MonoBehaviour
 
     public void GenerateOrder()
     {
-        IReadOnlyList<RecipeData> menu = MenuManager.Instance.UnlockedFoods;
+        IReadOnlyList<RecipeData> menu = MenuManager.Instance.DailyFoods;
         if (menu == null || menu.Count == 0)
         {
             Debug.LogWarning("오늘의 메뉴가 없습니다.");
