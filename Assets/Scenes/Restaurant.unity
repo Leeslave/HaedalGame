@@ -472,13 +472,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 3
-  isIdle: 1
-  arrivalThreshold: 0
+  arrivalThreshold: 0.5
   status:
     serving: 3
     cooking: 0
     handy: 0
     hp: 10
+  state: 0
 --- !u!114 &87334758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1391,7 +1391,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 216400912}
-  seatNumber: 0
   facingDirection: {x: 0, y: 0}
   seatedSortingOrderOffset: 0
 --- !u!1 &236589893
@@ -2044,7 +2043,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 336851907}
-  seatNumber: 0
   facingDirection: {x: 0, y: 0}
   seatedSortingOrderOffset: 0
 --- !u!1 &344478069
@@ -2097,14 +2095,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 1
-  isIdle: 0
   arrivalThreshold: 0
   status:
     serving: 3
     cooking: 3
     handy: 0
     hp: 0
-  target: {fileID: 0}
+  state: 0
 --- !u!212 &344478072
 SpriteRenderer:
   serializedVersion: 2
@@ -2380,14 +2377,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 3
-  isIdle: 0
   arrivalThreshold: 0
   status:
     serving: 3
     cooking: 3
     handy: 0
     hp: 0
-  target: {fileID: 0}
+  state: 0
 --- !u!212 &366765213
 SpriteRenderer:
   serializedVersion: 2
@@ -2585,13 +2581,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 1
-  isIdle: 1
-  arrivalThreshold: 0
+  arrivalThreshold: 0.5
   status:
     serving: 3
     cooking: 0
     handy: 0
     hp: 10
+  state: 0
 --- !u!114 &399206753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7085,7 +7081,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 1237784908}
-  seatNumber: 0
   facingDirection: {x: 0, y: 0}
   seatedSortingOrderOffset: 0
 --- !u!1 &1268199945
@@ -7586,14 +7581,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 2
-  isIdle: 0
   arrivalThreshold: 0
   status:
     serving: 3
     cooking: 3
     handy: 0
     hp: 0
-  target: {fileID: 0}
+  state: 0
 --- !u!212 &1316032010
 SpriteRenderer:
   serializedVersion: 2
@@ -14467,11 +14461,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SeatManager
   seats: []
-  waitingSeats: []
-  indoorSeat: 0
-  seatedCount: 0
-  outdoorSeat: 0
-  waitingCount: 0
+  waitingBenchSeats: []
+  waitingLine: []
 --- !u!1 &1563448431
 GameObject:
   m_ObjectHideFlags: 0
@@ -14934,7 +14925,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Seat
   seatPoint: {fileID: 1654768748}
-  seatNumber: 0
   facingDirection: {x: 0, y: 0}
   seatedSortingOrderOffset: 0
 --- !u!1 &1713875608
@@ -18146,13 +18136,13 @@ MonoBehaviour:
   initPosition: {x: 0, y: 0}
   level: 0
   positionNumber: 2
-  isIdle: 1
-  arrivalThreshold: 0
+  arrivalThreshold: 0.5
   status:
     serving: 3
     cooking: 0
     handy: 0
     hp: 10
+  state: 0
 --- !u!114 &2116109009
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RecipePhaseSetSO
   _recipeId: 11
   _phases:
+  - {fileID: 11400000, guid: dd37460c670046e4abfee7ff88785258, type: 2}
   - {fileID: 11400000, guid: dbd0b3247fe17ef4aaccd81798538a9d, type: 2}
   - {fileID: 11400000, guid: d727a500975538a4b93bd90dd040ddeb, type: 2}
   - {fileID: 11400000, guid: 5b572ee3df778df41ab6d4bebcb80322, type: 2}

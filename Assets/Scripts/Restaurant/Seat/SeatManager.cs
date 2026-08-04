@@ -1,29 +1,17 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class SeatManager : MonoBehaviour
 {
     // 현재 좌석들을 Inspector에서 확인할 수 있게 SerializeField로 선언
     [SerializeField] private List<Seat> seats = new List<Seat>();
-    [SerializeField] private List<Seat> waitingSeats = new List<Seat>();
+    [SerializeField] private List<Seat> waitingBenchSeats = new List<Seat>();
 
-    [ReadOnly][SerializeField] private int indoorSeat;      // 현재 가게에 앉을 수 있는 좌석의 수
-    [ReadOnly][SerializeField] private int seatedCount;     // 현재 가게에 손님이 앉아있는 좌석의 수
-    [ReadOnly][SerializeField] private int outdoorSeat;     // 현재 웨이팅을 할 수 있는 좌석의 수
-    [ReadOnly][SerializeField] private int waitingCount;    // 현재 웨이팅을 하고있는 좌석의 수
-
-    // ============================================
-    /* Getter and Setter */
-    public void SetMaxSeat(int upgrade) { indoorSeat = upgrade; }       // 가게 업그레이드로 인한 내부 좌석 수 증감
-
-    public void SetMaxWaiting(int upgrade) { outdoorSeat = upgrade; }    // 가게 업그레이드로 인한 외부 좌석 수 증감
-
-
-    private void Awake()
-    {
-        seatedCount = 0;
-        waitingCount = 0;
-    }
+    // 대기줄의 유일한 소유자. index 0이 맨 앞(다음에 승격될 손님)이고,
+    // 리스트 인덱스가 곧 그 손님이 서 있는 웨이팅 벤치의 인덱스와 대응한다.
+    // 웨이팅 벤치(Seat)에는 점유 플래그를 걸지 않으므로 한 벤치에 두 명이 배정되는 일이 구조적으로 불가능하다.
+    [ReadOnly][SerializeField] private List<CustomerAgent> waitingLine = new List<CustomerAgent>();
 
     public void RegisterSeats(List<TableGroup> sortedTables)
     {
@@ -36,101 +24,78 @@ public class SeatManager : MonoBehaviour
 
     public void RegisterWaitingSeats(List<WaitingGroup> waiting)
     {
-        waitingSeats.Clear();
-        foreach (var seat in waiting)
+        waitingBenchSeats.Clear();
+        foreach (var group in waiting)
         {
-            waitingSeats.AddRange(seat.GetSeats());
+            waitingBenchSeats.AddRange(group.GetSeats());
         }
     }
-
 
     public bool HasAvailableSeat()
     {
-        for (int i = 0; i < seats.Count; i++)
-            if (!seats[i].GetIsOccupied()) return true;
-        for (int i = 0; i < waitingSeats.Count; i++)
-            if (!waitingSeats[i].GetIsOccupied()) return true;
-        return false;
+        if (seats.Any(s => !s.GetIsOccupied())) { return true; }
+        return waitingLine.Count < waitingBenchSeats.Count;
     }
 
-    // 손님 오브젝트가 좌석을 앉으려고 시도하는 함수
+    // 손님이 좌석을 배정받으려고 시도하는 함수. 인도어 자리가 없으면 웨이팅 줄 맨 뒤에 등록한다.
     public Seat TryAssignSeat(CustomerAgent customer, out bool indoor)
     {
         indoor = false;
-        for (int i = 0; i < seats.Count; i++) // 전체 좌석을 순회하면서
-        {
-            if (!seats[i].GetIsOccupied() && seats[i].TryOccupy(customer)) // 남는 좌석이 있다면
-            {
-                Debug.Log($"{i + 1}번째 자리를 고객이 차지하였습니다.");
-                seatedCount++;
-                indoor = true;
-                return seats[i]; // 좌석 배정
-            }
-        }
-        for (int i = 0; i < waitingSeats.Count; i++)
-        {
-            if (!waitingSeats[i].GetIsOccupied() && waitingSeats[i].TryOccupy(customer)) // 남는 좌석이 있다면
-            {
-                Debug.Log($"{i + 1}번째 웨이팅 자리를 고객이 차지하였습니다.");
-                waitingCount++;
-                return waitingSeats[i]; // 좌석 배정
-            }
-        }
-        return null; // 그렇지 않다면 null를 리턴하여 자리가 없다는 것을 customer에게 전달
-    }
-
-    public void ReleaseSeat(Seat seat, bool isWaiting) // 자리를 비우게 하는 함수
-    {
-        if (seat == null) { return; } // 이미 공석이라면 리턴
-        seat.Vacate(); // 공석이 아니라면 공석으로 만들라고 전달.
-        if (!isWaiting) seatedCount--;
-        else waitingCount--;
-        TryAwakeWaitingCustomer();
-    }
-
-    private void TryAwakeWaitingCustomer()
-    {
-        Seat emptySeat = null;
         for (int i = 0; i < seats.Count; i++)
         {
-            if (!seats[i].GetIsOccupied()) { emptySeat = seats[i]; break; } // 식당 내부에 빈 자리가 있으면 해당 자리를 가져옴
-        }
-        if (emptySeat == null) return;
-
-        for (int i = 0; i < waitingSeats.Count; i++) // 웨이팅 석 탐색
-        {
-            if (waitingSeats[i].GetIsOccupied())     // 웨이팅을 하고 있는 인원이 있다면
+            if (!seats[i].GetIsOccupied() && seats[i].TryOccupy(customer))
             {
-                CustomerAgent customer = waitingSeats[i].GetOccupant();
-                waitingSeats[i].Vacate();
-                waitingCount--;
-                emptySeat.TryOccupy(customer);      // 줄의 맨 앞 사람을 위에서 찾아준 빈 자리에 넣는다.
-                seatedCount++;
-                customer.PromoteToSeat(emptySeat);
-
-                ShiftWaitingCustomersForward(i);    // 웨이팅 대기석 앞당기기
-                return;
+                indoor = true;
+                return seats[i];
             }
-
         }
 
+        if (waitingLine.Count >= waitingBenchSeats.Count) { return null; } // 웨이팅 자리도 꽉 참
+
+        waitingLine.Add(customer);
+        return waitingBenchSeats[waitingLine.Count - 1];
     }
 
-    // 웨이팅 석 앞당기기
-    private void ShiftWaitingCustomersForward(int fromIndex)
+    // 자리를 비우게 하는 함수. isWaiting이면 웨이팅 줄에서 해당 손님을 제거하고, 아니면 인도어 좌석을 반납한다.
+    public void ReleaseSeat(CustomerAgent customer, Seat seat, bool isWaiting)
     {
-        // 웨이팅 석의 빈자리가 생긴 지점의 다음 좌석부터 순회
-        for (int i = fromIndex + 1; i < waitingSeats.Count; i++) 
+        if (isWaiting)
         {
-            // 자리가 비어있으면 끝 -> 만약 새치기가 생긴다면 이 부분이 수정되어야 함.
-            if (!waitingSeats[i].GetIsOccupied()) break; 
-
-            CustomerAgent next = waitingSeats[i].GetOccupant();
-            waitingSeats[i].Vacate();
-            waitingSeats[i - 1].TryOccupy(next);
-            next.MoveWaitingSeat(waitingSeats[i - 1]); // 실제로 자리 이동
+            if (waitingLine.Remove(customer))
+            {
+                RepositionWaitingLine();
+            }
+            return;
         }
+
+        if (seat == null) { return; }
+        seat.Vacate();
+        PromoteNextFromWaitingLine();
     }
 
+    // 인도어 자리가 하나 비면 웨이팅 줄 맨 앞 손님을 그 자리로 승격시킨다.
+    private void PromoteNextFromWaitingLine()
+    {
+        if (waitingLine.Count == 0) { return; }
 
+        Seat emptySeat = seats.FirstOrDefault(s => !s.GetIsOccupied());
+        if (emptySeat == null) { return; }
+
+        CustomerAgent customer = waitingLine[0];
+        waitingLine.RemoveAt(0);
+
+        emptySeat.TryOccupy(customer);
+        customer.PromoteToSeat(emptySeat);
+
+        RepositionWaitingLine();
+    }
+
+    // 대기줄 순서에 맞춰 남은 손님들을 각자의 웨이팅 벤치 위치로 재배치한다(점유 플래그 조작 없음).
+    private void RepositionWaitingLine()
+    {
+        for (int i = 0; i < waitingLine.Count; i++)
+        {
+            waitingLine[i].MoveWaitingSeat(waitingBenchSeats[i]);
+        }
+    }
 }

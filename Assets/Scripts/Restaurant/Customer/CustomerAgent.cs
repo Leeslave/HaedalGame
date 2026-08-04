@@ -20,7 +20,6 @@ public class CustomerAgent : MonoBehaviour
 
     [Header("Other")]
     private bool indoor = false;
-    private int seatNumber;
     private bool isWaiting = false;
 
 
@@ -72,7 +71,6 @@ public class CustomerAgent : MonoBehaviour
             ChangeState(CustomerState.Exit);
             return;
         }
-        seatNumber = currentSeat.seatNumber;
 
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
@@ -130,7 +128,6 @@ public class CustomerAgent : MonoBehaviour
                 ChangeState(CustomerState.Exit);
                 return;
             }
-            seatNumber = currentSeat.seatNumber;
         }
 
         //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
@@ -146,7 +143,7 @@ public class CustomerAgent : MonoBehaviour
         if (startNode == null || endNode == null)
         {
             Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, !indoor);
+            gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
@@ -157,7 +154,7 @@ public class CustomerAgent : MonoBehaviour
         if (path == null)
         {
             Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, !indoor);
+            gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
@@ -205,7 +202,7 @@ public class CustomerAgent : MonoBehaviour
         nm.SetMoving(false);
         cuc.CloseBubble();
         StopAllCoroutines();
-        TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
+        TaskLogger.Instance.LogServing("현재 손님이 좌석에 앉았습니다.");
         StartCoroutine(MoveToSeat(newSeat));
     }
 
@@ -293,7 +290,7 @@ public class CustomerAgent : MonoBehaviour
 
         if (currentSeat != null)
         {
-            gm.seatManager.ReleaseSeat(currentSeat, isWaiting);
+            gm.seatManager.ReleaseSeat(this, currentSeat, isWaiting);
             currentSeat = null;
         }
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
