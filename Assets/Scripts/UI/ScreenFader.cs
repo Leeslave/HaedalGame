@@ -44,6 +44,8 @@ public class ScreenFader : MonoBehaviour
 
     private void StartFade(float targetAlpha, Action onComplete)
     {
+        if (!gameObject.activeSelf) { gameObject.SetActive(true); }
+
         if (activeRoutine != null) { StopCoroutine(activeRoutine); }
         activeRoutine = StartCoroutine(FadeRoutine(targetAlpha, onComplete));
     }

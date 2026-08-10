@@ -18817,6 +18817,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ClosingCanvas
       objectReference: {fileID: 0}
+    - target: {fileID: 7376084829498750250, guid: a3fc639216a259e43be21fe8eaf3927b, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8159396312014686085, guid: a3fc639216a259e43be21fe8eaf3927b, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

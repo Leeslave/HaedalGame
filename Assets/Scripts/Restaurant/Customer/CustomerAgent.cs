@@ -39,6 +39,11 @@ public class CustomerAgent : MonoBehaviour
     public bool WasServed { get; private set; }
 
     private Seat currentSeat;
+    public Seat GetCurrentSeat() { return currentSeat; }
+
+    // MoveToSeat에서 경로 탐색에 실패한 좌석들. 만석+대기열 만석 상태에서 유일하게 빈 좌석이
+    // 도달 불가능할 경우, 같은 좌석을 무한히 재배정받아 TrySeat<->MoveToSeat이 무한 반복되는 것을 막기 위함.
+    private readonly HashSet<Seat> failedSeats = new HashSet<Seat>();
 
     /* [ Awake & Start ] */
     private void Awake()
@@ -127,7 +132,7 @@ public class CustomerAgent : MonoBehaviour
         // 경로 탐색 실패로 자리를 반납하고 재시도하는 경우이므로 다시 잡아본다.
         if (currentSeat == null)
         {
-            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
+            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor, failedSeats);
             if (currentSeat == null) // 만약 재시도했는데도 자리가 없는 경우
             {
                 ratingFlag = RatingFlag.Low;
@@ -149,6 +154,7 @@ public class CustomerAgent : MonoBehaviour
         if (startNode == null || endNode == null)
         {
             Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
+            failedSeats.Add(seat);
             gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();
@@ -160,6 +166,7 @@ public class CustomerAgent : MonoBehaviour
         if (path == null)
         {
             Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
+            failedSeats.Add(seat);
             gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();

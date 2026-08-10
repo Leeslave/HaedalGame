@@ -38,11 +38,15 @@ public class SeatManager : MonoBehaviour
     }
 
     // 손님이 좌석을 배정받으려고 시도하는 함수. 인도어 자리가 없으면 웨이팅 줄 맨 뒤에 등록한다.
-    public Seat TryAssignSeat(CustomerAgent customer, out bool indoor)
+    // excludeSeats: 그 손님이 이미 경로 탐색에 실패한 적 있는 좌석들. 같은(도달 불가능한) 좌석을
+    // 무한히 재배정받는 것을 막기 위함 (만석+대기열 만석 상태에서 무한 루프로 이어지던 버그 수정).
+    public Seat TryAssignSeat(CustomerAgent customer, out bool indoor, HashSet<Seat> excludeSeats = null)
     {
         indoor = false;
         for (int i = 0; i < seats.Count; i++)
         {
+            if (excludeSeats != null && excludeSeats.Contains(seats[i])) { continue; }
+
             if (!seats[i].GetIsOccupied() && seats[i].TryOccupy(customer))
             {
                 indoor = true;
@@ -61,6 +65,10 @@ public class SeatManager : MonoBehaviour
     {
         if (isWaiting)
         {
+            // 대기 벤치 타일도 착석 시 OnCustomerSeated()로 walkable=false 처리되므로,
+            // 여기서 Vacate()로 복원하지 않으면 그 타일이 영구히 막힌 채로 남는다(타일 누수).
+            if (seat != null) { seat.Vacate(); }
+
             if (waitingLine.Remove(customer))
             {
                 RepositionWaitingLine();
@@ -83,6 +91,11 @@ public class SeatManager : MonoBehaviour
 
         CustomerAgent customer = waitingLine[0];
         waitingLine.RemoveAt(0);
+
+        // 승격 경로에서는 ReleaseSeat(isWaiting: true)를 거치지 않으므로, 여기서 직접
+        // 대기 벤치 타일을 복원해야 한다 (안 그러면 그 타일이 영구히 막힌다 - 타일 누수).
+        Seat oldBenchSeat = customer.GetCurrentSeat();
+        if (oldBenchSeat != null) { oldBenchSeat.Vacate(); }
 
         emptySeat.TryOccupy(customer);
         customer.PromoteToSeat(emptySeat);
