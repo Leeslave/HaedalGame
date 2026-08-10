@@ -154,25 +154,19 @@ public class MenuManager : MonoBehaviour
 
     public void LoadMenuData()
     {
-        unlockedFoods.Clear();          // 탐험 후, 새로운 음식이 해금 되었다면 덮어쓰기 해야함 
+        unlockedFoods.Clear();          // 탐험 후, 새로운 음식이 해금 되었다면 덮어쓰기 해야함
         unlockedFoodIdSet.Clear();      // 언락된 음식들을 빠르게 찾기 위해 만든 리스트도 덮어쓰기 해야함.
         dailyFoods.Clear();             // 매일마다 오늘의 메뉴가 다르니 덮어쓰기 해야함.
-         
 
-        //MenuSaveData saveData = FoodSaveLoadManager.LoadMenu();
-        MenuSaveData saveData = null;
-        if (saveData == null)
+        MenuSaveData saveData = FoodSaveLoadManager.LoadMenu();
+
+        if (saveData == null || saveData.unlockedFoodIds == null || saveData.unlockedFoodIds.Count == 0)
         {
-            Debug.Log("메뉴 세이브 데이터가 없어서 기본 상태로 시작합니다.");
-            
-            //  테스트용 - 모든 음식 자동 해금
-            foreach (var food in recipeDatabase.Recipes)
-            {
-                UnlockMenu(food);
-            }
+            Debug.Log("메뉴 세이브 데이터가 없어서 기본 해금 메뉴로 시작합니다.");
+            AddDefaultUnlockedRecipesIfMissing();
             return;
         }
-        
+
         if (saveData.unlockedFoodIds != null)
         {
             foreach (int id in saveData.unlockedFoodIds)
@@ -189,6 +183,9 @@ public class MenuManager : MonoBehaviour
                 }
             }
         }
+
+        // Setting 씬에서 저장한 시점 이후 새로 추가된 기본 해금 레시피가 있다면 함께 채워준다.
+        AddDefaultUnlockedRecipesIfMissing();
 
         if (saveData.dailyFoodIds != null)
         {
@@ -208,6 +205,23 @@ public class MenuManager : MonoBehaviour
 
                 dailyFoods.Add(food);
             }
+        }
+    }
+
+    private void AddDefaultUnlockedRecipesIfMissing()
+    {
+        if (recipeDatabase == null)
+            return;
+
+        foreach (var food in recipeDatabase.Recipes)
+        {
+            if (food == null)
+                continue;
+
+            if (!food.DefaultUnlock)
+                continue;
+
+            UnlockMenu(food);
         }
     }
 

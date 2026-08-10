@@ -3,6 +3,10 @@ using UnityEngine;
 
 public class CustomerOrderComponent : MonoBehaviour
 {
+    // 손님 유형별로 인스펙터에서 직접 배정하는 최애 메뉴 레시피 ID. -1이면 미설정(보너스 없음).
+    [SerializeField] private int favoriteRecipeId = -1;
+    public int FavoriteRecipeId => favoriteRecipeId;
+
     private RecipeData curData;
     public RecipeData GetOrderData()
     {

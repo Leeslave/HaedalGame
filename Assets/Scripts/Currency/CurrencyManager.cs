@@ -6,6 +6,7 @@ public class CurrencyManager : MonoBehaviour
 {
     public static CurrencyManager Instance { get; private set; }
     public Action<Currency, int> OnCurrencyChanged;
+    public Action<CurrencyTransaction> OnTransactionProcessed;
 
     private Dictionary<Currency, int> _wallets = new Dictionary<Currency, int>();
     [SerializeField] private List<Currency> _allCurrencies;
@@ -42,10 +43,11 @@ public class CurrencyManager : MonoBehaviour
         _wallets[tx.Currency] += finalAmount;
         Mathf.Clamp(_wallets[tx.Currency], tx.Currency.MinCapacity, tx.Currency.MaxCapacity);
 
-        Debug.Log($"[{tx.Source}] {tx.Currency.CurrencyID} {finalAmount} º¯µ¿µÊ. (ÇöÀç ÀÜ¾×: {_wallets[tx.Currency]})");
+        Debug.Log($"[{tx.Source}] {tx.Currency.CurrencyID} {finalAmount} ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. (ï¿½ï¿½ï¿½ï¿½ ï¿½Ü¾ï¿½: {_wallets[tx.Currency]})");
 
-        // UI ¾÷µ¥ÀÌÆ® ¹æ¼Û
+        // UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½
         OnCurrencyChanged?.Invoke(tx.Currency, _wallets[tx.Currency]);
+        OnTransactionProcessed?.Invoke(tx);
     }
 
     public int GetCurrency(Currency currency)
@@ -53,7 +55,7 @@ public class CurrencyManager : MonoBehaviour
         return _wallets.ContainsKey(currency) ? _wallets[currency] : -1;
     }
 
-    // ¹öÇÁ(°öÇÏ±â ¿¬»ê)
+    // ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½)
     private CurrencyTransaction ApplyGlobalModifiers(CurrencyTransaction tx)
     {
         return tx;

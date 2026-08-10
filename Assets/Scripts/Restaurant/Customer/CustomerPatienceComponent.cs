@@ -73,8 +73,8 @@ public class CustomerPatienceComponent : MonoBehaviour
             }
             else                                        // 인내심 방어 시간이 전부 떨어졌을 경우
             {
-                
-                curPatience -= drainPerSec * Time.deltaTime;
+                float drainMultiplier = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.PatienceDrainMultiplier : 1f;
+                curPatience -= drainPerSec * drainMultiplier * Time.deltaTime;
                 if (isWaiting) { ForWaiting(); }
                 if (curPatience <= 0)
                 {

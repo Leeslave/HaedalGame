@@ -127,7 +127,8 @@ public class ChefAgent : PartTimerAgent
 
     private IEnumerator CookingRoutine()
     {
-        yield return new WaitForSeconds(curTask.CookingTime);
+        float speedMultiplier = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.StaffSpeedMultiplier : 1f;
+        yield return new WaitForSeconds(curTask.CookingTime / speedMultiplier);
         ChefManager.Instance.ReleaseTool(curType);
         Advance(ChefState.ApproachingDropoff, ApproachingDropoffRoutine());
     }

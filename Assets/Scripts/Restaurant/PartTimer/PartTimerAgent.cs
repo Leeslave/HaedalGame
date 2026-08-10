@@ -33,6 +33,8 @@ public class PartTimerAgent : MonoBehaviour
             yield break;
         }
 
+        if (RestaurantRatingManager.Instance != null) { speed *= RestaurantRatingManager.Instance.StaffSpeedMultiplier; }
+
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
         PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(destination);
         if (startNode == null || endNode == null) { yield break; }

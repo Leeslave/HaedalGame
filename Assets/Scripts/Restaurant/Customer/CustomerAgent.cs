@@ -18,6 +18,9 @@ public class CustomerAgent : MonoBehaviour
     [SerializeField] private float payDuration = 2f;
     [SerializeField] private float stateChangeDuration = 1.0f;
 
+    [Header("Payment")]
+    [SerializeField] private Currency gold;
+
     [Header("Other")]
     private bool indoor = false;
     private bool isWaiting = false;
@@ -31,6 +34,9 @@ public class CustomerAgent : MonoBehaviour
 
     private CustomerState state;
     private RatingFlag ratingFlag = RatingFlag.None;
+
+    // 식사를 마치고 결제까지 완료했는지(= 대접받았는지) 여부. 일일 결산의 손님 수 집계에 쓰인다.
+    public bool WasServed { get; private set; }
 
     private Seat currentSeat;
 
@@ -268,8 +274,50 @@ public class CustomerAgent : MonoBehaviour
     // CustomState.Paying
     private IEnumerator Paying()
     {
+        ProcessPayment();
         yield return new WaitForSeconds(payDuration);
         StartCoroutine(WaitStateChange(CustomerState.Exit));
+    }
+
+    private void ProcessPayment()
+    {
+        RecipeData order = coc.GetOrderData();
+        if (order == null) { return; }
+
+        WasServed = true;
+
+        float tipMultiplier = 1f;
+
+        if (RestaurantRatingManager.Instance != null && gm != null && gm.ratingSystem != null)
+        {
+            float score = ComputePersonalRating(order);
+            RestaurantRatingManager.Instance.AddCustomerScore(score);
+            tipMultiplier = RestaurantRatingManager.Instance.TipMultiplier;
+        }
+
+        if (gold == null) { return; }
+
+        int amount = Mathf.RoundToInt(order.Price);
+        CurrencyManager.Instance.ProcessTransaction(new CurrencyTransaction(gold, amount, TransactionSource.CustomerPayment, tipMultiplier));
+
+        if (DailySalesTracker.Instance != null)
+        {
+            int finalAmount = Mathf.RoundToInt(amount * tipMultiplier);
+            DailySalesTracker.Instance.RecordSale(order, finalAmount);
+        }
+    }
+
+    // Score = min(5.0, Taste Score + Favorite Bonus)
+    private float ComputePersonalRating(RecipeData order)
+    {
+        int recipeGrade = RatingSystem.GradeToInt(order.Grade);
+        int expectation = RestaurantRatingManager.Instance.CurrentExpectation;
+        float taste = gm.ratingSystem.PersonalRating(recipeGrade, expectation);
+
+        float favoriteBonus = 0f;
+        if (coc.FavoriteRecipeId >= 0 && coc.FavoriteRecipeId == order.RecipeId) { favoriteBonus = 0.5f; }
+
+        return Mathf.Min(5.0f, taste + favoriteBonus);
     }
 
     // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
