@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f348023f1a89bd9439952f4acf3c8995, type: 3}
+  m_Name: HouseTutorial_07_Outro
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialStepSO
+  _targetKey: 
+  _targetWaitTimeout: 3
+  _highlightPadding: {x: 24, y: 24}
+  _shape: 2
+  _titleText: "\uC900\uBE44 \uC644\uB8CC"
+  _descriptionText: "\uC774\uC81C \uC9D1\uC744 \uC790\uC720\uB86D\uAC8C \uB458\uB7EC\uBCF4\uC138\uC694."
+  _instructionText: "\uC544\uBB34 \uACF3\uC774\uB098 \uD074\uB9AD\uD558\uC5EC \uB05D\uB0B4\uAE30"
+  _extraLines: []
+  _textPlacement: 0
+  _textOffset: {x: 0, y: 0}
+  _advanceMode: 0
+  _inputDelay: 0.35
+  _autoAdvanceDelay: 2
+  _completeEventKey: 
+  _allowTargetInteraction: 0
+  _showSkipButton: 1
+  _startDelay: 0

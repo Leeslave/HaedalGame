@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f348023f1a89bd9439952f4acf3c8995, type: 3}
+  m_Name: HouseTutorial_06_LevelInfoButton
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialStepSO
+  _targetKey: "house.levelInfoButton"
+  _targetWaitTimeout: 3
+  _highlightPadding: {x: 24, y: 24}
+  _shape: 0
+  _titleText: 
+  _descriptionText: "[\uB808\uBCA8 \uC815\uBCF4] \uBC84\uD2BC\uC744 \uB20C\uB7EC \uBCF4\uC138\uC694."
+  _instructionText: "\uBC84\uD2BC\uC744 \uB20C\uB7EC\uC57C \uB2E4\uC74C\uC73C\uB85C \uB118\uC5B4\uAC00\uC694"
+  _extraLines:
+  - "\uC9C1\uC811 \uB20C\uB7EC\uC57C \uC9C4\uD589\uB418\uB294 \uC2A4\uD15D\uC774\uC5D0\uC694."
+  _textPlacement: 0
+  _textOffset: {x: 0, y: 0}
+  _advanceMode: 1
+  _inputDelay: 0.35
+  _autoAdvanceDelay: 2
+  _completeEventKey: 
+  _allowTargetInteraction: 0
+  _showSkipButton: 1
+  _startDelay: 0
