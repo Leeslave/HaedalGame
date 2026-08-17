@@ -1,0 +1,68 @@
+{
+  "id": "sample_dialogue",
+  "backgroundStyle": "SeasideDusk",
+  "canSkip": true,
+  "pauseGameTime": true,
+  "playOnce": false,
+  "typeSpeed": 34,
+  "allowFastForward": true,
+
+  "characters": [
+    { "id": "haedal", "name": "해달", "color": "#7FD4E8", "side": "Left" },
+    { "id": "elf", "name": "엘프 상인", "color": "#B9E88F", "side": "Right" }
+  ],
+
+  "nodes": [
+    {
+      "id": "start",
+      "speaker": "haedal",
+      "text": "오늘도 파도가 좋네. 슬슬 가게 문을 열어볼까?"
+    },
+    {
+      "speaker": "elf",
+      "text": "해달! 오늘 들어온 재료가 아주 싱싱해. 구경하고 갈래?"
+    },
+    {
+      "id": "ask",
+      "speaker": "haedal",
+      "text": "음... 오늘은 뭘 먼저 해볼까?",
+      "choices": [
+        { "text": "재료부터 사러 간다", "next": "buy", "eventKey": "sample.goto_shop", "setFlag": "bought" },
+        { "text": "일단 가게부터 연다", "next": "open" },
+        { "text": "바다나 보고 온다", "next": "sea" }
+      ]
+    },
+    {
+      "id": "buy",
+      "speaker": "elf",
+      "text": "잘 골랐어. 오늘 들어온 건 전부 아침에 잡은 것들이야.",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade",
+      "next": "end_line"
+    },
+    {
+      "id": "open",
+      "speaker": "haedal",
+      "text": "좋아, 손님 맞을 준비부터 하자.",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade",
+      "next": "end_line"
+    },
+    {
+      "id": "sea",
+      "speaker": "haedal",
+      "text": "가끔은 이렇게 아무것도 안 하는 시간도 필요한 법이지.",
+      "backgroundStyle": "DeepSea",
+      "transition": "Fade",
+      "next": "end_line"
+    },
+    {
+      "id": "end_line",
+      "speaker": "haedal",
+      "text": "자, 오늘 하루도 잘 부탁해!",
+      "blockSkip": true,
+      "eventKey": "sample.finished",
+      "next": "end"
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "id": "test_dialogue",
+  "backgroundStyle": "SeasideDay",
+  "canSkip": true,
+  "pauseGameTime": true,
+  "playOnce": false,
+  "typeSpeed": 32,
+  "allowFastForward": true,
+
+  "characters": [
+    { "id": "haedal", "name": "해달", "color": "#7FD4E8", "portrait": "haedal_normal", "side": "Left" },
+    { "id": "elf", "name": "엘프 상인", "color": "#B9E88F", "portrait": "elf_normal", "side": "Right" }
+  ],
+
+  "nodes": [
+    {
+      "id": "start",
+      "side": "None",
+      "text": "<i>대사 시스템 테스트 스크립트.</i>\n화자 없이 지문만 나오는 줄이다. 이름표가 안 보여야 정상.",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Instant",
+      "typeSpeed": 14,
+      "autoAdvance": 4,
+      "next": "hub"
+    },
+
+    {
+      "id": "hub",
+      "speaker": "haedal",
+      "text": "무엇을 확인해볼까? <color=#FFD966>고르면 그 항목으로 간다.</color>",
+      "typeSpeed": 0,
+      "choices": [
+        { "text": "1. 배경 스타일 7종", "next": "bg_day" },
+        { "text": "2. 화자 표시 (이름·색·정체숨김)", "next": "spk_1" },
+        { "text": "3. 글자 속도 / 자동 넘김", "next": "spd_1" },
+        { "text": "4. 건너뛰기 · blockSkip", "next": "skip_1" },
+        { "text": "5. 플래그 분기", "next": "flag_1" },
+        { "text": "6. 이미지 키 (일부러 없는 키)", "next": "img_1" },
+        { "text": "★ 숨겨진 선택지 (플래그 획득 후 등장)", "next": "secret", "requireFlag": "got_secret" },
+        { "text": "테스트 종료", "next": "outro" }
+      ]
+    },
+
+    {
+      "id": "bg_day",
+      "side": "None",
+      "text": "SeasideDay — 한낮 바다 (하늘빛 → 모래빛)",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade",
+      "next": "bg_dusk"
+    },
+    {
+      "id": "bg_dusk",
+      "side": "None",
+      "text": "SeasideDusk — 노을 진 바다 (주황 → 남색)",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade",
+      "next": "bg_night"
+    },
+    {
+      "id": "bg_night",
+      "side": "None",
+      "text": "SeasideNight — 밤바다 (짙은 남색 → 보랏빛)",
+      "backgroundStyle": "SeasideNight",
+      "transition": "Fade",
+      "next": "bg_interior"
+    },
+    {
+      "id": "bg_interior",
+      "side": "None",
+      "text": "WarmInterior — 식당 실내 (따뜻한 나무빛)",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade",
+      "next": "bg_deep"
+    },
+    {
+      "id": "bg_deep",
+      "side": "None",
+      "text": "DeepSea — 깊은 바닷속 (청록 → 짙은 파랑)",
+      "backgroundStyle": "DeepSea",
+      "transition": "Fade",
+      "next": "bg_dim"
+    },
+    {
+      "id": "bg_dim",
+      "side": "None",
+      "text": "Dim — 게임 화면을 어둡게만 덮는다. 뒤 화면이 비쳐 보여야 정상.",
+      "backgroundStyle": "Dim",
+      "transition": "Instant",
+      "next": "bg_none"
+    },
+    {
+      "id": "bg_none",
+      "side": "None",
+      "text": "None — 배경을 아예 안 그린다. 게임 화면이 그대로 보여야 정상.",
+      "backgroundStyle": "None",
+      "transition": "Instant",
+      "next": "bg_back"
+    },
+    {
+      "id": "bg_back",
+      "speaker": "haedal",
+      "text": "배경 확인 끝. (Instant/Fade 전환도 같이 봤다)",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade",
+      "next": "hub"
+    },
+
+    {
+      "id": "spk_1",
+      "speaker": "haedal",
+      "text": "이름표는 <color=#7FD4E8>해달</color>, 초상화는 왼쪽에 서야 한다.",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade"
+    },
+    {
+      "id": "spk_2",
+      "speaker": "elf",
+      "name": "???",
+      "text": "이름만 ??? 로 바뀌고 색은 그대로여야 한다. (정체 숨김)"
+    },
+    {
+      "id": "spk_3",
+      "speaker": "elf",
+      "text": "이제 이름이 밝혀졌다. 오른쪽에 서고, 왼쪽 해달은 살짝 어두워져야 한다."
+    },
+    {
+      "id": "spk_4",
+      "speaker": "지나가던 손님",
+      "text": "characters에 등록 안 된 이름이다. 적은 글자가 그대로 이름표에 떠야 한다.",
+      "side": "Center"
+    },
+    {
+      "id": "spk_5",
+      "speaker": "haedal",
+      "portrait": "none",
+      "text": "portrait를 \"none\"으로 두면 이 쪽 초상화만 지워져야 한다.",
+      "next": "hub"
+    },
+
+    {
+      "id": "spd_1",
+      "speaker": "haedal",
+      "text": "이 줄은 아주 느리다. (typeSpeed 6) — 도중에 클릭하면 즉시 다 채워져야 한다.",
+      "typeSpeed": 6,
+      "backgroundStyle": "SeasideNight",
+      "transition": "Fade"
+    },
+    {
+      "id": "spd_2",
+      "speaker": "haedal",
+      "text": "이 줄은 타자 효과 없이 즉시 표시된다. (typeSpeed 0)",
+      "typeSpeed": 0
+    },
+    {
+      "id": "spd_3",
+      "side": "None",
+      "text": "이 줄은 클릭하지 않아도 2.5초 뒤 자동으로 넘어간다. (autoAdvance)",
+      "autoAdvance": 2.5,
+      "next": "hub"
+    },
+
+    {
+      "id": "skip_1",
+      "speaker": "haedal",
+      "text": "지금부터 5줄이다. 오른쪽 위 [건너뛰기 ▶▶]를 눌러보자. (1/5)",
+      "backgroundStyle": "DeepSea",
+      "transition": "Fade"
+    },
+    { "id": "skip_2", "speaker": "haedal", "text": "건너뛰는 중이면 이 줄은 순식간에 지나간다. (2/5)" },
+    { "id": "skip_3", "speaker": "haedal", "text": "이 줄도 마찬가지. (3/5)" },
+    {
+      "id": "skip_4",
+      "speaker": "elf",
+      "text": "★ blockSkip 줄이다. 건너뛰기가 여기서 멈추고 보통 속도로 돌아와야 한다. (4/5)",
+      "blockSkip": true,
+      "eventKey": "test.block_skip_hit"
+    },
+    {
+      "id": "skip_5",
+      "speaker": "haedal",
+      "text": "멈췄다면 정상. 다시 건너뛰기를 눌러도 된다. (5/5)",
+      "next": "hub"
+    },
+
+    {
+      "id": "flag_1",
+      "speaker": "elf",
+      "text": "선택지에 조건을 걸어둘 수 있다. 아래에서 하나 골라보자.",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade",
+      "choices": [
+        {
+          "text": "비밀을 듣는다 (플래그 ON)",
+          "next": "flag_got",
+          "setFlag": "got_secret",
+          "eventKey": "test.secret_taken"
+        },
+        {
+          "text": "관심 없다 (아직 안 들었을 때만 보임)",
+          "next": "flag_skip",
+          "requireFlag": "!got_secret"
+        }
+      ]
+    },
+    {
+      "id": "flag_got",
+      "speaker": "elf",
+      "text": "플래그를 켰다. 이제 허브에 <color=#FFD966>★ 숨겨진 선택지</color>가 생기고,\n위의 '관심 없다'는 사라져야 한다.",
+      "next": "hub"
+    },
+    {
+      "id": "flag_skip",
+      "speaker": "elf",
+      "text": "그렇군. 마음이 바뀌면 다시 와라.",
+      "next": "hub"
+    },
+    {
+      "id": "secret",
+      "speaker": "elf",
+      "text": "requireFlag로만 열리는 줄이다. 여기가 보이면 플래그 분기가 정상 동작한 것.",
+      "backgroundStyle": "SeasideNight",
+      "transition": "Fade",
+      "next": "hub"
+    },
+
+    {
+      "id": "img_1",
+      "speaker": "haedal",
+      "text": "배경 이미지 키를 일부러 없는 값으로 뒀다. 콘솔에 경고가 뜨고,\n화면은 기본 스타일(DeepSea)로 대체되어야 한다.",
+      "background": "이_키는_존재하지_않음",
+      "backgroundStyle": "DeepSea",
+      "transition": "Fade"
+    },
+    {
+      "id": "img_2",
+      "speaker": "haedal",
+      "portrait": "이_초상화도_없음",
+      "text": "초상화 키도 없는 값이다. 경고만 남고 대사는 그대로 진행되어야 한다.",
+      "next": "hub"
+    },
+
+    {
+      "id": "outro",
+      "speaker": "haedal",
+      "text": "테스트 끝. 수고했어!",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade",
+      "blockSkip": true,
+      "eventKey": "test.finished",
+      "next": "end"
+    }
+  ]
+}
