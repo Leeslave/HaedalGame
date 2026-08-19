@@ -58,9 +58,9 @@ public class ClosingPanelController : MonoBehaviour
         {
             ratingCard.Setup(
                 "<평점>",
-                "오늘 평점: " + FormatStars(data.TodayRating),
-                "기존 평점: " + FormatStars(data.PreviousRating),
-                "총 평점: " + FormatStars(data.TotalRating));
+                "오늘 평점: " + FormatRating(data.TodayRating),
+                "기존 평점: " + FormatRating(data.PreviousRating),
+                "총 평점: " + FormatRating(data.TotalRating));
         }
 
         if (moneyCard != null)
@@ -89,14 +89,8 @@ public class ClosingPanelController : MonoBehaviour
         if (ScreenFader.Instance != null) { ScreenFader.Instance.FadeIn(null); }
     }
 
-    private string FormatStars(float rating)
+    private string FormatRating(float rating)
     {
-        int full = Mathf.Clamp(Mathf.RoundToInt(rating), 0, 5);
-        string stars = "";
-        for (int i = 0; i < 5; i++)
-        {
-            stars += (i < full) ? "★" : "☆";
-        }
-        return stars;
+        return rating.ToString("F1");
     }
 }

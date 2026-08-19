@@ -38,6 +38,8 @@ public class RestaurantGameManager : MonoBehaviour
 
     public void StartOperation()
     {
+        if (OperationUIManager.Instance != null) { OperationUIManager.Instance.ShowUI(); }
+
         hallSystem.Initialize();
         kitchenSystem.Initialize();
         ServerManager.Instance.InitializeAgents();
@@ -50,6 +52,9 @@ public class RestaurantGameManager : MonoBehaviour
     // 마지막 손님이 나가면 CustomerSpawner.OnAllCustomersHandled를 통해 호출된다.
     public void EndOperation()
     {
+        if (OperationUIManager.Instance != null) { OperationUIManager.Instance.HideUI(); }
+        RestaurantSpeedController.SetFastForward(false);
+
         pendingClosingDay = InGameTimeManager.Instance != null ? InGameTimeManager.Instance.CurrentDay : 0;
         pendingTodayRating = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.TodayAverage : 0f;
         pendingPreviousRating = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.RestaurantRating : 0f;

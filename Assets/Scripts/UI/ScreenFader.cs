@@ -72,6 +72,7 @@ public class ScreenFader : MonoBehaviour
         canvasGroup.alpha = targetAlpha;
         canvasGroup.blocksRaycasts = targetAlpha > 0f;
         activeRoutine = null;
+        gameObject.SetActive(false);
         onComplete?.Invoke();
     }
 }

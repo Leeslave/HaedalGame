@@ -150,6 +150,7 @@ GameObject:
   - component: {fileID: 7347122871497434692}
   - component: {fileID: 2860465723425151383}
   - component: {fileID: 6631362952188144186}
+  - component: {fileID: 6631362952188144200}
   m_Layer: 0
   m_Name: Two Seat
   m_TagString: Untagged
@@ -205,6 +206,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00299d221f2c56849916df9a92503b37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlacedTable
+--- !u!61 &6631362952188144200
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7186909959724740063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  serializedVersion: 2
+  m_Size: {x: 2, y: 1.2}
+  m_EdgeRadius: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
 --- !u!1 &8949585327672625194
 GameObject:
   m_ObjectHideFlags: 0

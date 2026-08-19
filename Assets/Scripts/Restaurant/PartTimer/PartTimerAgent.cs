@@ -34,6 +34,7 @@ public class PartTimerAgent : MonoBehaviour
         }
 
         if (RestaurantRatingManager.Instance != null) { speed *= RestaurantRatingManager.Instance.StaffSpeedMultiplier; }
+        speed *= RestaurantSpeedController.SpeedMultiplier;
 
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
         PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(destination);

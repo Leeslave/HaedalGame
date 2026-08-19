@@ -2,7 +2,7 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
+  serializedVersion: 3
   tags: []
   layers:
   - Default
@@ -41,3 +41,20 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Kitchen
+    uniqueID: 2722432259
+    locked: 0
+  - name: Cheif
+    uniqueID: 4198706251
+    locked: 0
+  - name: Table
+    uniqueID: 4016417397
+    locked: 0
+  - name: Roof
+    uniqueID: 3141602527
+    locked: 0
+  - name: Close
+    uniqueID: 2614691233
+    locked: 0
+  m_RenderingLayers:
+  - Default

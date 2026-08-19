@@ -41,6 +41,9 @@ public class CustomerAgent : MonoBehaviour
     private Seat currentSeat;
     public Seat GetCurrentSeat() { return currentSeat; }
 
+    private const float BaseMoveSpeed = 3f;
+    private float MoveSpeed => BaseMoveSpeed * RestaurantSpeedController.SpeedMultiplier;
+
     // MoveToSeat에서 경로 탐색에 실패한 좌석들. 만석+대기열 만석 상태에서 유일하게 빈 좌석이
     // 도달 불가능할 경우, 같은 좌석을 무한히 재배정받아 TrySeat<->MoveToSeat이 무한 반복되는 것을 막기 위함.
     private readonly HashSet<Seat> failedSeats = new HashSet<Seat>();
@@ -179,7 +182,7 @@ public class CustomerAgent : MonoBehaviour
         {
             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
                 Vector2 dir = (waypoint - transform.position).normalized;
                 nm.SetDirection(dir);
                 yield return null;
@@ -189,7 +192,7 @@ public class CustomerAgent : MonoBehaviour
         // A* 경로는 타일 중심까지만 안내하므로, 테이블 크기에 비례해 옮겨진 실제 좌석 좌표까지 마지막으로 미세 이동
         while (Vector2.Distance(transform.position, target) > 0.05f)
         {
-            transform.position = Vector2.MoveTowards(transform.position, target, 3f * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, target, MoveSpeed * Time.deltaTime);
             Vector2 dir = (target - transform.position).normalized;
             nm.SetDirection(dir);
             yield return null;
@@ -386,7 +389,7 @@ public class CustomerAgent : MonoBehaviour
         {
             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
                 Vector2 dir = (waypoint - transform.position).normalized;
                 nm.SetDirection(dir);
                 yield return null;
