@@ -2,18 +2,6 @@ using UnityEngine;
 
 public class RatingSystem : MonoBehaviour
 {
-    public static RatingSystem Instance { get; private set; }
-
-    void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-    }
-
     public float PersonalRating(int recipeGrade, int expectation)
     {
         float result = 0;

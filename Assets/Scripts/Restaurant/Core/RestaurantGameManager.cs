@@ -40,8 +40,6 @@ public class RestaurantGameManager : MonoBehaviour
     {
         if (OperationUIManager.Instance != null) { OperationUIManager.Instance.ShowUI(); }
 
-        hallSystem.Initialize();
-        kitchenSystem.Initialize();
         ServerManager.Instance.InitializeAgents();
         ChefManager.Instance.InitializeAgents();
         customerSpawner.OnAllCustomersHandled -= EndOperation;
@@ -53,7 +51,7 @@ public class RestaurantGameManager : MonoBehaviour
     public void EndOperation()
     {
         if (OperationUIManager.Instance != null) { OperationUIManager.Instance.HideUI(); }
-        RestaurantSpeedController.SetFastForward(false);
+        RestaurantSpeedController.SetFastForward(false);        // Next Day에 배속이 켜져있는 문제 방지.
 
         pendingClosingDay = InGameTimeManager.Instance != null ? InGameTimeManager.Instance.CurrentDay : 0;
         pendingTodayRating = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.TodayAverage : 0f;
@@ -110,5 +108,8 @@ public class RestaurantGameManager : MonoBehaviour
         if (DailySalesTracker.Instance != null) { DailySalesTracker.Instance.ResetDay(); }
         if (DailyCustomerTracker.Instance != null) { DailyCustomerTracker.Instance.ResetDay(); }
         if (DailyFinanceTracker.Instance != null) { DailyFinanceTracker.Instance.ResetDay(); }
+
+        if (hallSystem != null) { hallSystem.ResetDay(); }
+        if (kitchenSystem != null) { kitchenSystem.ResetDay(); }
     }
 }

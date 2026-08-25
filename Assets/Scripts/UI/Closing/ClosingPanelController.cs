@@ -32,7 +32,11 @@ public class ClosingPanelController : MonoBehaviour
 
     private void Start()
     {
-        if (ClosingReportManager.Instance != null) { ClosingReportManager.Instance.OnReportReady += ShowReport; }
+        if (ClosingReportManager.Instance != null) 
+        { 
+            ClosingReportManager.Instance.OnReportReady -= ShowReport; 
+            ClosingReportManager.Instance.OnReportReady += ShowReport; 
+        }
     }
 
     private void SetVisible(bool visible)

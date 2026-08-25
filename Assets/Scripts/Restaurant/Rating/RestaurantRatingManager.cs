@@ -47,6 +47,7 @@ public class RestaurantRatingManager : MonoBehaviour
     {
         if (InGameTimeManager.Instance != null)
         {
+            InGameTimeManager.Instance.OnDayAdvanced -= OnDayAdvanced;
             InGameTimeManager.Instance.OnDayAdvanced += OnDayAdvanced;
         }
 

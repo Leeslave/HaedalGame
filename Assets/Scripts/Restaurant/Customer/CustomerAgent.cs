@@ -354,6 +354,8 @@ public class CustomerAgent : MonoBehaviour
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
         nm.ResetSortingOrder();
         nm.SetMoving(false);
+        cpc.OnPatienceExhausted -= PatienceExhausted;
+        cpc.OnWaitingProgress -= cuc.ChangeEmotion;
         StopAllCoroutines();
         StartCoroutine(MoveToExit());
     }

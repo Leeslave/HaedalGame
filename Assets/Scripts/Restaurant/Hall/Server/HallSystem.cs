@@ -7,16 +7,17 @@ public class HallSystem : MonoBehaviour
     private ServingTaskQueue taskQueue = new ServingTaskQueue();
     private readonly Queue<ServerAgent> idleAgents = new Queue<ServerAgent>();
 
+
+    // 씬이 켜졌을 때 이벤트를 등록하고, 꺼질 때 이벤트 해제한다.
     void Awake()
     {
         Instance = this;
+        taskQueue.OnTaskEnqueue += DispatchPending;
     }
 
-    void Start() { }
-
-    public void Initialize()
+    void OnDestroy()
     {
-        taskQueue.OnTaskEnqueue += DispatchPending;
+        taskQueue.OnTaskEnqueue -= DispatchPending;
     }
 
     // 알바가 유휴 상태가 될 때(작업 완료 직후, 초기화 시 포함) 호출한다.
@@ -43,6 +44,7 @@ public class HallSystem : MonoBehaviour
         }
     }
 
+    // 손님 착석 시
     public void RegisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived += HandleOrderReceived;
@@ -50,6 +52,7 @@ public class HallSystem : MonoBehaviour
         customer.OnExited += UnregisterCustomer;
     }
 
+    // 손님 퇴장 시
     private void UnregisterCustomer(CustomerAgent customer)
     {
         customer.OnOrderReceived -= HandleOrderReceived;
@@ -57,23 +60,32 @@ public class HallSystem : MonoBehaviour
         customer.OnExited -= UnregisterCustomer;
     }
 
+    // 손님이 메뉴 결정 시
     private void HandleOrderReceived(CustomerAgent customer)
     {
         taskQueue.Enqueue(new ServingTask(ServingTaskType.TakeOrder, customer));
     }
 
+    // 서버가 손님의 주문을 수주했을 시
     private void HandleOrderTaken(CustomerAgent customer)
     {
         KitchenSystem.Instance.HandleOrderReceived(customer);
     }
 
+    // 쿠커로부터 Task를 전달 받았을 시
     public void HandleFoodReceived(CookingTask task)
     {
         taskQueue.Enqueue(new ServingTask(ServingTaskType.DeliverFood, task.GetCustomerAgent()));
     }
 
+    // 만약 손님의 우선순위가 높아졌을 시
     public void BoostCustomer(CustomerAgent customer)
     {
         taskQueue.Boost(customer);
+    }
+
+    public void ResetDay()
+    {
+        idleAgents.Clear();
     }
 }

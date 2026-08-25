@@ -55,7 +55,6 @@ public class ServerAgent : PartTimerAgent
     public void AssignTask(ServingTask task)
     {
         curTask = task;
-
         if (task.Customer.cbc.GetCheckBoost())
         {
             Debug.Log("**※※※** Boost한 업무를 수주했습니다.");

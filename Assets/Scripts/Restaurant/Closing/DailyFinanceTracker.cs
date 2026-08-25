@@ -29,6 +29,7 @@ public class DailyFinanceTracker : MonoBehaviour
     {
         if (CurrencyManager.Instance != null)
         {
+            CurrencyManager.Instance.OnTransactionProcessed -= HandleTransaction;
             CurrencyManager.Instance.OnTransactionProcessed += HandleTransaction;
         }
     }
