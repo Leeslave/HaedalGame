@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -25,6 +26,12 @@ public class TableGhostController : MonoBehaviour
         overlayPool     = pool;
         spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
         lastCellPos     = new Vector2Int(int.MinValue, int.MinValue);
+
+        // PlacedTable(TableGroup.Awake)과 동일하게 visualScale을 적용해야, 미리보기 크기가
+        // 실제 배치되는 테이블 크기와 일치한다. Ghost 프리팹에는 TableGroup을 붙이지 않으므로
+        // (붙이면 OnEnable에서 TableManager에 실제 테이블처럼 등록돼버림) 여기서 직접 적용.
+        Transform visual = transform.Find("Visual");
+        if (visual != null) { visual.localScale *= data.visualScale; }
     }
 
     private void Update()
@@ -50,20 +57,37 @@ public class TableGhostController : MonoBehaviour
         overlayPool.ReturnAll();
         IsPlaceable = true;
 
-        foreach (Vector2Int offset in TableData.tableTiles)
-        {
-            Vector2Int worldCell = anchor + offset;
-            bool valid = CheckTileValid(worldCell, false);
-            if (!valid) { IsPlaceable = false; }
-            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(worldCell), valid);
-        }
-
+        // 좌석 위치를 PlacedTable.Initialize()와 동일하게 visualScale만큼 앵커 기준으로 벌려서 계산해야,
+        // 테이블이 커진 만큼 미리보기의 유효 영역도 같이 넓어져서 실제 설치 결과와 어긋나지 않는다.
+        Vector3 anchorWorldPos = PathfindingGrid.Instance.GetWorldPos(anchor);
+        List<Vector2Int> chairCells = new List<Vector2Int>();
         foreach (Vector2Int offset in TableData.chairTiles)
         {
-            Vector2Int worldCell = anchor + offset;
-            bool valid = CheckTileValid(worldCell, true);
+            Vector3 baseWorldPos   = PathfindingGrid.Instance.GetWorldPos(anchor + offset);
+            Vector3 scaledWorldPos = anchorWorldPos + (baseWorldPos - anchorWorldPos) * TableData.visualScale;
+            chairCells.Add(PathfindingGrid.Instance.WorldToGridPos(scaledWorldPos));
+        }
+        List<Vector2Int> bodyCells = TableFootprint.GetBodyCells(chairCells);
+
+        foreach (Vector2Int cell in bodyCells)
+        {
+            bool valid = CheckTileValid(cell, false);
             if (!valid) { IsPlaceable = false; }
-            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(worldCell), valid);
+            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(cell), valid);
+        }
+
+        foreach (Vector2Int cell in chairCells)
+        {
+            bool valid = CheckTileValid(cell, true);
+            if (!valid) { IsPlaceable = false; }
+            overlayPool.ShowOverlay(PathfindingGrid.Instance.GetWorldPos(cell), valid);
+        }
+
+        // 칸 하나하나는 다 비어있어도, 이 테이블이 통로를 완전히 갈라놓아서 반대편으로
+        // 이동할 수 없게 만드는 배치라면 거부한다. (실제로 막지 않고 가상으로만 검사)
+        if (IsPlaceable && !PathfindingGrid.Instance.WouldStayConnected(bodyCells))
+        {
+            IsPlaceable = false;
         }
 
         // Ghost 전체 색상 갱신

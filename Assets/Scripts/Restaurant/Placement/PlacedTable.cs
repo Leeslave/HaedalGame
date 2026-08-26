@@ -41,26 +41,7 @@ public class PlacedTable : MonoBehaviour
         // 테이블을 키운 만큼 장애물 범위도 같이 넓어져서, 손님이 커진 테이블 그림을 가로질러
         // 걸어다니는 문제가 생기지 않는다.
         obstacleCells.Clear();
-        if (chairGridPositions.Count > 0)
-        {
-            Vector2Int min = chairGridPositions[0];
-            Vector2Int max = chairGridPositions[0];
-            foreach (Vector2Int pos in chairGridPositions)
-            {
-                min = Vector2Int.Min(min, pos);
-                max = Vector2Int.Max(max, pos);
-            }
-
-            for (int x = min.x; x <= max.x; x++)
-            {
-                for (int y = min.y; y <= max.y; y++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    if (chairGridPositions.Contains(cell)) { continue; } // 좌석 칸 자체는 착석 여부에 따라 동적으로 막히므로 제외
-                    obstacleCells.Add(cell);
-                }
-            }
-        }
+        obstacleCells.AddRange(TableFootprint.GetBodyCells(chairGridPositions)); // 좌석 칸 자체는 착석 여부에 따라 동적으로 막히므로 제외
         PathfindingGrid.Instance.RegisterObstacleTiles(obstacleCells);
     }
 

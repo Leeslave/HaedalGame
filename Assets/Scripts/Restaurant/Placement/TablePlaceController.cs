@@ -1,12 +1,6 @@
 using UnityEngine;
 
-public enum PlacementState 
-{ 
-    Idle, 
-    PlacingGhost, 
-    Moving,
-    Awating 
-}
+
 public class TablePlaceController : MonoBehaviour
 {
     // [SerializeField] private TableData twoSeat; // 2개짜리 좌석

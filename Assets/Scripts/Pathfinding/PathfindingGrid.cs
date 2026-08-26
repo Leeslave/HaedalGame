@@ -110,6 +110,70 @@ public class PathfindingGrid : MonoBehaviour
     }
 
 
+    // 후보 칸들을 실제로 막지 않고(가상 적용) 임시로만 walkable=false로 가정한 뒤,
+    // 그래도 나머지 이동 가능 영역이 하나로 계속 연결돼 있는지 BFS로 검사한다.
+    // 배치 확정 전 Ghost 미리보기 단계에서 "통로를 완전히 막아버리는 배치"를 걸러내는 데 사용.
+    public bool WouldStayConnected(List<Vector2Int> candidateBlockedCells)
+    {
+        Vector2Int? reference = FindReferenceWalkableCell(candidateBlockedCells);
+        if (reference == null) { return true; } // 참조할 이동 가능 칸이 없으면 판단 불필요
+
+        HashSet<Vector2Int> reachableBefore = FloodFillWalkable(reference.Value);
+
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (nodes.TryGetValue(cell, out PathNode node)) { node.walkable = false; }
+        }
+
+        HashSet<Vector2Int> reachableAfter = FloodFillWalkable(reference.Value);
+
+        // 위에서 candidateBlockedCells는 배치 유효성 검사(CheckTileValid)를 이미 통과한
+        // 칸들이므로, 가상 적용 전에는 항상 walkable=true였다. 그대로 복원한다.
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (nodes.TryGetValue(cell, out PathNode node)) { node.walkable = true; }
+        }
+
+        int removedFromReachable = 0;
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (reachableBefore.Contains(cell)) { removedFromReachable++; }
+        }
+
+        // 후보 칸들만큼만 줄어들었다면(= 다른 영역을 갈라놓지 않았다면) 여전히 연결된 것
+        return reachableAfter.Count == reachableBefore.Count - removedFromReachable;
+    }
+
+    private Vector2Int? FindReferenceWalkableCell(List<Vector2Int> excluding)
+    {
+        foreach (KeyValuePair<Vector2Int, PathNode> kv in nodes)
+        {
+            if (kv.Value.walkable && !excluding.Contains(kv.Key)) { return kv.Key; }
+        }
+        return null;
+    }
+
+    private HashSet<Vector2Int> FloodFillWalkable(Vector2Int start)
+    {
+        HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+
+        visited.Add(start);
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            PathNode current = nodes[queue.Dequeue()];
+            foreach (PathNode neighbor in GetNeighbors(current))
+            {
+                if (!neighbor.walkable || visited.Contains(neighbor.gridPos)) { continue; }
+                visited.Add(neighbor.gridPos);
+                queue.Enqueue(neighbor.gridPos);
+            }
+        }
+        return visited;
+    }
+
     // 런타임에서 그리드 리빌드
     public void RebuildGrid()
     {

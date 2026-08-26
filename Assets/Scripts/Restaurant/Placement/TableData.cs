@@ -10,6 +10,8 @@ public class TableData : ScriptableObject
     public TableType tableType;
     [Tooltip("2인 = 3, 4인 = 4")] public int gridWidth;
     [Tooltip("2인 = 3, 4인 = 3")] public int gridHeight;
+    [Tooltip("placedPrefab의 TableGroup.visualScale과 반드시 같은 값으로 맞출 것. 배치 미리보기(Ghost)의 유효 영역 계산에 사용됨")]
+    public float visualScale = 1f;
 
     [Header("타일 구성 (앵커 기준 상대 좌표)")]
     public Vector2Int[] tableTiles;  // "테" 타일 - 영구 장애물

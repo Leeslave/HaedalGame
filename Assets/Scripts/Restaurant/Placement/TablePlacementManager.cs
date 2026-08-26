@@ -2,7 +2,13 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 
-
+public enum PlacementState 
+{ 
+    Idle, 
+    PlacingGhost, 
+    Moving,
+    Awating 
+}
 public class TablePlacementManager : MonoBehaviour
 {
     public static TablePlacementManager Instance;
