@@ -113,10 +113,15 @@ public class ChefAgent : PartTimerAgent
             TaskLogger.Instance.LogCooking($"현재 {positionNumber}번째 주방 직원이 {curTask.Customer.coc.GetOrderData().RecipeName}주문을 받았습니다.");
         }
 
-        yield return MoveTo(stationTransform.position, status.serving);
+        MoveResult moveResult = new MoveResult();
+        yield return MoveToWithRetry(stationTransform.position, status.serving, moveResult);
 
-        if (curTask.Customer == null)
+        if (curTask.Customer == null || !moveResult.Success)
         {
+            if (!moveResult.Success)
+            {
+                Debug.LogWarning($"[{name}] 조리대에 도달하지 못해 조리 작업을 포기합니다.");
+            }
             ChefManager.Instance.ReleaseTool(curType);
             FinishTask();
             yield break;
@@ -135,7 +140,15 @@ public class ChefAgent : PartTimerAgent
 
     private IEnumerator ApproachingDropoffRoutine()
     {
-        yield return MoveTo(ChefManager.Instance.GetKitchenPosition(), status.serving);
+        MoveResult moveResult = new MoveResult();
+        yield return MoveToWithRetry(ChefManager.Instance.GetKitchenPosition(), status.serving, moveResult);
+
+        if (!moveResult.Success)
+        {
+            Debug.LogWarning($"[{name}] 배달대에 도달하지 못해 완성된 요리를 폐기합니다.");
+            FinishTask();
+            yield break;
+        }
 
         state = ChefState.DroppingOffFood;
         if (curTask.Customer == null)

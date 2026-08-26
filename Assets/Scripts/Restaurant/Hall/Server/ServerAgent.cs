@@ -100,15 +100,24 @@ public class ServerAgent : PartTimerAgent
     // ── TakeOrder ──────────────────────────────────────────
     private IEnumerator ApproachingCustomerForOrderRoutine()
     {
+        MoveResult moveResult = new MoveResult();
         if (curTask.Customer != null)
         {
             PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(curTask.Customer.transform.position);
             PathNode approachNode = FindApproachNode(customerNode);
             if (approachNode != null)
             {
-                yield return MoveTo(approachNode.worldPos, status.serving);
+                yield return MoveToWithRetry(approachNode.worldPos, status.serving, moveResult);
             }
         }
+
+        if (curTask.Customer != null && !moveResult.Success)
+        {
+            Debug.LogWarning($"[{name}] 손님에게 접근하지 못해 주문 접수를 포기합니다.");
+            FinishTask();
+            yield break;
+        }
+
         Advance(ServerState.TakingOrder, TakingOrderRoutine());
     }
 
@@ -122,7 +131,16 @@ public class ServerAgent : PartTimerAgent
     // ── DeliverFood ────────────────────────────────────────
     private IEnumerator ApproachingKitchenRoutine()
     {
-        yield return MoveTo(ServerManager.Instance.GetKitchenPosition(), status.serving);
+        MoveResult moveResult = new MoveResult();
+        yield return MoveToWithRetry(ServerManager.Instance.GetKitchenPosition(), status.serving, moveResult);
+
+        if (!moveResult.Success)
+        {
+            Debug.LogWarning($"[{name}] 주방에 도달하지 못해 배달 작업을 포기합니다.");
+            FinishTask();
+            yield break;
+        }
+
         Advance(ServerState.PickingUpFood, PickingUpFoodRoutine());
     }
 
@@ -136,15 +154,24 @@ public class ServerAgent : PartTimerAgent
 
     private IEnumerator ApproachingCustomerWithFoodRoutine()
     {
+        MoveResult moveResult = new MoveResult();
         if (curTask.Customer != null)
         {
             PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(curTask.Customer.transform.position);
             PathNode approachNode = FindApproachNode(customerNode);
             if (approachNode != null)
             {
-                yield return MoveTo(approachNode.worldPos, status.serving);
+                yield return MoveToWithRetry(approachNode.worldPos, status.serving, moveResult);
             }
         }
+
+        if (curTask.Customer != null && !moveResult.Success)
+        {
+            Debug.LogWarning($"[{name}] 손님에게 접근하지 못해 배달 작업을 포기합니다.");
+            FinishTask();
+            yield break;
+        }
+
         Advance(ServerState.DeliveringFood, DeliveringFoodRoutine());
     }
 

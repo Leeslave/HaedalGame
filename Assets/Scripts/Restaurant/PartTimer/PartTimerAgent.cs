@@ -23,10 +23,20 @@ public class PartTimerAgent : MonoBehaviour
         nm = GetComponent<PartTimerMovement>();
     }
 
-    // 알바의 유일한 이동 수단. A*(PathfindingGrid + Pathfinder)로 경로를 구해 그대로 따라간다.
-    // 경로를 못 찾으면 이동 없이 즉시 반환 - 호출부는 이 경우에도 다음 단계로 진행하면 된다.
-    protected IEnumerator MoveTo(Vector2 destination, float speed)
+    // MoveTo의 성공 여부를 호출자에게 돌려주기 위한 out 파라미터용 결과 상자.
+    // IEnumerator는 return으로 값을 못 주므로 이 방식을 사용한다.
+    protected class MoveResult
     {
+        public bool Success;
+    }
+
+    // 알바의 유일한 이동 수단. A*(PathfindingGrid + Pathfinder)로 경로를 구해 그대로 따라간다.
+    // 목적지에 도달하지 못하면(경로 탐색 실패 등) result.Success가 false로 남는다.
+    // 호출부는 도착을 전제로 하는 다음 상태(조리 시작, 주문 접수 등)로 넘어가기 전에 반드시 이 값을 확인해야 한다.
+    protected IEnumerator MoveTo(Vector2 destination, float speed, MoveResult result)
+    {
+        result.Success = false;
+
         if (speed <= 0f)
         {
             Debug.LogError($"[{name}] MoveTo: 이동 속도가 {speed}입니다. PartTimerStatus 설정을 확인하세요. 이동을 건너뜁니다.");
@@ -44,6 +54,25 @@ public class PartTimerAgent : MonoBehaviour
         if (path == null) { yield break; }
 
         yield return FollowPath(path, speed);
+        result.Success = true;
+    }
+
+    // 도착 여부를 신경 쓰지 않는 호출부(대기 위치 복귀 등)를 위한 편의 오버로드.
+    protected IEnumerator MoveTo(Vector2 destination, float speed)
+    {
+        yield return MoveTo(destination, speed, new MoveResult());
+    }
+
+    // 일시적으로 경로가 막힌 상황(다른 알바/손님이 타일을 점유 등)을 감안해 제한된 횟수만큼 재시도한다.
+    // 그래도 실패하면 result.Success는 false로 남고, 호출부가 작업 포기 등으로 처리해야 한다.
+    protected IEnumerator MoveToWithRetry(Vector2 destination, float speed, MoveResult result, int maxAttempts = 3, float retryDelay = 0.5f)
+    {
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            yield return MoveTo(destination, speed, result);
+            if (result.Success) { yield break; }
+            yield return new WaitForSeconds(retryDelay);
+        }
     }
 
     // 대상 타일 자체가 walkable하지 않을 때(손님 좌석 등) 그 옆의 walkable 타일을 찾는다.
