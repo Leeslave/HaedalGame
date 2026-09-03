@@ -20,7 +20,7 @@ Unity 기반 2D 식당 경영 시뮬레이션 팀 프로젝트입니다.
 
 ## Main Features
 
-### 1. NPC Task Dispatch System
+### 1. NPC Task 분배 시스템
 
 초기에는 각 NPC가 직접 수행 가능한 작업을 탐색하고 선점하는 분산 방식으로 구현했습니다.
 
@@ -37,7 +37,7 @@ Unity 기반 2D 식당 경영 시뮬레이션 팀 프로젝트입니다.
 
 ---
 
-### 2. NPC State & Task Execution Refactoring
+### 2. NPC 상태 & Task 실행 로직 리팩토링
 
 초기에는 NPC의 이동, 상호작용, 대기 등 여러 동작이 하나의 `ExecuteTask` Coroutine에 집중되어 있었습니다.
 
@@ -54,7 +54,7 @@ Unity 기반 2D 식당 경영 시뮬레이션 팀 프로젝트입니다.
 
 ---
 
-### 3. Furniture Placement Validation
+### 3. 가구 배치 검증 시스템
 
 플레이어가 테이블과 가구를 자유롭게 배치할 수 있도록 배치 시스템을 구현했습니다.
 
@@ -73,7 +73,7 @@ Unity 기반 2D 식당 경영 시뮬레이션 팀 프로젝트입니다.
 
 ---
 
-### 4. A* Pathfinding
+### 4. A* 길찾기
 
 Tile 기반 Grid에서 NPC 이동을 위해 A* 알고리즘을 구현했습니다.
 
@@ -125,7 +125,7 @@ Tile 기반 Grid에서 NPC 이동을 위해 A* 알고리즘을 구현했습니�
 
 ## Technical Decisions
 
-### Why Central Dispatcher?
+### 중앙 관리 시스템을 이용한 이유?
 
 분산 Claim 방식은 구현이 단순하지만, 각 NPC가 독립적으로 작업을 탐색하기 때문에 현재 대기 중인 작업과 향후 작업 배정 결과를 중앙에서 파악하기 어렵습니다.
 
@@ -133,7 +133,7 @@ Tile 기반 Grid에서 NPC 이동을 위해 A* 알고리즘을 구현했습니�
 
 ---
 
-### Why BFS Validation Before Placement?
+### 왜 테이블 배치 이전에 BFS를 통해 검증을 하는가?
 
 가구가 현재 위치에 물리적으로 배치 가능한 것과 NPC가 해당 배치 이후에도 정상적으로 이동할 수 있는 것은 별개의 문제입니다.
 
@@ -143,9 +143,9 @@ Tile 기반 Grid에서 NPC 이동을 위해 A* 알고리즘을 구현했습니�
 
 ---
 
-## Troubleshooting
+## 트러블 슈팅
 
-### Infinite Task Reassignment
+### 무한 Task 재할당
 
 하루 전체 운영 Flow를 테스트하던 중 특정 상황에서 로그가 반복적으로 발생하며 메모리 사용량이 증가하는 문제가 발생했습니다.
 
