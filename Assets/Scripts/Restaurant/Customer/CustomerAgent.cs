@@ -224,6 +224,14 @@ public class CustomerAgent : MonoBehaviour
 
     public void MoveWaitingSeat(Seat newSeat)
     {
+        Seat oldSeat = currentSeat;
+        if (oldSeat == newSeat) { return; } // 대기열 앞당김으로 위치가 바뀌지 않은 손님은 처리할 필요 없음
+
+        // 대기 벤치 슬롯 이동도 착석/퇴장과 동일하게 타일 walkable을 갱신해야 한다.
+        // (그렇지 않으면 옮겨간 벤치는 통행 가능으로, 비워둔 벤치는 통행 불가로 남는 버그가 생긴다)
+        if (oldSeat != null) { oldSeat.Vacate(); }
+        newSeat.OnCustomerSeated();
+
         currentSeat = newSeat;
         transform.position = newSeat.GetSeatPoint().position;
         nm.ApplySeatSortingOrder(newSeat.GetSeatedSortingOrderOffset());
