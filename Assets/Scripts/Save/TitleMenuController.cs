@@ -4,13 +4,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 타이틀 화면. 새로하기 / 이어하기 / 종료 버튼의 OnClick에 아래 public 메서드를 연결한다.
+/// 타이틀 화면. 버튼은 인스펙터에 연결하면 Awake에서 클릭 처리가 붙는다. (버튼 OnClick에 따로 연결하지 않는다)
+/// [Haedal > Dev Tools > 타이틀 씬 자동 설정] 메뉴로 한 번에 연결할 수 있다.
 /// 확인·오류 안내는 씬의 PopupManager(PopupCanvas 프리팹) 확인 팝업을 사용한다.
 /// </summary>
 public class TitleMenuController : MonoBehaviour
 {
-    [Header("이어하기")]
+    [Header("버튼")]
+    [SerializeField] private Button _newGameButton;
     [SerializeField] private Button _continueButton;
+    [SerializeField] private Button _quitButton;
+
+    [Header("이어하기")]
     [Tooltip("비워도 된다. 세이브 요약(일차·저장 시각·플레이 시간)을 표시할 텍스트")]
     [SerializeField] private TMP_Text _continueSummaryText;
 
@@ -19,6 +24,31 @@ public class TitleMenuController : MonoBehaviour
     [SerializeField] private IntroController _intro;
 
     private bool _busy;
+
+    private void Awake()
+    {
+        BindButton(_newGameButton, OnClickNewGame, nameof(_newGameButton));
+        BindButton(_continueButton, OnClickContinue, nameof(_continueButton));
+        BindButton(_quitButton, OnClickQuit, nameof(_quitButton));
+    }
+
+    private void OnDestroy()
+    {
+        if (_newGameButton != null) _newGameButton.onClick.RemoveListener(OnClickNewGame);
+        if (_continueButton != null) _continueButton.onClick.RemoveListener(OnClickContinue);
+        if (_quitButton != null) _quitButton.onClick.RemoveListener(OnClickQuit);
+    }
+
+    private void BindButton(Button button, UnityEngine.Events.UnityAction action, string fieldName)
+    {
+        if (button == null)
+        {
+            Debug.LogWarning($"[Title] {fieldName}가 연결되지 않았습니다. [Haedal > Dev Tools > 타이틀 씬 자동 설정]을 실행하세요.", this);
+            return;
+        }
+
+        button.onClick.AddListener(action);
+    }
 
     private void Start()
     {
