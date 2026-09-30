@@ -16,6 +16,9 @@ public class PartTimerAgent : MonoBehaviour
     // 이동 루프가 끝나지 않을 위험이 있다. 최소 허용 오차로 이를 방지한다.
     private const float MinArrivalThreshold = 0.05f;
 
+    // 목적지 칸이 막혀 있을 때 대신 설 칸을 찾는 범위 (칸)
+    private const int ApproachSearchRadius = 2;
+
     protected PartTimerMovement nm;
 
     protected void Awake()
@@ -49,6 +52,13 @@ public class PartTimerAgent : MonoBehaviour
         PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
         PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(destination);
         if (startNode == null || endNode == null) { yield break; }
+
+        // 조리대처럼 장애물 칸 위에 있는 작업 지점이면, 그 앞의 걸어갈 수 있는 칸까지 간다.
+        if (!endNode.walkable)
+        {
+            endNode = PathfindingGrid.Instance.FindClosestReachableNear(startNode, endNode, ApproachSearchRadius);
+            if (endNode == null) { yield break; }
+        }
 
         List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
         if (path == null) { yield break; }

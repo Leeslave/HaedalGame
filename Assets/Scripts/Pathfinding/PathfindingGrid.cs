@@ -174,6 +174,50 @@ public class PathfindingGrid : MonoBehaviour
         return visited;
     }
 
+    // 목적지 칸이 막혀 있을 때(조리대·카운터 등 장애물 위의 작업 지점) 대신 설 칸을 찾는다.
+    // target 주변 radius 칸 이내의 walkable 칸 중 (걸어가는 거리 + 작업 지점과의 거리 × 2)가 가장 작은 칸을 고른다.
+    // 작업 지점에 붙은 칸이라도 카운터 반대편(홀 쪽)이라 멀리 돌아가야 하면 고르지 않고,
+    // 가깝게 닿는 칸이라도 작업 지점에서 떨어져 있으면 불리하게 한다.
+    public PathNode FindClosestReachableNear(PathNode from, PathNode target, int radius)
+    {
+        if (from == null || target == null) { return null; }
+
+        // from에서 BFS로 걸음 수를 구한다 (from 자체가 장애물 위여도 이웃의 walkable 칸으로 나아갈 수 있다)
+        Dictionary<PathNode, int> steps = new Dictionary<PathNode, int> { { from, 0 } };
+        Queue<PathNode> queue = new Queue<PathNode>();
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            PathNode current = queue.Dequeue();
+            foreach (PathNode neighbor in GetNeighbors(current))
+            {
+                if (!neighbor.walkable || steps.ContainsKey(neighbor)) { continue; }
+                steps[neighbor] = steps[current] + 1;
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        PathNode best = null;
+        int bestCost = int.MaxValue;
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                PathNode node = GetNode(target.gridPos + new Vector2Int(dx, dy));
+                if (node == null || !node.walkable || !steps.TryGetValue(node, out int walk)) { continue; }
+
+                int cost = walk + 2 * (Mathf.Abs(dx) + Mathf.Abs(dy));
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
+                    best = node;
+                }
+            }
+        }
+        return best;
+    }
+
     // 런타임에서 그리드 리빌드
     public void RebuildGrid()
     {
