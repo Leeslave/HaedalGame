@@ -108,6 +108,17 @@ public static class GameFlow
         SceneManager.LoadScene(GameScenes.Island);
     }
 
+    /// <summary>섬에서 식당으로 이동해 영업 준비를 시작한다. 같은 날 이미 영업을 마쳤으면 false.</summary>
+    public static bool TryEnterRestaurant()
+    {
+        if (GameSession.OperationCompletedToday)
+            return false;
+
+        SetPhase(GamePhase.Preparation);
+        SceneManager.LoadScene(GameScenes.Restaurant);
+        return true;
+    }
+
     public static void ReturnToTitle()
     {
         GameSession.End();
