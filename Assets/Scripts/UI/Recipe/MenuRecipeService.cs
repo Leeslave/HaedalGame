@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MenuRecipeService : MonoBehaviour
+public class MenuRecipeService : MonoBehaviour, ISaveParticipant
 {
     [SerializeField] private int _slotCount = 4;
     [SerializeField] private IngredientInventoryService _inventoryService;
@@ -16,6 +16,46 @@ public class MenuRecipeService : MonoBehaviour
     private void Awake()
     {
         _recipes = new RecipeData[_slotCount];
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        GameSession.Unregister(this);
+    }
+
+    // ë©”ë‰´íŒì´ ê³§ ê·¸ë‚  ì˜ì—… ë©”ë‰´(MenuManager.DailyFoods)ë‹¤. ë“±ë¡ ì‹œ ì°¨ê°ëœ ì¬ë£ŒëŠ” ì¸ë²¤í† ë¦¬ ìª½ì— ì´ë¯¸ ë°˜ì˜ë˜ì–´ ìˆìœ¼ë¯€ë¡œ
+    // ë³µì›í•  ë•Œ ë‹¤ì‹œ ì°¨ê°í•˜ê±°ë‚˜ í™˜ë¶ˆí•˜ì§€ ì•ŠëŠ”ë‹¤.
+    public void CaptureState(GameSaveData data)
+    {
+        data.menuSlots.Clear();
+        for (int i = 0; i < _recipes.Length; i++)
+            data.menuSlots.Add(_recipes[i] != null ? _recipes[i].RecipeId : -1);
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        for (int i = 0; i < _recipes.Length; i++)
+        {
+            _recipes[i] = null;
+
+            if (i >= data.menuSlots.Count || data.menuSlots[i] < 0)
+                continue;
+
+            if (GameDatabase.TryGetRecipe(data.menuSlots[i], out RecipeData recipe))
+                _recipes[i] = recipe;
+            else
+                Debug.LogWarning($"[MenuRecipeService] ë©”ë‰´ ìŠ¬ë¡¯ {i}ì˜ ë ˆì‹œí”¼ ID {data.menuSlots[i]}ë¥¼ ì°¾ì„ ìˆ˜ ì—†ì–´ ë¹„ì›ë‹ˆë‹¤.");
+        }
+
+        OnChanged?.Invoke();
+    }
+
+    // ìŠ¬ë¡¯ ë³€ê²½ì„ ì„¸ì…˜ì— ë°”ë¡œ ë°˜ì˜í•´, ê°™ì€ ë‚  ì‹ë‹¹ ì”¬ì˜ MenuManagerê°€ ìµœì‹  ë©”ë‰´íŒì„ ì½ê²Œ í•œë‹¤.
+    private void PushToSession()
+    {
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
     }
 
     public RecipeData GetRecipe(int slotIndex)
@@ -39,19 +79,19 @@ public class MenuRecipeService : MonoBehaviour
 
         RecipeData currentRecipe = _recipes[slotIndex];
 
-        // °°Àº ½½·Ô¿¡ °°Àº ·¹½ÃÇÇ
+        // ê°™ì€ ìŠ¬ë¡¯ì— ê°™ì€ ë ˆì‹œí”¼
         if (currentRecipe != null && currentRecipe.RecipeId == recipe.RecipeId)
             return MenuRecipeSetResult.SameRecipeAlreadyAssigned;
 
-        // ´Ù¸¥ ½½·Ô¿¡ µ¿ÀÏ ·¹½ÃÇÇ Á¸Àç
+        // ë‹¤ë¥¸ ìŠ¬ë¡¯ì— ë™ì¼ ë ˆì‹œí”¼ ì¡´ì¬
         if (ContainsRecipeInOtherSlot(slotIndex, recipe.RecipeId))
             return MenuRecipeSetResult.DuplicateRecipeInOtherSlot;
 
-        // ÇöÀç ½½·Ô¿¡ ÀÖ´ø ¸Ş´º Àç·á¸¦ "°¡¿ë·® °è»ê»ó" ¸ÕÀú ¹İÈ¯ÇÑ´Ù°í °¡Á¤ÇÏ°í Ã¼Å©
+        // í˜„ì¬ ìŠ¬ë¡¯ì— ìˆë˜ ë©”ë‰´ ì¬ë£Œë¥¼ "ê°€ìš©ëŸ‰ ê³„ì‚°ìƒ" ë¨¼ì € ë°˜í™˜í•œë‹¤ê³  ê°€ì •í•˜ê³  ì²´í¬
         if (!CanAssignRecipe(slotIndex, recipe))
             return MenuRecipeSetResult.NotEnoughIngredients;
 
-        // ½ÇÁ¦ ¹İ¿µ
+        // ì‹¤ì œ ë°˜ì˜
         if (currentRecipe != null)
             RefundRecipeIngredients(currentRecipe);
 
@@ -59,7 +99,7 @@ public class MenuRecipeService : MonoBehaviour
 
         if (!consumeSuccess)
         {
-            // ¿©±â ¿À¸é ÀÌ·Ğ»ó °ÅÀÇ ¾øÁö¸¸, ¾ÈÀüÇÏ°Ô ·Ñ¹é
+            // ì—¬ê¸° ì˜¤ë©´ ì´ë¡ ìƒ ê±°ì˜ ì—†ì§€ë§Œ, ì•ˆì „í•˜ê²Œ ë¡¤ë°±
             if (currentRecipe != null)
                 ConsumeRecipeIngredients(currentRecipe);
 
@@ -69,6 +109,7 @@ public class MenuRecipeService : MonoBehaviour
         _recipes[slotIndex] = recipe;
 
         _inventoryService.NotifyChanged();
+        PushToSession();
         OnChanged?.Invoke();
 
         return MenuRecipeSetResult.Success;
@@ -87,6 +128,7 @@ public class MenuRecipeService : MonoBehaviour
         _recipes[slotIndex] = null;
 
         _inventoryService.NotifyChanged();
+        PushToSession();
         OnChanged?.Invoke();
     }
 
@@ -97,7 +139,7 @@ public class MenuRecipeService : MonoBehaviour
 
         Dictionary<int, int> virtualCounts = new Dictionary<int, int>();
 
-        // ÇöÀç ÀÎº¥Åä¸® º¹»ç
+        // í˜„ì¬ ì¸ë²¤í† ë¦¬ ë³µì‚¬
         for (int i = 0; i < newRecipe.Requirements.Count; i++)
         {
             int ingredientId = newRecipe.Requirements[i].IngredientId;
@@ -108,7 +150,7 @@ public class MenuRecipeService : MonoBehaviour
 
         RecipeData currentRecipe = _recipes[slotIndex];
 
-        // ±³Ã¼ ½Ã ÇöÀç ½½·Ô ¸Ş´º Àç·á ¹İÈ¯·® ¹İ¿µ
+        // êµì²´ ì‹œ í˜„ì¬ ìŠ¬ë¡¯ ë©”ë‰´ ì¬ë£Œ ë°˜í™˜ëŸ‰ ë°˜ì˜
         if (currentRecipe != null)
         {
             for (int i = 0; i < currentRecipe.Requirements.Count; i++)
@@ -122,7 +164,7 @@ public class MenuRecipeService : MonoBehaviour
             }
         }
 
-        // »õ ·¹½ÃÇÇ ÇÊ¿ä·® °Ë»ç
+        // ìƒˆ ë ˆì‹œí”¼ í•„ìš”ëŸ‰ ê²€ì‚¬
         for (int i = 0; i < newRecipe.Requirements.Count; i++)
         {
             RecipeIngredientRequirement req = newRecipe.Requirements[i];
@@ -143,7 +185,7 @@ public class MenuRecipeService : MonoBehaviour
         if (_inventoryService == null || recipe == null)
             return false;
 
-        // ¸ÕÀú ÀüÃ¼ °¡´É ¿©ºÎ ´Ù½Ã È®ÀÎ
+        // ë¨¼ì € ì „ì²´ ê°€ëŠ¥ ì—¬ë¶€ ë‹¤ì‹œ í™•ì¸
         for (int i = 0; i < recipe.Requirements.Count; i++)
         {
             RecipeIngredientRequirement req = recipe.Requirements[i];
@@ -223,6 +265,7 @@ public class MenuRecipeService : MonoBehaviour
             if (_inventoryService != null)
                 _inventoryService.NotifyChanged();
 
+            PushToSession();
             OnChanged?.Invoke();
         }
     }

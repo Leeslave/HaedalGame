@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
-public class ElfShopManager : MonoBehaviour
+/// <summary>
+/// 엘프 상점. 하루에 한 번 엘프와 재고를 정하고, 그 결과는 세이브(GameSaveData.elfShop)에 그대로 남는다.
+/// 추첨은 runId + 일차로 시드를 고정한 결정적 난수를 사용한다. 따라서 이어하기·저장 재시도로 같은 날을
+/// 다시 계산해도 엘프와 재고가 바뀌지 않는다. (로드 때 재추첨으로 결과가 바뀌는 일 방지)
+/// </summary>
+public class ElfShopManager : MonoBehaviour, ISaveParticipant
 {
     public static ElfShopManager Instance { get; private set; }
 
@@ -24,22 +28,10 @@ public class ElfShopManager : MonoBehaviour
     private const float DEFAULT_WEIGHT_TWO = 50f;
     private const float DEFAULT_WEIGHT_THREE = 100f / 3f;
 
-    private const string Key_Day = "ElfShop_Day";
-    private const string Key_CurrentElf = "ElfShop_CurrentElf";
-    private const string Key_WeightRed = "ElfShop_WRed";
-    private const string Key_WeightBlue = "ElfShop_WBlue";
-    private const string Key_WeightYellow = "ElfShop_WYellow";
-    private const string Key_Stocks = "ElfShop_Stocks";
-
-    private int _savedDay;
-    private ElfType _currentElfType;
-    private float _weightRed;
-    private float _weightBlue;
-    private float _weightYellow;
-
+    private ElfShopSaveState _state = new ElfShopSaveState();
     private List<ElfShopStockData> _elfStocks = new List<ElfShopStockData>();
 
-    public ElfType CurrentElfType => _currentElfType;
+    public ElfType CurrentElfType => ParseElf(_state.currentElf);
     public IReadOnlyList<ElfShopStockData> ElfStocks => _elfStocks;
 
     public Action OnElfShopRefreshed;
@@ -55,54 +47,97 @@ public class ElfShopManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        LoadElfState();
-        CheckDailyRefresh();
-    }
-
-    private void Start()
-    {
-        if (InGameTimeManager.Instance != null)
-            InGameTimeManager.Instance.OnDayAdvanced += OnDayAdvanced;
-
-        ForceRefresh();
+        GameSession.Register(this);
     }
 
     private void OnDestroy()
     {
-        if (InGameTimeManager.Instance != null)
-            InGameTimeManager.Instance.OnDayAdvanced -= OnDayAdvanced;
+        if (Instance == this)
+            GameSession.Unregister(this);
     }
 
-    private void OnDayAdvanced(int day)
-    {
-        _savedDay = day;
-        RefreshShop();
-    }
+    // ───── 세이브 ─────
 
-    private void CheckDailyRefresh()
+    public void CaptureState(GameSaveData data)
     {
-        int today = InGameTimeManager.Instance != null ? InGameTimeManager.Instance.CurrentDay : 0;
-        if (today != _savedDay)
+        _state.stocks.Clear();
+        foreach (ElfShopStockData stock in _elfStocks)
         {
-            _savedDay = today;
-            RefreshShop();
+            _state.stocks.Add(new ElfShopStockEntry
+            {
+                itemType = stock.ItemType.ToString(),
+                itemId = stock.IngredientID,
+                currentStock = stock.CurrentStock,
+                maxStock = stock.MaxStock,
+            });
         }
+
+        data.elfShop = CloneState(_state);
     }
 
-    private void RefreshShop()
+    public void RestoreState(GameSaveData data)
     {
-        ElfType rolledElf = WeightedRandom();
-        UpdateWeightsForNextDay(rolledElf);
-        _currentElfType = rolledElf;
+        // 해당 일차의 재고가 아직 정해지지 않았으면(새 게임, 또는 하루 종료 시 상점이 로드되지 않았던 경우) 정한다.
+        // 시드가 고정되어 있어 몇 번을 계산해도 같은 결과다.
+        if (data.elfShop == null || data.elfShop.targetDay != data.day)
+            data.elfShop = CreateStateForDay(data.elfShop, data.day, data.restaurantLevel, data.runId);
 
-        GenerateElfStocks();
-        SaveElfState();
+        ApplyState(data.elfShop);
+    }
+
+    private void ApplyState(ElfShopSaveState state)
+    {
+        _state = CloneState(state);
+        _elfStocks.Clear();
+
+        foreach (ElfShopStockEntry entry in _state.stocks)
+        {
+            if (entry == null || !Enum.TryParse(entry.itemType, out ElfShopItemType itemType))
+                continue;
+
+            ElfShopStockData stock = new ElfShopStockData(itemType, entry.itemId, entry.maxStock);
+            stock.CurrentStock = Mathf.Clamp(entry.currentStock, 0, entry.maxStock);
+            _elfStocks.Add(stock);
+        }
+
         OnElfShopRefreshed?.Invoke();
     }
 
+    /// <summary>
+    /// 이전 상태를 바탕으로 해당 일차의 엘프·재고를 정한다. 런타임 상태는 바꾸지 않는 순수 계산이다.
+    /// 하루 종료 처리에서 다음 날 저장 후보를 만들 때도 사용한다.
+    /// </summary>
+    public ElfShopSaveState CreateStateForDay(ElfShopSaveState previous, int day, int restaurantLevel, string runId)
+    {
+        ElfShopSaveState next = previous != null ? CloneState(previous) : new ElfShopSaveState();
+        System.Random rng = new System.Random(DeterministicSeed(runId, day, "ElfShop"));
+
+        bool yellowUnlocked = IsYellowUnlocked(restaurantLevel);
+        ElfType previousElf = ParseElf(next.currentElf);
+
+        if (previous == null || previous.targetDay <= 0)
+            ResetWeights(next, yellowUnlocked);
+
+        ElfType rolledElf = WeightedRandom(next, yellowUnlocked, rng);
+        UpdateWeightsForNextDay(next, previousElf, rolledElf, yellowUnlocked);
+
+        next.currentElf = rolledElf.ToString();
+        next.targetDay = day;
+        next.stocks = GenerateElfStocks(rolledElf, restaurantLevel, rng);
+        return next;
+    }
+
+    // ───── 테스트 ─────
+
+    [ContextMenu("테스트: 오늘 상점 다시 추첨")]
     public void ForceRefresh()
     {
-        RefreshShop();
+        string seedSource = Guid.NewGuid().ToString("N");
+        int day = GameSession.IsActive ? GameSession.Current.day : 1;
+        int level = RestaurantLevelManager.Instance != null ? RestaurantLevelManager.Instance.CurrentLevel : 1;
+
+        ApplyState(CreateStateForDay(_state, day, level, seedSource));
+        PushToSession();
     }
 
     [ContextMenu("테스트: 재고 초기화")]
@@ -111,35 +146,42 @@ public class ElfShopManager : MonoBehaviour
         foreach (ElfShopStockData stock in _elfStocks)
             stock.CurrentStock = stock.MaxStock;
 
-        SaveElfState();
+        PushToSession();
         OnElfShopRefreshed?.Invoke();
     }
 
     // ───── 재고 생성 ─────
 
-    private void GenerateElfStocks()
+    private List<ElfShopStockEntry> GenerateElfStocks(ElfType elfType, int level, System.Random rng)
     {
-        _elfStocks.Clear();
+        List<ElfShopStockEntry> result = new List<ElfShopStockEntry>();
 
-        int level =
-            RestaurantLevelManager.Instance != null
-                ? RestaurantLevelManager.Instance.CurrentLevel
-                : 1;
-        int slotCount = GetSlotCount(level);
-
-        IReadOnlyList<ElfShopItemEntry> pool = GetItemPool(_currentElfType);
+        IReadOnlyList<ElfShopItemEntry> pool = GetItemPool(elfType);
         if (pool == null || pool.Count == 0)
-            return;
+            return result;
 
-        List<ElfShopItemEntry> shuffled = pool.OrderBy(_ => UnityEngine.Random.value).ToList();
-        int count = Mathf.Min(slotCount, shuffled.Count);
+        // Fisher-Yates
+        List<ElfShopItemEntry> shuffled = new List<ElfShopItemEntry>(pool);
+        for (int i = shuffled.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+        }
 
+        int count = Mathf.Min(GetSlotCount(level), shuffled.Count);
         for (int i = 0; i < count; i++)
         {
-            ElfShopStockData stock = CreateStock(shuffled[i]);
-            if (stock != null)
-                _elfStocks.Add(stock);
+            int maxQty = shuffled[i].ItemType == ElfShopItemType.Recipe ? 1 : 50;
+            result.Add(new ElfShopStockEntry
+            {
+                itemType = shuffled[i].ItemType.ToString(),
+                itemId = shuffled[i].ItemId,
+                currentStock = maxQty,
+                maxStock = maxQty,
+            });
         }
+
+        return result;
     }
 
     private int GetSlotCount(int level)
@@ -155,12 +197,6 @@ public class ElfShopManager : MonoBehaviour
             return new List<ElfShopItemEntry>();
 
         return _elfConfig.GetItems(elfType);
-    }
-
-    private ElfShopStockData CreateStock(ElfShopItemEntry entry)
-    {
-        int maxQty = entry.ItemType == ElfShopItemType.Recipe ? 1 : 50;
-        return new ElfShopStockData(entry.ItemType, entry.ItemId, maxQty);
     }
 
     // ───── 구매 ─────
@@ -190,12 +226,10 @@ public class ElfShopManager : MonoBehaviour
         }
         else
         {
-            RecipeBookState recipeBook = FindFirstObjectByType<RecipeBookState>();
-            if (recipeBook != null)
-                recipeBook.UnlockRecipe(stock.IngredientID);
+            RecipeBookState.UnlockRecipeAnywhere(stock.IngredientID);
         }
 
-        SaveElfState();
+        PushToSession();
         OnElfShopRefreshed?.Invoke();
         return true;
     }
@@ -221,14 +255,13 @@ public class ElfShopManager : MonoBehaviour
 
     // ───── 가중치 ─────
 
-    private void UpdateWeightsForNextDay(ElfType appearedElf)
+    private static void UpdateWeightsForNextDay(ElfShopSaveState state, ElfType previousElf, ElfType appearedElf, bool yellowUnlocked)
     {
-        bool yellowUnlocked = IsYellowUnlocked();
-        bool consecutive = appearedElf == _currentElfType;
+        bool consecutive = appearedElf == previousElf;
 
         if (!consecutive)
         {
-            ResetWeights(yellowUnlocked);
+            ResetWeights(state, yellowUnlocked);
             return;
         }
 
@@ -238,131 +271,91 @@ public class ElfShopManager : MonoBehaviour
         switch (appearedElf)
         {
             case ElfType.Red:
-                _weightRed = Mathf.Max(0f, _weightRed - WEIGHT_PENALTY);
-                _weightBlue += bonus;
-                if (yellowUnlocked) _weightYellow += bonus;
+                state.weightRed = Mathf.Max(0f, state.weightRed - WEIGHT_PENALTY);
+                state.weightBlue += bonus;
+                if (yellowUnlocked) state.weightYellow += bonus;
                 break;
             case ElfType.Blue:
-                _weightBlue = Mathf.Max(0f, _weightBlue - WEIGHT_PENALTY);
-                _weightRed += bonus;
-                if (yellowUnlocked) _weightYellow += bonus;
+                state.weightBlue = Mathf.Max(0f, state.weightBlue - WEIGHT_PENALTY);
+                state.weightRed += bonus;
+                if (yellowUnlocked) state.weightYellow += bonus;
                 break;
             case ElfType.Yellow:
-                _weightYellow = Mathf.Max(0f, _weightYellow - WEIGHT_PENALTY);
-                _weightRed += bonus;
-                _weightBlue += bonus;
+                state.weightYellow = Mathf.Max(0f, state.weightYellow - WEIGHT_PENALTY);
+                state.weightRed += bonus;
+                state.weightBlue += bonus;
                 break;
         }
     }
 
-    private void ResetWeights(bool yellowUnlocked)
+    private static void ResetWeights(ElfShopSaveState state, bool yellowUnlocked)
     {
         if (yellowUnlocked)
         {
-            _weightRed = DEFAULT_WEIGHT_THREE;
-            _weightBlue = DEFAULT_WEIGHT_THREE;
-            _weightYellow = DEFAULT_WEIGHT_THREE;
+            state.weightRed = DEFAULT_WEIGHT_THREE;
+            state.weightBlue = DEFAULT_WEIGHT_THREE;
+            state.weightYellow = DEFAULT_WEIGHT_THREE;
         }
         else
         {
-            _weightRed = DEFAULT_WEIGHT_TWO;
-            _weightBlue = DEFAULT_WEIGHT_TWO;
-            _weightYellow = 0f;
+            state.weightRed = DEFAULT_WEIGHT_TWO;
+            state.weightBlue = DEFAULT_WEIGHT_TWO;
+            state.weightYellow = 0f;
         }
     }
 
-    private ElfType WeightedRandom()
+    private static ElfType WeightedRandom(ElfShopSaveState state, bool yellowUnlocked, System.Random rng)
     {
-        bool yellowUnlocked = IsYellowUnlocked();
-        float total = _weightRed + _weightBlue + (yellowUnlocked ? _weightYellow : 0f);
+        float total = state.weightRed + state.weightBlue + (yellowUnlocked ? state.weightYellow : 0f);
 
         if (total <= 0f)
             return ElfType.Red;
 
-        float roll = UnityEngine.Random.Range(0f, total);
-        if (roll < _weightRed)
+        float roll = (float)(rng.NextDouble() * total);
+        if (roll < state.weightRed)
             return ElfType.Red;
-        roll -= _weightRed;
-        if (roll < _weightBlue)
+        roll -= state.weightRed;
+        if (roll < state.weightBlue)
             return ElfType.Blue;
-        return ElfType.Yellow;
+        return yellowUnlocked ? ElfType.Yellow : ElfType.Blue;
     }
 
-    private bool IsYellowUnlocked()
+    private static bool IsYellowUnlocked(int restaurantLevel)
     {
-        int level =
-            RestaurantLevelManager.Instance != null
-                ? RestaurantLevelManager.Instance.CurrentLevel
-                : 1;
-        return level >= 3;
+        return restaurantLevel >= 3;
     }
 
-    // ───── 저장/불러오기 ─────
+    // ───── 유틸 ─────
 
-    private void LoadElfState()
+    private void PushToSession()
     {
-        _savedDay = PlayerPrefs.GetInt(Key_Day, -1);
-        _currentElfType = (ElfType)PlayerPrefs.GetInt(Key_CurrentElf, (int)ElfType.Red);
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
+    }
 
-        bool yellowUnlocked = IsYellowUnlocked();
-        float def = yellowUnlocked ? DEFAULT_WEIGHT_THREE : DEFAULT_WEIGHT_TWO;
+    private static ElfType ParseElf(string value)
+    {
+        return Enum.TryParse(value, out ElfType elf) ? elf : ElfType.Red;
+    }
 
-        _weightRed = PlayerPrefs.GetFloat(Key_WeightRed, def);
-        _weightBlue = PlayerPrefs.GetFloat(Key_WeightBlue, def);
-        _weightYellow = yellowUnlocked
-            ? PlayerPrefs.GetFloat(Key_WeightYellow, DEFAULT_WEIGHT_THREE)
-            : 0f;
+    private static ElfShopSaveState CloneState(ElfShopSaveState source)
+    {
+        return JsonUtility.FromJson<ElfShopSaveState>(JsonUtility.ToJson(source));
+    }
 
-        string json = PlayerPrefs.GetString(Key_Stocks, string.Empty);
-        if (!string.IsNullOrEmpty(json))
+    /// <summary>플랫폼·실행마다 동일한 시드 (string.GetHashCode는 실행마다 달라질 수 있어 사용하지 않는다).</summary>
+    public static int DeterministicSeed(string runId, int day, string salt)
+    {
+        unchecked
         {
-            try
+            uint hash = 2166136261;
+            string key = (runId ?? "") + "|" + day + "|" + salt;
+            for (int i = 0; i < key.Length; i++)
             {
-                ElfShopSaveData data = JsonUtility.FromJson<ElfShopSaveData>(json);
-                _elfStocks = data?.stocks ?? new List<ElfShopStockData>();
-                RemoveStocksNotInConfig();
+                hash ^= key[i];
+                hash *= 16777619;
             }
-            catch
-            {
-                _elfStocks = new List<ElfShopStockData>();
-            }
+            return (int)hash;
         }
     }
-
-    private void RemoveStocksNotInConfig()
-    {
-        if (_elfConfig == null)
-            return;
-
-        IReadOnlyList<ElfShopItemEntry> validPool = GetItemPool(_currentElfType);
-        _elfStocks.RemoveAll(stock =>
-        {
-            for (int i = 0; i < validPool.Count; i++)
-            {
-                if (validPool[i].ItemId == stock.IngredientID && validPool[i].ItemType == stock.ItemType)
-                    return false;
-            }
-            return true;
-        });
-    }
-
-    private void SaveElfState()
-    {
-        PlayerPrefs.SetInt(Key_Day, _savedDay);
-        PlayerPrefs.SetInt(Key_CurrentElf, (int)_currentElfType);
-        PlayerPrefs.SetFloat(Key_WeightRed, _weightRed);
-        PlayerPrefs.SetFloat(Key_WeightBlue, _weightBlue);
-        PlayerPrefs.SetFloat(Key_WeightYellow, _weightYellow);
-        PlayerPrefs.SetString(
-            Key_Stocks,
-            JsonUtility.ToJson(new ElfShopSaveData { stocks = _elfStocks })
-        );
-        PlayerPrefs.Save();
-    }
-}
-
-[System.Serializable]
-public class ElfShopSaveData
-{
-    public List<ElfShopStockData> stocks = new List<ElfShopStockData>();
 }

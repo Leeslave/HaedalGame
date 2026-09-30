@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class ShopStockManager : MonoBehaviour
+public class ShopStockManager : MonoBehaviour, ISaveParticipant
 {
     public static ShopStockManager Instance;
 
@@ -35,6 +35,66 @@ public class ShopStockManager : MonoBehaviour
         }
 
         InitStocks();
+        GameSession.Register(this);
+    }
+
+    protected virtual void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    // 품목 구성은 DB/설정에서 다시 만들고, 남은 재고 수량만 저장한다. (현재 일일 재입고 규칙은 없음)
+    public void CaptureState(GameSaveData data)
+    {
+        data.regularShopStocks.Clear();
+
+        foreach (List<StockData> stocks in _islandStocks.Values)
+        {
+            foreach (StockData stock in stocks)
+                data.regularShopStocks.Add(ToEntry(stock));
+        }
+
+        foreach (StockData stock in _recipeStocks)
+            data.regularShopStocks.Add(ToEntry(stock));
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _islandStocks.Clear();
+        InitStocks();
+
+        foreach (ShopStockEntry entry in data.regularShopStocks)
+        {
+            StockData stock = FindStock(entry.itemId, entry.isRecipe);
+            if (stock != null)
+                stock.CurrentStock = Mathf.Clamp(entry.currentStock, 0, stock.MaxStock);
+        }
+    }
+
+    private static ShopStockEntry ToEntry(StockData stock)
+    {
+        return new ShopStockEntry
+        {
+            itemId = stock.IngredientID,
+            isRecipe = stock.IsRecipe,
+            currentStock = stock.CurrentStock,
+            maxStock = stock.MaxStock,
+        };
+    }
+
+    private StockData FindStock(int itemId, bool isRecipe)
+    {
+        if (isRecipe)
+            return _recipeStocks.Find(s => s.IngredientID == itemId);
+
+        foreach (List<StockData> stocks in _islandStocks.Values)
+        {
+            StockData found = stocks.Find(s => s.IngredientID == itemId);
+            if (found != null)
+                return found;
+        }
+        return null;
     }
 
     public virtual void InitStocks()
@@ -117,12 +177,15 @@ public class ShopStockManager : MonoBehaviour
         CurrencyManager.Instance.ProcessTransaction(
             new CurrencyTransaction(_gold, -totalCost, TransactionSource.ShopPurchase));
 
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
+
         if (target.IsRecipe)
         {
-            RecipeBookState recipeBook = _recipeBookState != null
-                ? _recipeBookState
-                : FindFirstObjectByType<RecipeBookState>();
-            recipeBook?.UnlockRecipe(ingredientId);
+            if (_recipeBookState != null)
+                _recipeBookState.UnlockRecipe(ingredientId);
+            else
+                RecipeBookState.UnlockRecipeAnywhere(ingredientId);
         }
         else
         {

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MenuManager : MonoBehaviour
+public class MenuManager : MonoBehaviour, ISaveParticipant
 {
     public static MenuManager Instance;
     [Header("DB")]
@@ -26,7 +26,48 @@ public class MenuManager : MonoBehaviour
         }
 
         recipeDatabase.BuildCache();
-        LoadMenuData();
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        GameSession.Unregister(this);
+    }
+
+    // 해금 목록은 RecipeBookState, 오늘의 메뉴는 섬의 메뉴판(MenuRecipeService)이 기준이다.
+    // MenuManager는 식당 씬에서 그 결과를 읽기만 하므로 세션에 쓰지 않는다.
+    public void CaptureState(GameSaveData data)
+    {
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        unlockedFoods.Clear();
+        unlockedFoodIdSet.Clear();
+        dailyFoods.Clear();
+
+        foreach (int id in data.unlockedRecipeIds)
+        {
+            if (recipeDatabase.TryGetRecipe(id, out RecipeData food))
+                UnlockMenu(food);
+        }
+
+        AddDefaultUnlockedRecipesIfMissing();
+
+        foreach (int id in data.menuSlots)
+        {
+            if (id < 0)
+                continue;
+
+            if (!recipeDatabase.TryGetRecipe(id, out RecipeData food) || !unlockedFoodIdSet.Contains(id))
+            {
+                Debug.LogWarning($"[MenuManager] 메뉴판의 레시피 ID {id}가 해금 목록에 없어 오늘의 메뉴에서 제외합니다.");
+                continue;
+            }
+
+            if (!dailyFoods.Contains(food))
+                dailyFoods.Add(food);
+        }
     }
 
     // -------------------------
@@ -126,7 +167,7 @@ public class MenuManager : MonoBehaviour
     }
 
     // -------------------------
-    // 저장 / 로드
+    // 저장 / 로드 (MenuSettingScene 개발 도구 전용. 게임 진행 세이브는 GameSession을 사용한다)
     // -------------------------
 
     public void SaveMenuData()

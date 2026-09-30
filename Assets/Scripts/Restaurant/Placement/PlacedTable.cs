@@ -5,6 +5,10 @@ using UnityEngine;
 [RequireComponent(typeof(TableGroup))]
 public class PlacedTable : MonoBehaviour
 {
+    // 현재 씬에 배치되어 있는(철거·이동 전) 테이블 목록. Destroy는 프레임 끝에 처리되므로 씬 검색 대신 이 목록으로 배치를 저장한다.
+    private static readonly List<PlacedTable> _active = new List<PlacedTable>();
+    public static IReadOnlyList<PlacedTable> Active => _active;
+
     public TableData tableData { get; private set; }
     public Vector2Int anchorCell { get; private set; }
 
@@ -15,6 +19,7 @@ public class PlacedTable : MonoBehaviour
     {
         tableData = data;
         anchorCell = anchor;
+        if (!_active.Contains(this)) { _active.Add(this); }
 
         seats = GetComponentsInChildren<Seat>();
 
@@ -49,7 +54,19 @@ public class PlacedTable : MonoBehaviour
     public void RemoveTable()
     {
         PathfindingGrid.Instance.UnregisterObstacleTiles(obstacleCells);
+        MarkRemoved();
         Destroy(gameObject);
+    }
+
+    // 배치 목록에서 즉시 뺀다. (이동 확정처럼 장애물 처리를 따로 한 뒤 Destroy하는 경우에도 호출)
+    public void MarkRemoved()
+    {
+        _active.Remove(this);
+    }
+
+    private void OnDestroy()
+    {
+        _active.Remove(this);
     }
 
     public List<Vector2Int> GetObstacleCells() { return obstacleCells; }

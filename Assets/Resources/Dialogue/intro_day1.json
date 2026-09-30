@@ -1,0 +1,41 @@
+{
+  "id": "intro_day1",
+  "backgroundStyle": "SeasideNight",
+  "canSkip": false,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 24,
+  "allowFastForward": true,
+
+  "characters": [
+    { "id": "haedal", "name": "해달", "color": "#7FD4E8", "side": "Left" }
+  ],
+
+  "nodes": [
+    {
+      "side": "None",
+      "text": "<i>[임시 인트로] 실제 시작 연출이 준비되면 Timeline으로 교체됩니다.</i>",
+      "backgroundStyle": "SeasideNight",
+      "transition": "Instant",
+      "autoAdvance": 3
+    },
+    {
+      "side": "None",
+      "text": "거센 파도가 지나간 밤, 작은 해달 한 마리가 낯선 섬에 떠밀려 왔다.",
+      "backgroundStyle": "SeasideNight",
+      "transition": "Fade"
+    },
+    {
+      "side": "None",
+      "text": "해가 뜨자, 모래사장 끝에 문을 닫은 오래된 식당이 보였다.",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade"
+    },
+    {
+      "speaker": "haedal",
+      "text": "……여기서 다시 시작해 볼까?",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade"
+    }
+  ]
+}

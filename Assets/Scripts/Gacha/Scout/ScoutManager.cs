@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ScoutManager : MonoBehaviour
+public class ScoutManager : MonoBehaviour, ISaveParticipant
 {
     public static ScoutManager Instance;
 
@@ -14,7 +14,7 @@ public class ScoutManager : MonoBehaviour
     [SerializeField] private List<GameObject> _sections;
     private int _selectedSectionIndex;
 
-    [Header("ÀÓ±İÃ¼ºÒ ÆĞ³ÎÆ¼ °ü·Ã º¯¼ö")]
+    [Header("ì„ê¸ˆì²´ë¶ˆ íŒ¨ë„í‹° ê´€ë ¨ ë³€ìˆ˜")]
     public bool _isPenaltyActive;
 
     private void Awake()
@@ -31,6 +31,24 @@ public class ScoutManager : MonoBehaviour
         }
 
         Initialize();
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    // í›„ë³´ ëª…ë‹¨ì€ ì²´í¬í¬ì¸íŠ¸ ë„ˆë¨¸ë¡œ ìœ ì§€í•˜ì§€ ì•ŠëŠ”ë‹¤. (ìŠ¤ì¹´ìš°íŠ¸ ê²°ê³¼ëŠ” ê·¸ ìë¦¬ì—ì„œ ê³ ìš©í•˜ê±°ë‚˜ ë²„ë¦°ë‹¤)
+    public void CaptureState(GameSaveData data)
+    {
+        data.scoutPenaltyPending = _isPenaltyActive;
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _isPenaltyActive = data.scoutPenaltyPending;
     }
 
     public void Initialize()
@@ -75,7 +93,7 @@ public class ScoutManager : MonoBehaviour
 
             PartTimerData newData = new PartTimerData();
             newData.status = GachaManager.Instance.GenerateRandomStatus(rolledGrade);
-            newData.serverName = "½ÅÀÔ ÇØ´Ş";
+            newData.serverName = "ì‹ ì… í•´ë‹¬";
             newData.level = rolledGrade.name;
 
             CandinateLists.Add(newData);
@@ -97,7 +115,7 @@ public class ScoutManager : MonoBehaviour
                 return grade.Key;
         }
 
-        Debug.LogWarning("DetermineGrade ÇÔ¼ö ¿À·ù");
+        Debug.LogWarning("DetermineGrade í•¨ìˆ˜ ì˜¤ë¥˜");
         return null;
     }
 
@@ -118,12 +136,12 @@ public class ScoutManager : MonoBehaviour
             return;
 
         PopupManager.Instance.ShowConfirmPopup(
-            $"{slot.Data.serverName}À»(¸¦) °í¿ëÇÏ½Ã°Ú½À´Ï±î?\n",
-            "³×",
-            "¾Æ´Ï¿À",
+            $"{slot.Data.serverName}ì„(ë¥¼) ê³ ìš©í•˜ì‹œê² ìŠµë‹ˆê¹Œ?\n",
+            "ë„¤",
+            "ì•„ë‹ˆì˜¤",
             () => HireCandidate(slot),
             null,
-            "(°í¿ë ½Ã Ã¹ ÁÖ±ŞÀÌ ¹Ù·Î ÁöºÒµË´Ï´Ù.)"
+            "(ê³ ìš© ì‹œ ì²« ì£¼ê¸‰ì´ ë°”ë¡œ ì§€ë¶ˆë©ë‹ˆë‹¤.)"
         );
     }
 
@@ -134,7 +152,7 @@ public class ScoutManager : MonoBehaviour
 
         PartTimerData hiredData = slot.Data;
 
-        Debug.Log($"{hiredData.serverName} °í¿ë ¿Ï·á");
+        Debug.Log($"{hiredData.serverName} ê³ ìš© ì™„ë£Œ");
         bool success = PartTimerAssignmentManager.Instance.RegisterHiredPartTimer(slot.Data);
         slot.MarkHired();
         // TODO:

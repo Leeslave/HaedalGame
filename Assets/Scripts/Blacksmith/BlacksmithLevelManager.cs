@@ -3,15 +3,12 @@ using UnityEngine;
 
 /// <summary>
 /// 대장간 자체 레벨 (강화 조건 검사 + 하단 바 표시용).
-/// 경험치가 가득 차면 자동 레벨업. RestaurantLevelManager와 같은 PlayerPrefs 저장 방식.
+/// 경험치가 가득 차면 자동 레벨업. 저장은 통합 세이브(GameSession) 체크포인트에서 한다.
 /// 경험치 획득처(강화 성공 등)는 추후 연결.
 /// </summary>
-public class BlacksmithLevelManager : MonoBehaviour
+public class BlacksmithLevelManager : MonoBehaviour, ISaveParticipant
 {
     public static BlacksmithLevelManager Instance { get; private set; }
-
-    private const string LevelKey = "BlacksmithLevel";
-    private const string ExpKey = "BlacksmithExp";
 
     [SerializeField] private int _defaultLevel = 1;
     [SerializeField] private int _expPerLevel = 100; // 레벨당 필요 경험치 (예: 30/100)
@@ -37,8 +34,28 @@ public class BlacksmithLevelManager : MonoBehaviour
             return;
         }
 
-        _currentLevel = PlayerPrefs.GetInt(LevelKey, _defaultLevel);
-        _currentExp = PlayerPrefs.GetInt(ExpKey, 0);
+        _currentLevel = _defaultLevel;
+        _currentExp = 0;
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.blacksmithLevel = _currentLevel;
+        data.blacksmithExp = _currentExp;
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _currentLevel = Mathf.Max(1, data.blacksmithLevel);
+        _currentExp = Mathf.Max(0, data.blacksmithExp);
+        OnChanged?.Invoke();
     }
 
     public void AddExp(int amount)
@@ -74,10 +91,10 @@ public class BlacksmithLevelManager : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    // 세션에 즉시 반영한다. 파일 저장은 체크포인트에서만 한다.
     private void Save()
     {
-        PlayerPrefs.SetInt(LevelKey, _currentLevel);
-        PlayerPrefs.SetInt(ExpKey, _currentExp);
-        PlayerPrefs.Save();
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
     }
 }

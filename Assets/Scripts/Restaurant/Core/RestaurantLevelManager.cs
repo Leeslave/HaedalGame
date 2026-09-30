@@ -1,11 +1,9 @@
 using System;
 using UnityEngine;
 
-public class RestaurantLevelManager : MonoBehaviour
+public class RestaurantLevelManager : MonoBehaviour, ISaveParticipant
 {
     public static RestaurantLevelManager Instance { get; private set; }
-
-    private const string SaveKey = "RestaurantLevel";
 
     [SerializeField] private int _defaultLevel = 1;
 
@@ -28,15 +26,31 @@ public class RestaurantLevelManager : MonoBehaviour
             return;
         }
 
-        _currentLevel = PlayerPrefs.GetInt(SaveKey, _defaultLevel);
+        _currentLevel = _defaultLevel;
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.restaurantLevel = _currentLevel;
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _currentLevel = Mathf.Max(1, data.restaurantLevel);
+        OnLevelChanged?.Invoke(_currentLevel);
     }
 
     public void SetLevel(int level)
     {
         if (level == _currentLevel) return;
         _currentLevel = Mathf.Max(1, level);
-        PlayerPrefs.SetInt(SaveKey, _currentLevel);
-        PlayerPrefs.Save();
         OnLevelChanged?.Invoke(_currentLevel);
     }
 

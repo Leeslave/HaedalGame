@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RecipeBookState : MonoBehaviour
+public class RecipeBookState : MonoBehaviour, ISaveParticipant
 {
     [SerializeField]
     private RecipeDatabaseSO _database;
 
+    [Tooltip("사용 안 함. 해금 상태는 통합 세이브(GameSession)로 저장한다. 씬 참조 유지를 위해 필드만 남겨 둔다.")]
     [SerializeField]
     private RecipeUnlockSaveService _saveService;
 
@@ -28,32 +29,42 @@ public class RecipeBookState : MonoBehaviour
         _unlockedRecipeIdsInOrder.Clear();
         _acquireOrderByRecipeId.Clear();
 
-        RecipeUnlockSaveData saveData = _saveService != null ? _saveService.Load() : null;
+        // 세션이 있으면 Register에서 세션 데이터로 다시 복원된다. 없으면 DB 기본 해금만 적용한다.
+        AddDefaultUnlockedRecipesIfMissing();
 
-        if (
-            saveData != null
-            && saveData.unlockedRecipeIdsInOrder != null
-            && saveData.unlockedRecipeIdsInOrder.Count > 0
-        )
+        GameSession.Register(this);
+        OnChanged?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.unlockedRecipeIds.Clear();
+        data.unlockedRecipeIds.AddRange(_unlockedRecipeIdsInOrder);
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _unlockedRecipeIds.Clear();
+        _unlockedRecipeIdsInOrder.Clear();
+        _acquireOrderByRecipeId.Clear();
+
+        foreach (int recipeId in data.unlockedRecipeIds)
         {
-            for (int i = 0; i < saveData.unlockedRecipeIdsInOrder.Count; i++)
+            if (_database != null && !_database.TryGetRecipe(recipeId, out _))
             {
-                int recipeId = saveData.unlockedRecipeIdsInOrder[i];
-
-                if (_database == null || !_database.TryGetRecipe(recipeId, out _))
-                    continue;
-
-                AddUnlockedRecipeInternal(recipeId);
+                Debug.LogWarning($"[RecipeBookState] 세이브의 ID {recipeId}가 DB에 없어 건너뜁니다.");
+                continue;
             }
 
-            AddDefaultUnlockedRecipesIfMissing();
-        }
-        else
-        {
-            AddDefaultUnlockedRecipesIfMissing();
-            Save();
+            AddUnlockedRecipeInternal(recipeId);
         }
 
+        AddDefaultUnlockedRecipesIfMissing();
         OnChanged?.Invoke();
     }
 
@@ -111,6 +122,22 @@ public class RecipeBookState : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    /// <summary>
+    /// 씬에 RecipeBookState가 없어도(상점만 열린 씬 등) 해금이 유실되지 않도록 세션에 직접 반영한다.
+    /// </summary>
+    public static void UnlockRecipeAnywhere(int recipeId)
+    {
+        RecipeBookState recipeBook = FindFirstObjectByType<RecipeBookState>();
+        if (recipeBook != null)
+        {
+            recipeBook.UnlockRecipe(recipeId);
+            return;
+        }
+
+        if (GameSession.IsActive && !GameSession.Current.unlockedRecipeIds.Contains(recipeId))
+            GameSession.Current.unlockedRecipeIds.Add(recipeId);
+    }
+
     public int GetAcquireOrder(int recipeId)
     {
         return _acquireOrderByRecipeId.TryGetValue(recipeId, out int order) ? order : int.MaxValue;
@@ -157,13 +184,10 @@ public class RecipeBookState : MonoBehaviour
         return result;
     }
 
+    /// <summary>현재 해금 상태를 세션에 반영한다. 파일 저장은 체크포인트에서만 한다.</summary>
     public void Save()
     {
-        if (_saveService == null)
-            return;
-
-        RecipeUnlockSaveData data = new RecipeUnlockSaveData();
-        data.unlockedRecipeIdsInOrder.AddRange(_unlockedRecipeIdsInOrder);
-        _saveService.Save(data);
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
     }
 }

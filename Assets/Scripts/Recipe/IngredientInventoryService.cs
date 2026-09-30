@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class IngredientInventoryService : MonoBehaviour
+public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
 {
     [SerializeField] private List<Ingredient> _initialIngredients = new List<Ingredient>();
 
@@ -46,6 +46,53 @@ public class IngredientInventoryService : MonoBehaviour
             if (!_sourceByIngredientId.ContainsKey(data.IngredientId))
                 _sourceByIngredientId.Add(data.IngredientId, data.Source);
         }
+
+        // 세션이 있으면 위 인스펙터 초기값 대신 세션 데이터로 덮어쓴다.
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.ingredients.Clear();
+
+        foreach (KeyValuePair<int, int> pair in _countsByIngredientId)
+        {
+            _acquiredTimeByIngredientId.TryGetValue(pair.Key, out long acquiredTime);
+            _sourceByIngredientId.TryGetValue(pair.Key, out string source);
+
+            data.ingredients.Add(new IngredientStackEntry
+            {
+                ingredientId = pair.Key,
+                amount = pair.Value,
+                source = source ?? "",
+                acquiredTime = acquiredTime,
+            });
+        }
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _countsByIngredientId.Clear();
+        _acquiredTimeByIngredientId.Clear();
+        _sourceByIngredientId.Clear();
+
+        foreach (IngredientStackEntry entry in data.ingredients)
+        {
+            if (entry == null || entry.amount <= 0)
+                continue;
+
+            _countsByIngredientId[entry.ingredientId] = entry.amount;
+            _acquiredTimeByIngredientId[entry.ingredientId] = entry.acquiredTime;
+            _sourceByIngredientId[entry.ingredientId] = entry.source;
+        }
+
+        OnChanged?.Invoke();
     }
 
     public int GetCount(int ingredientId)

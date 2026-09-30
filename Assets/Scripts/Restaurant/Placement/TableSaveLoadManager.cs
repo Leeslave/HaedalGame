@@ -1,22 +1,10 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
-[Serializable]
-public class TablePlacementEntry
-{
-    public string tableType; // TableType enum의 string 값
-    public int    anchorX;
-    public int    anchorY;
-}
-
-[Serializable]
-public class TablePlacementSaveData
-{
-    public List<TablePlacementEntry> tables = new List<TablePlacementEntry>();
-}
-
+/// <summary>
+/// 테이블 배치를 세션(GameSaveData.placedTables)과 주고받는다. 파일 저장은 체크포인트에서만 한다.
+/// 배치/이동/철거 직후 SavePlacement()로 세션에 바로 반영하므로, 씬 언로드 순서와 무관하게 최신 배치가 남는다.
+/// </summary>
 public class TableSaveLoadManager : MonoBehaviour
 {
     public static TableSaveLoadManager Instance;
@@ -25,12 +13,9 @@ public class TableSaveLoadManager : MonoBehaviour
     [SerializeField] private TableData fourSeatData;
     [SerializeField] private Transform tableParent;
 
-    private string savePath;
-
     private void Awake()
     {
         Instance = this;
-        savePath = Path.Combine(Application.persistentDataPath, "table_placement.json");
     }
 
     private void Start()
@@ -38,35 +23,43 @@ public class TableSaveLoadManager : MonoBehaviour
         LoadPlacement();
     }
 
+    /// <summary>현재 씬의 배치를 세션에 반영한다.</summary>
     public void SavePlacement()
     {
-        TablePlacementSaveData data = new TablePlacementSaveData();
+        if (!GameSession.IsActive) { return; }
 
-        PlacedTable[] placed = FindObjectsByType<PlacedTable>(FindObjectsSortMode.None);
-        foreach (PlacedTable table in placed)
+        List<PlacedTableEntry> entries = GameSession.Current.placedTables;
+        entries.Clear();
+
+        foreach (PlacedTable table in PlacedTable.Active)
         {
-            TablePlacementEntry entry = new TablePlacementEntry();
-            entry.tableType = table.tableData.tableType.ToString();
-            entry.anchorX   = table.anchorCell.x;
-            entry.anchorY   = table.anchorCell.y;
-            data.tables.Add(entry);
+            entries.Add(new PlacedTableEntry
+            {
+                tableType = table.tableData.tableType.ToString(),
+                anchorX   = table.anchorCell.x,
+                anchorY   = table.anchorCell.y,
+            });
         }
-
-        File.WriteAllText(savePath, JsonUtility.ToJson(data, true));
     }
 
+    /// <summary>세션의 배치로 씬 테이블을 다시 만든다. 이미 있던 배치 테이블은 먼저 제거해 중복 생성을 막는다.</summary>
     public void LoadPlacement()
     {
-        if (!File.Exists(savePath)) { return; }
+        if (!GameSession.IsActive) { return; }
 
-        TablePlacementSaveData data = JsonUtility.FromJson<TablePlacementSaveData>(
-            File.ReadAllText(savePath)
-        );
+        foreach (PlacedTable existing in new List<PlacedTable>(PlacedTable.Active))
+        {
+            existing.RemoveTable();
+        }
 
-        foreach (TablePlacementEntry entry in data.tables)
+        foreach (PlacedTableEntry entry in GameSession.Current.placedTables)
         {
             TableData tableData = GetTableData(entry.tableType);
-            if (tableData == null) { continue; }
+            if (tableData == null)
+            {
+                Debug.LogWarning($"[TableSaveLoadManager] 알 수 없는 테이블 종류 '{entry.tableType}'를 건너뜁니다.");
+                continue;
+            }
 
             Vector2Int anchor   = new Vector2Int(entry.anchorX, entry.anchorY);
             Vector3    worldPos = PathfindingGrid.Instance.GetWorldPos(anchor);

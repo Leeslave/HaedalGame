@@ -77,6 +77,7 @@ public class TablePlacementManager : MonoBehaviour
 
         if (state == PlacementState.Moving && movingTable != null)
         {
+            movingTable.MarkRemoved();
             Destroy(movingTable.gameObject);
             movingTable = null;
         }

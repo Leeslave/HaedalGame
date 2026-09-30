@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PartTimerAssignmentManager : MonoBehaviour
+public class PartTimerAssignmentManager : MonoBehaviour, ISaveParticipant
 {
     public static PartTimerAssignmentManager Instance;
 
@@ -58,10 +58,136 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         Instance = this;
 
+        GameSession.Register(this);
         RefreshOwnedPartTimerList();
         SetTopTab(TopTabType.Kitchen);
 
     }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    #region Save
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.employees.Clear();
+
+        foreach (PartTimerData partTimer in _ownedPartTimers)
+        {
+            if (partTimer == null)
+                continue;
+
+            PartTimerSlot slot = FindAssignedSlot(partTimer);
+            int slotIndex = slot != null ? GetRoleSlotIndex(slot) : -1;
+            if (slot == null)
+                partTimer.CurrentRole = PartTimerRole.None;
+
+            data.employees.Add(partTimer.ToEntry(slotIndex));
+        }
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _ownedPartTimers.Clear();
+        _selectedOwnedPartTimer = null;
+        _selectedTargetSlot = null;
+
+        for (int i = 0; i < _workSlots.Count; i++)
+        {
+            if (_workSlots[i] != null)
+                _workSlots[i].Clear();
+        }
+
+        foreach (EmployeeEntry entry in data.employees)
+        {
+            if (entry == null)
+                continue;
+
+            PartTimerData partTimer = PartTimerData.FromEntry(entry);
+            PartTimerRole savedRole = partTimer.CurrentRole;
+            partTimer.CurrentRole = PartTimerRole.None;
+            _ownedPartTimers.Add(partTimer);
+
+            if (savedRole == PartTimerRole.None || entry.slotIndex < 0)
+                continue;
+
+            PartTimerSlot slot = GetRoleSlot(savedRole, entry.slotIndex);
+            if (slot != null && !slot.IsLock && slot.IsEmpty)
+                slot.SetPartTimer(partTimer);
+            else
+                Debug.LogWarning($"[PartTimerAssignmentManager] {entry.name}의 배치 슬롯({savedRole} {entry.slotIndex})을 복원할 수 없어 미배치로 둡니다.");
+        }
+
+        if (_ownedPartTimerScrollRect != null)
+            _ownedPartTimerScrollRect.ValidItemCount = _ownedPartTimers.Count;
+
+        _ownedCursorIndex = _ownedPartTimers.Count > 0 ? 0 : -1;
+        RefreshOwnedPartTimerList();
+
+        for (int i = 0; i < _workSlots.Count; i++)
+        {
+            if (_workSlots[i] != null)
+                _workSlots[i].RefreshUI();
+        }
+
+        OnAssignmentChanged?.Invoke();
+    }
+
+    // 고용·배치 변경을 세션에 바로 반영해, 식당 씬이 같은 날의 최신 배치를 읽게 한다.
+    private void PushToSession()
+    {
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
+    }
+
+    // 같은 역할 슬롯들 중 몇 번째인지 (0-based)
+    private int GetRoleSlotIndex(PartTimerSlot target)
+    {
+        int index = 0;
+        for (int i = 0; i < _workSlots.Count; i++)
+        {
+            PartTimerSlot slot = _workSlots[i];
+            if (slot == null || slot.SlotRole != target.SlotRole)
+                continue;
+
+            if (slot == target)
+                return index;
+
+            index++;
+        }
+        return -1;
+    }
+
+    private PartTimerSlot GetRoleSlot(PartTimerRole role, int roleIndex)
+    {
+        int index = 0;
+        for (int i = 0; i < _workSlots.Count; i++)
+        {
+            PartTimerSlot slot = _workSlots[i];
+            if (slot == null || slot.SlotRole != role)
+                continue;
+
+            if (index == roleIndex)
+                return slot;
+
+            index++;
+        }
+        return null;
+    }
+
+    private static string CreateInstanceId()
+    {
+        if (GameSession.IsActive)
+            return "emp-" + GameSession.Current.nextEmployeeSerial++;
+
+        return "emp-" + System.Guid.NewGuid().ToString("N");
+    }
+
+    #endregion
 
     private void Update()
     {
@@ -98,6 +224,7 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         PartTimerData newHire = ClonePartTimerData(candidateData);
         newHire.CurrentRole = PartTimerRole.None;
+        newHire.instanceId = CreateInstanceId();
 
         _ownedPartTimers.Add(newHire);
 
@@ -107,6 +234,7 @@ public class PartTimerAssignmentManager : MonoBehaviour
         RefreshOwnedPartTimerList();
         _ownedPartTimerScrollRect.ValidItemCount++;
 
+        PushToSession();
         OnAssignmentChanged?.Invoke();
         return true;
     }
@@ -395,7 +523,8 @@ public class PartTimerAssignmentManager : MonoBehaviour
                 _workSlots[i].RefreshUI();
         }
 
-        // 배치가 바뀌었음을 외부(집 UI 등)에 알린다.
+        // 배치가 바뀌었음을 세션과 외부(집 UI 등)에 알린다.
+        PushToSession();
         OnAssignmentChanged?.Invoke();
     }
     private void ClearSelection()
@@ -423,6 +552,11 @@ public class PartTimerAssignmentManager : MonoBehaviour
         newData.serverName = source.serverName;
         newData.level = source.level;
         newData.CurrentRole = PartTimerRole.None;
+        newData.wage = source.wage;
+
+        // 스카우트 후보는 주급이 비어 있으므로 등급 기준 주급을 채운다.
+        if (newData.wage <= 0)
+            newData.ServerStatusInit();
 
         newData.status = new PartTimerStatus
         {

@@ -380,12 +380,19 @@ public class TutorialManager : MonoBehaviour
         if (Instance != null && Instance._ignoreSavedProgress)
             return false;
 
+        // 진행 세이브가 있으면 그 기록이 기준이다. (체크포인트 이후 본 기록은 되돌아가면 함께 되돌아간다)
+        if (GameSession.TryGetTutorialCompleted(sequenceId, out bool completed))
+            return completed;
+
         return PlayerPrefs.GetInt(CompletedKeyPrefix + sequenceId, 0) == 1;
     }
 
     public static void MarkCompleted(string sequenceId)
     {
         if (string.IsNullOrEmpty(sequenceId))
+            return;
+
+        if (GameSession.TryMarkTutorialCompleted(sequenceId))
             return;
 
         PlayerPrefs.SetInt(CompletedKeyPrefix + sequenceId, 1);
@@ -395,6 +402,9 @@ public class TutorialManager : MonoBehaviour
     public static void ResetProgress(string sequenceId)
     {
         if (string.IsNullOrEmpty(sequenceId))
+            return;
+
+        if (GameSession.TryResetTutorial(sequenceId))
             return;
 
         PlayerPrefs.DeleteKey(CompletedKeyPrefix + sequenceId);
