@@ -5,6 +5,9 @@ public class PartTimerAssignmentManager : MonoBehaviour
 {
     public static PartTimerAssignmentManager Instance;
 
+    /// <summary>알바 배치/고용이 바뀔 때 발행 (집 UI 등 외부 표시 갱신용).</summary>
+    public event System.Action OnAssignmentChanged;
+
     [Header("References")]
     [SerializeField] private SnapScrollRect _ownedPartTimerScrollRect; 
 
@@ -65,6 +68,29 @@ public class PartTimerAssignmentManager : MonoBehaviour
         HandleOwnedPartTimerKeyboard();
     }
 
+    /// <summary>
+    /// 해당 역할에 배치된 알바를 배치 순서대로 반환한다 (집 UI 등 읽기 전용 표시에 사용).
+    /// </summary>
+    public List<PartTimerData> GetAssignedPartTimers(PartTimerRole role)
+    {
+        List<PartTimerData> result = new List<PartTimerData>();
+
+        for (int i = 0; i < _workSlots.Count; i++)
+        {
+            PartTimerSlot slot = _workSlots[i];
+
+            if (slot == null || slot.SlotRole != role || slot.IsEmpty)
+                continue;
+
+            result.Add(slot.CurrentPartTimer);
+        }
+
+        return result;
+    }
+
+    /// <summary>보유 중인 전체 알바 수 (배치 여부 무관).</summary>
+    public int OwnedPartTimerCount => _ownedPartTimers != null ? _ownedPartTimers.Count : 0;
+
     public bool RegisterHiredPartTimer(PartTimerData candidateData)
     {
         if (candidateData == null)
@@ -80,6 +106,8 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         RefreshOwnedPartTimerList();
         _ownedPartTimerScrollRect.ValidItemCount++;
+
+        OnAssignmentChanged?.Invoke();
         return true;
     }
 
@@ -203,7 +231,7 @@ public class PartTimerAssignmentManager : MonoBehaviour
 
         if (targetPartTimer == null)
         {
-            content = $"{selectedPartTimer.serverName} �˹ٻ��� {roleName}�� ��ġ�ϰڽ��ϱ�?";
+            content = $"{selectedPartTimer.serverName} 알바를 {roleName}에 배치하시겠습니까?";
         }
         else
         {
@@ -213,13 +241,13 @@ public class PartTimerAssignmentManager : MonoBehaviour
                 return;
             }
 
-            content = $"{selectedPartTimer.serverName} �˹ٿ� {targetPartTimer.serverName} �˹ٸ� �����ϰڽ��ϱ�?";
+            content = $"{selectedPartTimer.serverName} 알바와 {targetPartTimer.serverName} 알바를 교체하시겠습니까?";
         }
 
         PopupManager.Instance.ShowConfirmPopup(
             content,
-            "��",
-            "�ƴϿ�",
+            "예",
+            "아니오",
             () => AssignOrSwap(selectedPartTimer, targetSlot),
             () =>
             {
@@ -284,14 +312,14 @@ public class PartTimerAssignmentManager : MonoBehaviour
         string roleName = GetRoleText(toSlot.SlotRole);
 
         if (toData == null)
-            content = $"{fromData.serverName} �˹ٻ��� {roleName}�� ��ġ�ϰڽ��ϱ�?";
+            content = $"{fromData.serverName} 알바를 {roleName}에 배치하시겠습니까?";
         else
-            content = $"{fromData.serverName} �˹ٿ� {toData.serverName} �˹ٸ� �����ϰڽ��ϱ�?";
+            content = $"{fromData.serverName} 알바와 {toData.serverName} 알바를 교체하시겠습니까?";
 
         PopupManager.Instance.ShowConfirmPopup(
             content,
-            "��",
-            "�ƴϿ�",
+            "예",
+            "아니오",
             () =>
             {
                 if (toData == null)
@@ -366,6 +394,9 @@ public class PartTimerAssignmentManager : MonoBehaviour
             if (_workSlots[i] != null)
                 _workSlots[i].RefreshUI();
         }
+
+        // 배치가 바뀌었음을 외부(집 UI 등)에 알린다.
+        OnAssignmentChanged?.Invoke();
     }
     private void ClearSelection()
     {
@@ -379,11 +410,11 @@ public class PartTimerAssignmentManager : MonoBehaviour
         switch (role)
         {
             case PartTimerRole.Serving:
-                return "Ȧ";
+                return "홀";
             case PartTimerRole.Kitchen:
-                return "�ֹ�";
+                return "주방";
             default:
-                return "���";
+                return "없음";
         }
     }
     private PartTimerData ClonePartTimerData(PartTimerData source)

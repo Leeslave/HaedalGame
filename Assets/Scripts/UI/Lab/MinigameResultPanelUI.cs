@@ -34,6 +34,9 @@ public class MinigameResultPanelUI : MonoBehaviour
     // 미니게임 동안만 보일 UI (페이즈 타이틀 TopSection 등). 결과가 뜨면 꺼진다.
     [SerializeField] private GameObject _hideDuringResult;
 
+    // 미니게임 UI 루트(캔버스). 결과 확인 시 함께 끈다. (연구 시작 시 켜는 건 연구실 인벤토리가 담당)
+    [SerializeField] private GameObject _minigameRoot;
+
     private readonly List<MinigameResultRowUI> _spawnedRows = new List<MinigameResultRowUI>();
 
     // 구독은 Awake/OnDestroy에서 한다.
@@ -123,6 +126,10 @@ public class MinigameResultPanelUI : MonoBehaviour
         // 결과 확인 후 인벤토리 UI 복귀.
         if (_hideDuringMinigame != null)
             _hideDuringMinigame.SetActive(true);
+
+        // 미니게임 UI 루트(캔버스)를 끈다. (자기 자신이 이 캔버스의 자식이므로 마지막에 처리)
+        if (_minigameRoot != null)
+            _minigameRoot.SetActive(false);
     }
 
     private void ClearRows()

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f348023f1a89bd9439952f4acf3c8995, type: 3}
+  m_Name: HouseTutorial_00_Intro
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialStepSO
+  _targetKey: 
+  _targetWaitTimeout: 3
+  _highlightPadding: {x: 24, y: 24}
+  _shape: 2
+  _titleText: "\uD574\uB2EC\uC774\uB124 \uC9D1"
+  _descriptionText: "\uC774\uACF3\uC5D0\uC11C \uC54C\uBC14\u00B7\uC7AC\uACE0\u00B7\uBBF8\uC158\uC744 \uD55C\uB208\uC5D0 \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694."
+  _instructionText: "\uC544\uBB34 \uACF3\uC774\uB098 \uD074\uB9AD\uD558\uC5EC \uB2E4\uC74C\uC73C\uB85C"
+  _extraLines:
+  - "\uAC00\uAC8C \uC6B4\uC601\uC744 \uC900\uBE44\uD558\uB294 \uACF5\uAC04\uC774\uC5D0\uC694."
+  _textPlacement: 0
+  _textOffset: {x: 0, y: 0}
+  _advanceMode: 0
+  _inputDelay: 0.35
+  _autoAdvanceDelay: 2
+  _completeEventKey: 
+  _allowTargetInteraction: 0
+  _showSkipButton: 1
+  _startDelay: 0

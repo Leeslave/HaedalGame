@@ -1,0 +1,100 @@
+{
+  "id": "sample_dialogue_full",
+  "background": "bg_restaurant",
+  "backgroundStyle": "WarmInterior",
+  "canSkip": true,
+  "pauseGameTime": true,
+  "playOnce": false,
+  "typeSpeed": 30,
+  "allowFastForward": true,
+
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "portrait": "haedal_normal",
+      "side": "Left"
+    },
+    {
+      "id": "elf",
+      "name": "엘프 상인",
+      "color": "#B9E88F",
+      "portrait": "elf_normal",
+      "side": "Right"
+    }
+  ],
+
+  "nodes": [
+    {
+      "id": "intro",
+      "text": "해질 무렵, 파도 소리만 남은 바닷가 식당.",
+      "side": "None",
+      "background": "bg_seaside",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade",
+      "typeSpeed": 18,
+      "autoAdvance": 2.5
+    },
+    {
+      "id": "greet",
+      "speaker": "haedal",
+      "portrait": "haedal_happy",
+      "text": "어서 와! 오늘은 좀 늦었네?",
+      "eventKey": "dialogue.greeted"
+    },
+    {
+      "speaker": "elf",
+      "name": "???",
+      "portrait": "elf_hood",
+      "text": "...길이 좀 험했거든.",
+      "typeSpeed": 12
+    },
+    {
+      "id": "question",
+      "speaker": "haedal",
+      "text": "무슨 일 있었어?",
+      "choices": [
+        {
+          "text": "자세히 물어본다",
+          "next": "detail",
+          "eventKey": "dialogue.asked_detail",
+          "setFlag": "asked"
+        },
+        {
+          "text": "그냥 넘어간다",
+          "next": "skip_it"
+        },
+        {
+          "text": "(아까 그 얘기를 꺼낸다)",
+          "next": "detail",
+          "requireFlag": "met_before"
+        }
+      ]
+    },
+    {
+      "id": "detail",
+      "speaker": "elf",
+      "portrait": "elf_worried",
+      "text": "숲 쪽 길이 막혔어. 당분간은 배로 돌아와야 할 것 같아.",
+      "blockSkip": true,
+      "next": "closing"
+    },
+    {
+      "id": "skip_it",
+      "speaker": "elf",
+      "text": "...고마워. 그렇게 물어봐 주지 않아서.",
+      "next": "closing"
+    },
+    {
+      "id": "closing",
+      "speaker": "haedal",
+      "portrait": "haedal_normal",
+      "text": "일단 앉아. 따뜻한 거라도 내올게.",
+      "background": "bg_restaurant",
+      "transition": "Fade",
+      "eventKey": "dialogue.finished",
+      "next": "end"
+    }
+  ]
+}

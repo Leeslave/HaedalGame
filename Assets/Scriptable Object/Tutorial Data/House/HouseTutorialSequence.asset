@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01eb3dd0646489c47a912f0d7193daa3, type: 3}
+  m_Name: HouseTutorialSequence
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialSequenceSO
+  _sequenceId: "tutorial.house"
+  _playOnce: 1
+  _pauseGameTime: 0
+  _steps:
+  - {fileID: 11400000, guid: dd508b43e4a48fc813f9ba087112fbf6, type: 2}
+  - {fileID: 11400000, guid: b27c72e867c26a5ff7f5d58324e745ec, type: 2}
+  - {fileID: 11400000, guid: 046ac43d509fa04d02bfdf936b29871c, type: 2}
+  - {fileID: 11400000, guid: a4283037326e10029ddabada3c9bd20b, type: 2}
+  - {fileID: 11400000, guid: 7cd15b847790cd05abdb05e771277bb7, type: 2}
+  - {fileID: 11400000, guid: ced43bb652b1884e9b55a491aaf96436, type: 2}
+  - {fileID: 11400000, guid: 4ae6a17c790f6e7492a1af60f80b1da5, type: 2}
+  - {fileID: 11400000, guid: 659c9da4550d3d8b3698da94b4e6db2d, type: 2}

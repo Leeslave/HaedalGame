@@ -21,6 +21,9 @@ public class RecipeLabInventoryController : MonoBehaviour
     [Header("Minigame Entry")]
     [SerializeField] private Button _researchButton; // 연구 시작 버튼
     [SerializeField] private MinigameManager _minigameManager;
+    // 미니게임 UI 루트(캔버스). 연구 시작 시 켜야 페이즈/결과 UI가 표시된다.
+    // 인벤토리 숨김·TopSection 표시·결과창은 이 캔버스 안의 MinigameResultPanelUI가 담당한다.
+    [SerializeField] private GameObject _minigameRoot;
 
 
     private readonly List<RecipeSlotUI> _spawnedSlots = new List<RecipeSlotUI>();
@@ -67,9 +70,9 @@ public class RecipeLabInventoryController : MonoBehaviour
             _researchButton.onClick.RemoveListener(OnClickResearch);
     }
 
-    // 미니게임 종료(개방 처리) 구독은 Awake/OnDestroy에서 유지한다.
-    // 미니게임 동안 인벤토리 루트가 꺼지면 OnDisable이 불리는데,
-    // OnEnable/OnDisable 구독이면 그 사이에 끝난 미니게임의 개방 처리를 놓친다.
+    // 종료(개방 처리) 구독은 Awake/OnDestroy에서 유지한다.
+    // 미니게임 동안 인벤토리 루트가 꺼지면(OnDisable) OnEnable/OnDisable 구독으로는
+    // 그 사이에 끝난 미니게임의 개방 처리를 놓치기 때문.
     private void Awake()
     {
         if (_minigameManager != null)
@@ -85,12 +88,18 @@ public class RecipeLabInventoryController : MonoBehaviour
     /// <summary>연구 성공 시 레시피 개방 (기획서 1.3). 실패 시엔 재료만 소모된 상태로 종료.</summary>
     private void HandleMinigameEnded(MinigameResult result)
     {
-        if (result == null || !result.Success || result.Recipe == null)
-            return;
-
-        if (_recipeBookState != null)
+        // 성공했을 때만 레시피를 개방한다.
+        if (result != null && result.Success && result.Recipe != null && _recipeBookState != null)
             _recipeBookState.UnlockRecipe(result.Recipe.RecipeId);
         // UnlockRecipe가 OnChanged를 발행 → RefreshList로 목록/상세가 자동 갱신된다.
+        // 캔버스/인벤토리 복귀는 결과창 확인 시 MinigameResultPanelUI가 처리한다.
+    }
+
+    /// <summary>널 안전하게 GameObject 활성 상태를 바꾼다.</summary>
+    private static void SetActiveSafe(GameObject go, bool active)
+    {
+        if (go != null && go.activeSelf != active)
+            go.SetActive(active);
     }
 
     private void Start()
@@ -321,7 +330,14 @@ public class RecipeLabInventoryController : MonoBehaviour
         if (!_minigameManager.Initialize(recipe.RecipeId))
             return;
 
-        _minigameManager.StartMinigame();
+        // 미니게임 UI 루트(캔버스)를 StartMinigame 전에 켠다.
+        // → 캔버스 안의 MinigameResultPanelUI가 Awake로 OnMinigameStarted를 구독한 뒤
+        //   시작 이벤트를 받아 인벤토리 숨김·TopSection 표시를 처리하게 된다.
+        SetActiveSafe(_minigameRoot, true);
+
+        // 재료 부족 등으로 시작에 실패하면 캔버스를 다시 끈다.
+        if (!_minigameManager.StartMinigame())
+            SetActiveSafe(_minigameRoot, false);
     }
 
     private void ClearSlots()
