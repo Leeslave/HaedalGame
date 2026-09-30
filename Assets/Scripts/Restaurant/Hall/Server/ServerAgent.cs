@@ -57,7 +57,6 @@ public class ServerAgent : PartTimerAgent
         curTask = task;
         if (task.Customer.cbc.GetCheckBoost())
         {
-            Debug.Log("**※※※** Boost한 업무를 수주했습니다.");
             task.Customer.cbc.SetCheckBoost(false);
         }
 

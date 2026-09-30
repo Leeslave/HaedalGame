@@ -18,22 +18,21 @@ public class Pathfinder : MonoBehaviour
         if (startNode == null || endNode == null) { return null; }          // 만약 시작노드 혹은 엔드 노드가 없다면, 이동 X
         if (!endNode.walkable) { return null; }                             // 만약 엔드노드가 장애물이라면 이동 X
 
-        List<PathNode> openList = new List<PathNode>();
+        Heap<PathNode> openSet = new Heap<PathNode>(PathfindingGrid.Instance.NodeCount);
         HashSet<PathNode> closedSet = new HashSet<PathNode>();
 
         startNode.gCost = 0;
         startNode.hCost = GetManhattan(start, end);
         startNode.parent = null;
 
-        openList.Add(startNode);
+        openSet.Add(startNode);
 
-        while(openList.Count > 0)
+        while(openSet.Count > 0)
         {
-            PathNode current = GetLowestFCost(openList);
+            PathNode current = openSet.RemoveFirst();
 
             if (current == endNode) { return RetracePath(endNode); }
 
-            openList.Remove(current);
             closedSet.Add(current);
 
             foreach (PathNode neighbor in PathfindingGrid.Instance.GetNeighbors(current))
@@ -41,42 +40,27 @@ public class Pathfinder : MonoBehaviour
                 if (!neighbor.walkable || closedSet.Contains(neighbor)) { continue; }
 
                 int newGCost = current.gCost + 1;
+                bool inOpenSet = openSet.Contains(neighbor);
 
-                if (newGCost < neighbor.gCost || !openList.Contains(neighbor))
+                if (newGCost < neighbor.gCost || !inOpenSet)
                 {
                     neighbor.gCost  = newGCost;
                     neighbor.hCost  = GetManhattan(neighbor.gridPos, end);
                     neighbor.parent = current;
 
-                    if (!openList.Contains(neighbor))
+                    if (!inOpenSet)
                     {
-                        openList.Add(neighbor);
+                        openSet.Add(neighbor);
+                    }
+                    else
+                    {
+                        openSet.UpdateItem(neighbor);
                     }
                 }
             }
 
         }
         return null;
-    }
-
-    private PathNode GetLowestFCost(List<PathNode> list)
-    {
-        PathNode lowest = list[0];
-
-        for (int i = 1; i < list.Count; i++)
-        {
-            PathNode node = list[i];
-            if (node.FCost() < lowest.FCost())
-            {
-                lowest = node;
-            }
-            else if (node.FCost() == lowest.FCost() && node.hCost < lowest.hCost)
-            {
-                lowest = node;
-            }
-        }
-
-        return lowest;
     }
 
     private int GetManhattan(Vector2Int a, Vector2Int b)

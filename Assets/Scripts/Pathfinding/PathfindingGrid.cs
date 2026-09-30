@@ -189,4 +189,7 @@ public class PathfindingGrid : MonoBehaviour
 
     // 배치 시스템에서 스냅 계산 용
     public Tilemap FloorMap => floorMap;
+
+    // Pathfinder가 오픈리스트 힙 크기를 미리 할당할 때 사용
+    public int NodeCount => nodes.Count;
 }
