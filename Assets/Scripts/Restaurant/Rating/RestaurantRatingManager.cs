@@ -176,6 +176,12 @@ public class RestaurantRatingManager : MonoBehaviour, ISaveParticipant
 
     public int LastRecordedRatingDay => _lastRecordedRatingDay;
 
+    // 오늘 받은 개인 평가 건수
+    public int TodayScoreCount => _todayScores.Count;
+
+    // 시작 평판(day 0 시드값)이 아직 7일 평균에 포함되어 있는지
+    public bool HasSeedRating => _dailyHistory.Exists(entry => entry.day == 0);
+
     private void OnDayAdvanced(int newDay)
     {
         // 날짜가 넘어가기 전 날의 평점이 아직 확정되지 않았다면 확정한다. (이미 확정했으면 무시)

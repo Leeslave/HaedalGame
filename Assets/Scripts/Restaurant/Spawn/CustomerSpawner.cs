@@ -38,6 +38,18 @@ public class CustomerSpawner : MonoBehaviour
     // 오늘 스폰할 손님을 모두 큐에서 꺼냈고, 활성 손님도 0명이 되었을 때(=마지막 손님이 나갔을 때) 발생.
     public Action OnAllCustomersHandled;
 
+    // 오늘 들어올 손님을 모두 내보내 신규 입장이 끝났을 때 한 번 발생. (남은 손님 응대는 계속된다)
+    public event Action OnEntryClosed;
+
+    private int plannedCount = 0;
+    private bool entryClosed = false;
+
+    public int PlannedCount => plannedCount;             // 오늘 입장 예정 손님 수
+    public int SpawnedCount => plannedCount - spawnQueue.Count;
+    public int PendingSpawnCount => spawnQueue.Count;
+    public int ActiveCustomerCount => activeCustomerCount;
+    public bool IsEntryClosed => entryClosed;
+
     void Awake()
     {
         csm = GetComponent<CustomerSpawnManager>();
@@ -46,7 +58,9 @@ public class CustomerSpawner : MonoBehaviour
     public void StartGame()
     {
         dayEndTriggered = false;
+        entryClosed = false;
         activeCustomerCount = 0;
+        spawnQueue.Clear();
 
         // 테스트든 아니든 큐에 입력
         if (isTest)
@@ -57,9 +71,18 @@ public class CustomerSpawner : MonoBehaviour
         {
             CustomerSpawn();
         }
+        plannedCount = spawnQueue.Count;
         if (manageQueueCoroutine != null) { StopCoroutine(manageQueueCoroutine); }
         manageQueueCoroutine = StartCoroutine(ManageQueue());
+        CheckEntryClosed();
         CheckDayEnd();
+    }
+
+    private void CheckEntryClosed()
+    {
+        if (entryClosed || spawnQueue.Count > 0) { return; }
+        entryClosed = true;
+        OnEntryClosed?.Invoke();
     }
 
     void Start()
@@ -88,6 +111,7 @@ public class CustomerSpawner : MonoBehaviour
                 CustomerAgent customer = csm.SpawnCustomer(curPat, customerParent);
                 activeCustomerCount++;
                 customer.OnExited += HandleCustomerExited;
+                CheckEntryClosed();
                 yield return new WaitForSeconds(spawnInterval);
             }
             else

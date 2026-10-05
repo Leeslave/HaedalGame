@@ -62,6 +62,11 @@ public class GameSaveData
     public ElfShopSaveState elfShop = new ElfShopSaveState();
     public List<ShopStockEntry> regularShopStocks = new List<ShopStockEntry>();
 
+    // ───── 하루 결산 (DayEnded 체크포인트와 함께 확정) ─────
+    // 이전 버전 세이브에는 없는 필드라 기본값(결산 없음)으로 읽힌다.
+    public DaySettlementRecord lastSettlement = new DaySettlementRecord();
+    public bool settlementPendingReview;    // 결산 확정 후 플레이어가 결산 화면을 닫기 전에 종료했는지
+
     public GameSaveData Clone()
     {
         return JsonUtility.FromJson<GameSaveData>(JsonUtility.ToJson(this));
@@ -159,6 +164,57 @@ public class ShopStockEntry
     public bool isRecipe;
     public int currentStock;
     public int maxStock;
+}
+
+/// <summary>
+/// 하루 영업 결산 스냅샷. 결산 확정 시점의 값을 그대로 담으며, 다시 계산하지 않고 표시만 한다.
+/// day가 0이면 아직 결산한 날이 없다는 뜻이다.
+/// </summary>
+[Serializable]
+public class DaySettlementRecord
+{
+    public int day;
+
+    // 장부 (모두 실제 거래 이벤트에서 집계)
+    public List<DaySaleEntry> sales = new List<DaySaleEntry>();
+    public int revenue;             // 손님 결제 합계 (팁 포함)
+    public int otherIncome;         // 영업 중 손님 결제 외 수입
+    public int expense;             // 영업 중 지출
+    public int netProfit;           // revenue + otherIncome - expense
+    public int goldAtOpen;
+    public int goldAtClose;
+
+    // 손님
+    public int visitedCount;        // 입장(생성) 기준
+    public int servedCount;         // 계산 완료 후 퇴장
+    public int notServedCount;      // 계산 없이 퇴장 (대기 포기·주문 불가 등)
+    public int forcedLeaveCount;    // 마감 정지 방지로 내보낸 손님 (notServedCount에 포함)
+
+    // 평점
+    public float todayRating;       // 오늘 개인 평점 평균 (평가 0건이면 0)
+    public int ratingCount;
+    public float previousRating;    // 결산 전 식당 평점
+    public float totalRating;       // 결산 후 식당 평점
+    public bool seedRatingIncluded; // 시작 평판(시드)이 아직 평균에 포함되어 있는지
+
+    // 운영 측정값 (평균 = 합계 / 표본 수)
+    public float seatWaitSum;
+    public int seatWaitSamples;
+    public float orderTakeSum;
+    public int orderTakeSamples;
+    public float foodWaitSum;
+    public int foodWaitSamples;
+    public float firstRevenueSeconds = -1f;   // 영업 시작부터 첫 결제까지 (측정 못 했으면 -1)
+}
+
+[Serializable]
+public class DaySaleEntry
+{
+    public int recipeId;
+    public string recipeName;
+    public int count;
+    public int unitPrice;           // 메뉴 가격
+    public int revenue;             // 실제 받은 금액 합계 (팁 포함)
 }
 
 /// <summary>타이틀 화면 요약 표시용 정보.</summary>

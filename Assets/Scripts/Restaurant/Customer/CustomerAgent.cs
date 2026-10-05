@@ -32,8 +32,16 @@ public class CustomerAgent : MonoBehaviour
     public Action<CustomerAgent> OnExited;
 
 
+    // 화면 표시·집계용 관찰 이벤트. 손님의 행동에는 관여하지 않는다.
+    public static event Action<CustomerAgent> OnAnySpawned;
+    public static event Action<CustomerAgent, CustomerState> OnAnyStateChanged;
+    public static event Action<CustomerAgent, RecipeData, int> OnAnyPaid;   // 실제 지급된 금액(팁 포함)
+
     private CustomerState state;
     private RatingFlag ratingFlag = RatingFlag.None;
+
+    public CustomerState State => state;
+    public bool IsInWaitingLine => isWaiting;
 
     // 식사를 마치고 결제까지 완료했는지(= 대접받았는지) 여부. 일일 결산의 손님 수 집계에 쓰인다.
     public bool WasServed { get; private set; }
@@ -65,7 +73,24 @@ public class CustomerAgent : MonoBehaviour
 
         cpc.OnPatienceExhausted += PatienceExhausted;
         cpc.OnWaitingProgress += cuc.ChangeEmotion;
+        OnAnySpawned?.Invoke(this);
         InitPatience(patienceValue);
+    }
+
+    // 이 손님의 식사 시간만 바꾼다. (첫 손님 안내 등 개별 조정용)
+    public void OverrideEatDuration(float seconds)
+    {
+        if (seconds > 0f) { eatDuration = seconds; }
+    }
+
+    // 마감이 끝나지 않는 상황(도달 불가 등)을 풀기 위해 손님을 미대접으로 내보낸다. 이미 계산했으면 대접으로 남는다.
+    public void ForceLeave()
+    {
+        if (state == CustomerState.Exit) { return; }
+        Debug.LogWarning($"[{name}] 진행이 멈춘 손님을 퇴장시킵니다. (상태: {state})");
+        ratingFlag = RatingFlag.Low;
+        StopAllCoroutines();
+        ChangeState(CustomerState.Exit);
     }
 
     private void InitPatience(float patienceValue)
@@ -95,6 +120,7 @@ public class CustomerAgent : MonoBehaviour
     private void ChangeState(CustomerState nextState)
     {
         state = nextState;
+        OnAnyStateChanged?.Invoke(this, state);
         switch (state)
         {
             case CustomerState.Enter:
@@ -250,6 +276,14 @@ public class CustomerAgent : MonoBehaviour
         cuc.ShowBubble(2);
         yield return new WaitForSeconds(3f); // 이 값은 랜덤으로 줘도 됨
         coc.GenerateOrder();
+        if (coc.GetOrderData() == null)
+        {
+            // 오늘의 메뉴가 비어 주문할 수 없으면 기다리지 않고 미대접으로 퇴장한다. (마감이 끝나지 않는 상황 방지)
+            ratingFlag = RatingFlag.Low;
+            cuc.CloseBubble();
+            StartCoroutine(WaitStateChange(CustomerState.Exit));
+            yield break;
+        }
         Debug.Log("메뉴를 골랏습니다");
         cuc.ShowBubble(0, coc.GetOrderData().Icon);
         cpc.ResetGraceTimer();
@@ -316,13 +350,16 @@ public class CustomerAgent : MonoBehaviour
         if (gold == null) { return; }
 
         int amount = Mathf.RoundToInt(order.Price);
-        CurrencyManager.Instance.ProcessTransaction(new CurrencyTransaction(gold, amount, TransactionSource.CustomerPayment, tipMultiplier));
+        CurrencyTransaction tx = new CurrencyTransaction(gold, amount, TransactionSource.CustomerPayment, tipMultiplier);
+        CurrencyManager.Instance.ProcessTransaction(tx);
 
         if (DailySalesTracker.Instance != null)
         {
             int finalAmount = Mathf.RoundToInt(amount * tipMultiplier);
             DailySalesTracker.Instance.RecordSale(order, finalAmount);
         }
+
+        OnAnyPaid?.Invoke(this, order, tx.FinalAmount);
     }
 
     // Score = min(5.0, Taste Score + Favorite Bonus)

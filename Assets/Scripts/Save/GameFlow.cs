@@ -31,6 +31,20 @@ public static class GameFlow
 
     public static event Action<GamePhase> OnPhaseChanged;
 
+    /// <summary>
+    /// 씬 이동 방식. 비어 있으면 SceneManager.LoadScene으로 바로 이동한다.
+    /// 전환 가림막(SceneTransition)이 설치되면 여기에 연결되어, 다음 씬 초기화가 끝날 때까지 화면을 덮는다.
+    /// </summary>
+    public static Action<string> SceneLoader;
+
+    private static void LoadScene(string sceneName)
+    {
+        if (SceneLoader != null)
+            SceneLoader(sceneName);
+        else
+            SceneManager.LoadScene(sceneName);
+    }
+
     public static void SetPhase(GamePhase phase)
     {
         if (Phase == phase)
@@ -105,7 +119,7 @@ public static class GameFlow
     {
         GameSession.OperationCompletedToday = false;
         SetPhase(GamePhase.DayStart);
-        SceneManager.LoadScene(GameScenes.Island);
+        LoadScene(GameScenes.Island);
     }
 
     /// <summary>섬에서 식당으로 이동해 영업 준비를 시작한다. 같은 날 이미 영업을 마쳤으면 false.</summary>
@@ -115,7 +129,7 @@ public static class GameFlow
             return false;
 
         SetPhase(GamePhase.Preparation);
-        SceneManager.LoadScene(GameScenes.Restaurant);
+        LoadScene(GameScenes.Restaurant);
         return true;
     }
 
@@ -123,6 +137,6 @@ public static class GameFlow
     {
         GameSession.End();
         SetPhase(GamePhase.Title);
-        SceneManager.LoadScene(GameScenes.Title);
+        LoadScene(GameScenes.Title);
     }
 }

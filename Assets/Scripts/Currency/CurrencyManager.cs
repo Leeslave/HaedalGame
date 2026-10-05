@@ -64,6 +64,13 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
         return _wallets.ContainsKey(currency) ? _wallets[currency] : -1;
     }
 
+    /// <summary>재화 ID로 잔액을 조회한다. 없는 재화면 -1.</summary>
+    public int GetCurrencyById(string currencyId)
+    {
+        Currency currency = FindCurrency(currencyId);
+        return currency != null ? GetCurrency(currency) : -1;
+    }
+
     // 전역 보정(배수 적용 등)
     private CurrencyTransaction ApplyGlobalModifiers(CurrencyTransaction tx)
     {

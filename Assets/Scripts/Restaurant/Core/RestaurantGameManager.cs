@@ -20,6 +20,15 @@ public class RestaurantGameManager : MonoBehaviour
     private float pendingTodayRating;
     private float pendingPreviousRating;
 
+    // 영업 시작 버튼 연타로 손님 큐가 두 번 채워지는 것을 막는다.
+    public bool IsOperating { get; private set; }
+
+    // 손님 생성 직전에 발행된다. (손님이 0명이면 이 직후 바로 종료 처리가 이어진다)
+    public event Action OnOperationStarted;
+
+    // 설정되면 영업 종료(마지막 손님 퇴장) 처리를 이 핸들러에 맡긴다. 비어 있으면 기존 결산 흐름을 그대로 사용한다.
+    public Action OperationEndHandler;
+
     void Awake()
     {
         if (instance != null && instance != this)
@@ -38,18 +47,30 @@ public class RestaurantGameManager : MonoBehaviour
 
     public void StartOperation()
     {
+        if (IsOperating) { return; }
+        IsOperating = true;
+
         if (OperationUIManager.Instance != null) { OperationUIManager.Instance.ShowUI(); }
 
         ServerManager.Instance.InitializeAgents();
         ChefManager.Instance.InitializeAgents();
         customerSpawner.OnAllCustomersHandled -= EndOperation;
         customerSpawner.OnAllCustomersHandled += EndOperation;
+        OnOperationStarted?.Invoke();
         customerSpawner.StartGame();
     }
 
     // 마지막 손님이 나가면 CustomerSpawner.OnAllCustomersHandled를 통해 호출된다.
     public void EndOperation()
     {
+        IsOperating = false;
+
+        if (OperationEndHandler != null)
+        {
+            OperationEndHandler();
+            return;
+        }
+
         if (OperationUIManager.Instance != null) { OperationUIManager.Instance.HideUI(); }
         RestaurantSpeedController.SetFastForward(false);        // Next Day에 배속이 켜져있는 문제 방지.
 
@@ -105,6 +126,12 @@ public class RestaurantGameManager : MonoBehaviour
             ClosingReportManager.Instance.ShowReport(summary);
         }
 
+        ResetDailyState();
+    }
+
+    // 당일 집계와 작업 배정 상태만 초기화한다. (골드·가구·직원 등 누적 자산은 건드리지 않는다)
+    public void ResetDailyState()
+    {
         if (DailySalesTracker.Instance != null) { DailySalesTracker.Instance.ResetDay(); }
         if (DailyCustomerTracker.Instance != null) { DailyCustomerTracker.Instance.ResetDay(); }
         if (DailyFinanceTracker.Instance != null) { DailyFinanceTracker.Instance.ResetDay(); }

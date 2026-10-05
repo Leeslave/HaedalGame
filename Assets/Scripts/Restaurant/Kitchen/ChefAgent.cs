@@ -23,6 +23,24 @@ public class ChefAgent : PartTimerAgent
     private Transform stationTransform;
     private Coroutine stateCoroutine;
 
+    // 화면 표시용 현재 상태 이름
+    public string StateLabel
+    {
+        get
+        {
+            switch (state)
+            {
+                case ChefState.WaitingForTool: return "조리도구 대기";
+                case ChefState.ApproachingStation: return "조리대로 이동";
+                case ChefState.Cooking: return "조리 중";
+                case ChefState.ApproachingDropoff: return "수령대로 이동";
+                case ChefState.DroppingOffFood: return "음식 내놓는 중";
+                case ChefState.Returning: return "대기 위치로";
+                default: return "대기 중";
+            }
+        }
+    }
+
     public void Initialize(int index)
     {
         positionNumber = index;

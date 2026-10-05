@@ -13,6 +13,11 @@ public class SeatManager : MonoBehaviour
     // 웨이팅 벤치(Seat)에는 점유 플래그를 걸지 않으므로 한 벤치에 두 명이 배정되는 일이 구조적으로 불가능하다.
     [ReadOnly][SerializeField] private List<CustomerAgent> waitingLine = new List<CustomerAgent>();
 
+    // 화면 표시용 집계
+    public int IndoorSeatCount => seats.Count;
+    public int WaitingBenchCount => waitingBenchSeats.Count;
+    public int WaitingCount => waitingLine.Count;
+
     public void RegisterSeats(List<TableGroup> sortedTables)
     {
         seats.Clear();

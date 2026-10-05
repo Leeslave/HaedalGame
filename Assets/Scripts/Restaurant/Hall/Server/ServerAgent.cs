@@ -22,6 +22,30 @@ public class ServerAgent : PartTimerAgent
     private ServingTask curTask;
     private Coroutine stateCoroutine;
 
+    // 화면 표시용: 현재 상태 이름, 응대 중인 손님, 들고 있는 음식(픽업 후 서빙 전까지만)
+    public string StateLabel
+    {
+        get
+        {
+            switch (state)
+            {
+                case ServerState.ApproachingCustomerForOrder: return "주문 받으러 이동";
+                case ServerState.TakingOrder: return "주문 받는 중";
+                case ServerState.ApproachingKitchen: return "음식 받으러 이동";
+                case ServerState.PickingUpFood: return "음식 받는 중";
+                case ServerState.ApproachingCustomerWithFood: return "음식 운반 중";
+                case ServerState.DeliveringFood: return "서빙 중";
+                case ServerState.Returning: return "대기 위치로";
+                default: return "대기 중";
+            }
+        }
+    }
+    public CustomerAgent CurrentCustomer => curTask != null ? curTask.Customer : null;
+    public RecipeData CarriedFood =>
+        state == ServerState.ApproachingCustomerWithFood && curTask != null && curTask.Customer != null
+            ? curTask.Customer.coc.GetOrderData()
+            : null;
+
     public void Initialize(int index)
     {
         positionNumber = index;
