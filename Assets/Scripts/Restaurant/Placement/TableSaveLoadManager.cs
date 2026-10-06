@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -12,6 +13,23 @@ public class TableSaveLoadManager : MonoBehaviour
     [SerializeField] private TableData twoSeatData;
     [SerializeField] private TableData fourSeatData;
     [SerializeField] private Transform tableParent;
+    private readonly Stack<List<PlacedTableEntry>> undo = new Stack<List<PlacedTableEntry>>();
+    private List<PlacedTableEntry> original;
+    private static List<PlacedTableEntry> Copy(List<PlacedTableEntry> source) => source.Select(e => new PlacedTableEntry
+    { tableType = e.tableType, anchorX = e.anchorX, anchorY = e.anchorY, rotation = e.rotation, skin = e.skin }).ToList();
+    public void RememberEdit() { if (GameSession.IsActive) undo.Push(Copy(GameSession.Current.placedTables)); }
+    public void UndoEdit()
+    {
+        if (!RestaurantProgress.CanManage || undo.Count == 0) return;
+        TablePlacementManager.Instance?.OnCancelClicked();
+        GameSession.Current.placedTables = undo.Pop(); LoadPlacement();
+    }
+    public void ResetEdits()
+    {
+        if (!RestaurantProgress.CanManage || original == null) return;
+        TablePlacementManager.Instance?.OnCancelClicked(); RememberEdit();
+        GameSession.Current.placedTables = Copy(original); LoadPlacement();
+    }
 
     private void Awake()
     {
@@ -20,6 +38,7 @@ public class TableSaveLoadManager : MonoBehaviour
 
     private void Start()
     {
+        if (GameSession.IsActive) original = Copy(GameSession.Current.placedTables);
         LoadPlacement();
     }
 
@@ -38,6 +57,8 @@ public class TableSaveLoadManager : MonoBehaviour
                 tableType = table.tableData.tableType.ToString(),
                 anchorX   = table.anchorCell.x,
                 anchorY   = table.anchorCell.y,
+                rotation = table.tableData.rotation,
+                skin = table.Skin,
             });
         }
     }
@@ -54,7 +75,9 @@ public class TableSaveLoadManager : MonoBehaviour
 
         foreach (PlacedTableEntry entry in GameSession.Current.placedTables)
         {
-            TableData tableData = GetTableData(entry.tableType);
+            TableData basis = GetTableData(entry.tableType);
+            TableData tableData = basis == null ? null : TableVariants.Copy(basis);
+            if (entry.tableType == TableType.OneSeat.ToString() && basis != null) Destroy(basis);
             if (tableData == null)
             {
                 Debug.LogWarning($"[TableSaveLoadManager] 알 수 없는 테이블 종류 '{entry.tableType}'를 건너뜁니다.");
@@ -62,11 +85,14 @@ public class TableSaveLoadManager : MonoBehaviour
             }
 
             Vector2Int anchor   = new Vector2Int(entry.anchorX, entry.anchorY);
+            for (int i = 0; i < entry.rotation % 4; i++) TableVariants.Rotate(tableData);
             Vector3    worldPos = PathfindingGrid.Instance.GetWorldPos(anchor);
 
             GameObject obj    = Instantiate(tableData.placedPrefab, worldPos, Quaternion.identity, tableParent);
             PlacedTable placed = obj.GetComponent<PlacedTable>();
             placed.Initialize(tableData, anchor);
+            placed.SetSkin(entry.skin);
+            Destroy(tableData);
         }
     }
 
@@ -74,6 +100,7 @@ public class TableSaveLoadManager : MonoBehaviour
     {
         if (typeStr == TableType.TwoSeat.ToString())  { return twoSeatData;  }
         if (typeStr == TableType.FourSeat.ToString()) { return fourSeatData; }
+        if (typeStr == TableType.OneSeat.ToString()) { return TableVariants.OneSeat(twoSeatData); }
         return null;
     }
 }

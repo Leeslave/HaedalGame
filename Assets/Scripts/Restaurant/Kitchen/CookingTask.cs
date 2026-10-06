@@ -13,7 +13,8 @@ public enum CookingType
     Pan     = 201,  // 프라이팬 요리
     Chop    = 202,  // 불을 쓰지 않는 요리
     Fry     = 203,  // 튀김 요리
-    Pot     = 204   // 국, 죽 등의 냄비 요리
+    Pot     = 204,   // 국, 죽 등의 냄비 요리
+    Composite = 205
 }
 
 
@@ -27,6 +28,13 @@ public class CookingTask
     public float CookingTime;
     public CookingType Type;
     public float EnqueuedTime { get; private set; }
+    public RecipeData Recipe { get; private set; }
+    private bool pendingPanStage;
+    public bool TryNextStage()
+    {
+        if (!pendingPanStage) return false;
+        pendingPanStage = false; Type = CookingType.Pan; return true;
+    }
 
     public CookingType GetCookingType() { return Type; }
     public CustomerAgent GetCustomerAgent() { return Customer; }
@@ -38,5 +46,7 @@ public class CookingTask
         EnqueuedTime = Time.time;
         CookingTime = time;
         Customer = customer;
+        Recipe = customer != null && customer.coc != null ? customer.coc.GetOrderData() : null;
+        if (type == CookingType.Composite) { Type = CookingType.Chop; pendingPanStage = true; CookingTime = time / 2; }
     }
 }

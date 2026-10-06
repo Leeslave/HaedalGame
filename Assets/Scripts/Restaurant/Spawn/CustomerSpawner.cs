@@ -63,7 +63,11 @@ public class CustomerSpawner : MonoBehaviour
         spawnQueue.Clear();
 
         // 테스트든 아니든 큐에 입력
-        if (isTest)
+        if (GameSession.IsActive)
+        {
+            for (int i = 0; i < RestaurantRules.DailyVisitors(GameSession.Current.restaurantLevel); i++) spawnQueue.Enqueue(60f);
+        }
+        else if (isTest)
         {
             CustomerSpawnForTest();
         }
@@ -109,6 +113,7 @@ public class CustomerSpawner : MonoBehaviour
             {
                 float curPat = spawnQueue.Dequeue();
                 CustomerAgent customer = csm.SpawnCustomer(curPat, customerParent);
+                if (customer.coc != null && GameSession.IsActive) customer.coc.Species = UnityEngine.Random.Range(0, 1 + GameSession.Current.progression.islandChapter);
                 activeCustomerCount++;
                 customer.OnExited += HandleCustomerExited;
                 CheckEntryClosed();

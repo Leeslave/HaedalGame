@@ -10,6 +10,7 @@ using UnityEngine;
 [Serializable]
 public class GameSaveData
 {
+    public ProgressionState progression = new ProgressionState();
     public const int CurrentSchemaVersion = 1;
     public const string CheckpointDayStart = "DayStart";
     public const string ReasonIntroCompleted = "IntroCompleted";
@@ -102,6 +103,8 @@ public class IngredientStackEntry
 [Serializable]
 public class EmployeeEntry
 {
+    public int appearanceSeed;
+    public float stamina = -1;
     public string instanceId;       // 같은 이름·등급이어도 구분되는 개체 ID
     public string name;
     public string grade;
@@ -117,6 +120,8 @@ public class EmployeeEntry
 [Serializable]
 public class PlacedTableEntry
 {
+    public int rotation;
+    public int skin;
     public string tableType;        // TableType 이름
     public int anchorX;
     public int anchorY;
@@ -140,6 +145,7 @@ public class DailyRatingEntry
 [Serializable]
 public class ElfShopSaveState
 {
+    public bool yellowUnlocked;
     public int targetDay;           // 이 재고가 유효한 일차 (0이면 아직 추첨 전)
     public string currentElf = "Red";
     public float weightRed = 50f;
@@ -220,6 +226,7 @@ public class DaySaleEntry
 /// <summary>타이틀 화면 요약 표시용 정보.</summary>
 public struct SaveSummary
 {
+    public int RestaurantLevel;
     public int Day;
     public DateTime SavedAtLocal;
     public double PlayTimeSeconds;

@@ -4,6 +4,44 @@ using System.Collections.Generic;
 
 public class PartTimerAgent : MonoBehaviour
 {
+    protected EmployeeEntry employee;
+    public bool IsSleeping { get; private set; }
+    private float lastWork;
+    private float restTimer;
+    public void BindEmployee(EmployeeEntry entry)
+    {
+        employee = entry;
+        IsSleeping = false;
+        if (employee.stamina < 0) employee.stamina = employee.hp;
+        partTimerName = entry.name;
+        level = entry.grade;
+        gameObject.name = entry.name;
+        var color = Color.HSVToRGB((entry.appearanceSeed % 360) / 360f, .18f, 1);
+        foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.color = color;
+    }
+    protected PartTimerStatus SavedStatus(PartTimerStatus fallback) => employee == null ? fallback : new PartTimerStatus
+    { serving = 3f * (1 + employee.serving / 100f), cooking = employee.cooking, handy = employee.handy, hp = employee.hp };
+    public void WakeUp() { IsSleeping = false; }
+    private void Update()
+    {
+        if (employee == null || Time.time - lastWork < 5) return;
+        restTimer += Time.deltaTime;
+        if (restTimer >= 5) { employee.stamina = Mathf.Min(employee.hp, employee.stamina + 1); restTimer = 0; }
+    }
+    protected IEnumerator Work(float duration, float staminaCost = 1)
+    {
+        while (duration > 0)
+        {
+            lastWork = Time.time;
+            if (!IsSleeping) duration -= Time.deltaTime * RestaurantSpeedController.SpeedMultiplier * (employee != null && employee.stamina <= 0 ? .5f : 1);
+            yield return null;
+        }
+        if (employee != null)
+        {
+            employee.stamina = Mathf.Max(0, employee.stamina - staminaCost);
+            IsSleeping = Random.value < .15f * (1 - employee.stamina / Mathf.Max(1, employee.hp));
+        }
+    }
     [Header("공통 사항")]
     [ReadOnly][SerializeField] protected string partTimerName;
     [SerializeField] protected Vector2 initPosition;
@@ -39,6 +77,8 @@ public class PartTimerAgent : MonoBehaviour
     protected IEnumerator MoveTo(Vector2 destination, float speed, MoveResult result)
     {
         result.Success = false;
+        while (IsSleeping) yield return null;
+        if (employee != null && employee.stamina <= 0) speed *= .5f;
 
         if (speed <= 0f)
         {

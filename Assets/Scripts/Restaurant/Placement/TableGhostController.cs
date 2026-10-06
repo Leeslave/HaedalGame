@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -21,7 +21,7 @@ public class TableGhostController : MonoBehaviour
     private bool frozen = false;
     public void Initialize(TableData data, Tilemap tilemap, OverlayPool pool)
     {
-        TableData       = data;
+        TableData       = TableVariants.Copy(data);
         floorMap        = tilemap;
         overlayPool     = pool;
         spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
@@ -32,6 +32,7 @@ public class TableGhostController : MonoBehaviour
         // (붙이면 OnEnable에서 TableManager에 실제 테이블처럼 등록돼버림) 여기서 직접 적용.
         Transform visual = transform.Find("Visual");
         if (visual != null) { visual.localScale *= data.visualScale; }
+        if (visual != null) visual.localRotation = Quaternion.Euler(0, 0, TableData.rotation * 90);
     }
 
     private void Update()
@@ -68,6 +69,7 @@ public class TableGhostController : MonoBehaviour
             chairCells.Add(PathfindingGrid.Instance.WorldToGridPos(scaledWorldPos));
         }
         List<Vector2Int> bodyCells = TableFootprint.GetBodyCells(chairCells);
+        if (TableData.tableType == TableType.OneSeat) bodyCells.Add(anchor);
 
         foreach (Vector2Int cell in bodyCells)
         {
@@ -130,4 +132,12 @@ public class TableGhostController : MonoBehaviour
 
     public void Freeze() { frozen = true; }
     public void Unfreeze() { frozen = false; }
+    public void Rotate()
+    {
+        TableVariants.Rotate(TableData);
+        var visual = transform.Find("Visual");
+        if (visual != null) visual.localRotation = Quaternion.Euler(0, 0, TableData.rotation * 90);
+        RefreshOverlays(CurrentCellPos);
+    }
+    private void OnDestroy() { overlayPool?.ReturnAll(); if (TableData != null) Destroy(TableData); }
 }

@@ -41,16 +41,16 @@ public class NewGameConfig : ScriptableObject
     [Header("재료 (보유 수량)")]
     [SerializeField] private List<StartIngredient> _startIngredients = new List<StartIngredient>
     {
-        new StartIngredient { ingredientId = 1, amount = 10 },  // 미역
-        new StartIngredient { ingredientId = 2, amount = 10 },  // 초장
-        new StartIngredient { ingredientId = 3, amount = 10 },  // 쌀
-        new StartIngredient { ingredientId = 4, amount = 10 },  // 생선
+        new StartIngredient { ingredientId = 1, amount = 10 },  // 새우
+        new StartIngredient { ingredientId = 2, amount = 10 },  // 가리비
+        new StartIngredient { ingredientId = 3, amount = 10 },  // 오징어
+        new StartIngredient { ingredientId = 4, amount = 10 },  // 조개
     };
 
     [Header("레시피·메뉴")]
-    [SerializeField] private List<int> _startUnlockedRecipeIds = new List<int> { 1, 3 };   // 초밥, 미역무침
+    [SerializeField] private List<int> _startUnlockedRecipeIds = new List<int> { 1, 2, 3, 4 };   // 기본 메뉴 4종
     [Tooltip("메뉴판 슬롯에 미리 올려 둘 레시피. 등록 규칙(MenuRecipeService)대로 재료 1세트씩 차감된다.")]
-    [SerializeField] private List<int> _startMenuRecipeIds = new List<int> { 1, 3 };
+    [SerializeField] private List<int> _startMenuRecipeIds = new List<int> { 1, 2, 3, 4 };
     [SerializeField] private int _menuSlotCount = 4;
 
     [Header("직원")]
@@ -76,7 +76,7 @@ public class NewGameConfig : ScriptableObject
     [Header("진행")]
     [SerializeField] private string _firstGuideStep = GuideSteps.IslandStory;
 
-    public int MenuSlotCount => Mathf.Max(1, _menuSlotCount);
+    public int MenuSlotCount => RestaurantRules.MenuLimit(_restaurantLevel);
     private RecipeDatabaseSO Database => _database != null ? _database : GameDatabase.Recipes;
 
     public static NewGameConfig Load()
@@ -127,15 +127,6 @@ public class NewGameConfig : ScriptableObject
         for (int i = 0; i < MenuSlotCount; i++)
             data.menuSlots.Add(-1);
 
-        int slot = 0;
-        foreach (int recipeId in _startMenuRecipeIds)
-        {
-            if (slot >= data.menuSlots.Count) break;
-            if (!data.unlockedRecipeIds.Contains(recipeId)) continue;
-            if (!TryReserveIngredients(data, recipeId)) continue;
-            data.menuSlots[slot++] = recipeId;
-        }
-
         Dictionary<PartTimerRole, int> nextSlotByRole = new Dictionary<PartTimerRole, int>();
         foreach (StartEmployee start in _startEmployees)
         {
@@ -172,35 +163,13 @@ public class NewGameConfig : ScriptableObject
         data.dailyRatingHistory.Add(new DailyRatingEntry { day = 0, value = _seedRating });
         data.lastRecordedRatingDay = 0;
 
+        // 첫 조리도구는 관리 화면에서 무료 선택한다. 선택 전에는 영업할 수 없다.
+        data.menuSlots.Clear();
+        for (int i = 0; i < RestaurantRules.MenuLimit(data.restaurantLevel); i++) data.menuSlots.Add(-1);
+        if (data.placedTables.Count > 1) data.placedTables.RemoveRange(1, data.placedTables.Count - 1);
+        for (int id = 1; id <= 10; id++) if (!data.ingredients.Exists(x => x.ingredientId == id)) AddIngredient(data, id, 30, now);
+        foreach (var ingredient in data.ingredients) ingredient.amount = 30;
         return data;
-    }
-
-    // 메뉴 등록 시 재료 1세트를 차감하는 MenuRecipeService 규칙과 동일하게 초기 메뉴도 차감한다.
-    private bool TryReserveIngredients(GameSaveData data, int recipeId)
-    {
-        RecipeDatabaseSO database = Database;
-        if (database == null)
-            return true;
-
-        if (!database.TryGetRecipe(recipeId, out RecipeData recipe))
-            return false;
-
-        foreach (RecipeIngredientRequirement req in recipe.Requirements)
-        {
-            IngredientStackEntry stack = data.ingredients.Find(s => s.ingredientId == req.IngredientId);
-            if (stack == null || stack.amount < req.Amount)
-                return false;
-        }
-
-        foreach (RecipeIngredientRequirement req in recipe.Requirements)
-        {
-            IngredientStackEntry stack = data.ingredients.Find(s => s.ingredientId == req.IngredientId);
-            stack.amount -= req.Amount;
-            if (stack.amount <= 0)
-                data.ingredients.Remove(stack);
-        }
-
-        return true;
     }
 
     private static void AddIngredient(GameSaveData data, int ingredientId, int amount, long acquiredTime)

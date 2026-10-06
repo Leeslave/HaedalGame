@@ -40,8 +40,15 @@ public static class DayLoopInstaller
         if (!scene.IsValid())
             return;
 
+        if (scene.name == GameScenes.Island || scene.name == GameScenes.Restaurant)
+            Create<RestaurantManagementUI>("Restaurant management", scene);
+
         if (scene.name == GameScenes.Restaurant)
+        {
+            Create<StaffWakeControl>("Staff waking", scene);
+            Create<RestaurantLitter>("Restaurant litter", scene);
             Create<DayCycleController>("[DayLoop] Restaurant", scene);
+        }
         else if (scene.name == GameScenes.Island)
             Create<IslandDayHud>("[DayLoop] Island", scene);
         else if (scene.name == GameScenes.Title)

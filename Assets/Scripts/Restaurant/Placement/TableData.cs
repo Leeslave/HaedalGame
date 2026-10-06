@@ -1,10 +1,11 @@
 using UnityEngine;
 
-public enum TableType { TwoSeat, FourSeat }
+public enum TableType { TwoSeat, FourSeat, OneSeat }
 
 [CreateAssetMenu(fileName = "TableData", menuName = "Game Data/Restaurant/Table Data")]
 public class TableData : ScriptableObject
 {
+    [System.NonSerialized] public int rotation;
     [Header("기본 설정")]
     public string tableName;
     public TableType tableType;

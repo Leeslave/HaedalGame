@@ -45,6 +45,9 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
         }
 
         Instance = this;
+        if (_database == null) _database = GameDatabase.Recipes;
+        if (_gold == null) _gold = Resources.Load<Currency>("Data/Gold");
+        if (_elfConfig == null) _elfConfig = Resources.Load<ElfShopConfigSO>("Data/ElfShopConfig");
         DontDestroyOnLoad(gameObject);
 
         GameSession.Register(this);
@@ -115,12 +118,13 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
         bool yellowUnlocked = IsYellowUnlocked(restaurantLevel);
         ElfType previousElf = ParseElf(next.currentElf);
 
-        if (previous == null || previous.targetDay <= 0)
+        if (previous == null || previous.targetDay <= 0 || (yellowUnlocked && !previous.yellowUnlocked))
             ResetWeights(next, yellowUnlocked);
 
         ElfType rolledElf = WeightedRandom(next, yellowUnlocked, rng);
         UpdateWeightsForNextDay(next, previousElf, rolledElf, yellowUnlocked);
 
+        next.yellowUnlocked = yellowUnlocked;
         next.currentElf = rolledElf.ToString();
         next.targetDay = day;
         next.stocks = GenerateElfStocks(rolledElf, restaurantLevel, rng);
@@ -162,6 +166,8 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
 
         // Fisher-Yates
         List<ElfShopItemEntry> shuffled = new List<ElfShopItemEntry>(pool);
+        if (GameSession.IsActive) shuffled.RemoveAll(item => item.ItemType == ElfShopItemType.Recipe &&
+            (GameSession.Current.unlockedRecipeIds.Contains(item.ItemId) || GameSession.Current.progression.blueprints.Contains(item.ItemId)));
         for (int i = shuffled.Count - 1; i > 0; i--)
         {
             int j = rng.Next(i + 1);
@@ -171,7 +177,7 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
         int count = Mathf.Min(GetSlotCount(level), shuffled.Count);
         for (int i = 0; i < count; i++)
         {
-            int maxQty = shuffled[i].ItemType == ElfShopItemType.Recipe ? 1 : 50;
+            int maxQty = shuffled[i].ItemType == ElfShopItemType.Recipe ? 1 : elfType == ElfType.Yellow ? 10 : 50;
             result.Add(new ElfShopStockEntry
             {
                 itemType = shuffled[i].ItemType.ToString(),
@@ -203,10 +209,13 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
 
     public bool PurchaseFromElf(ElfShopStockData stock, int quantity)
     {
+        if (GameSession.IsActive && !RestaurantProgress.CanManage) return false;
         if (stock == null || stock.IsSoldOut)
             return false;
         if (quantity <= 0 || quantity > stock.CurrentStock)
             return false;
+        if (GameSession.IsActive && stock.ItemType == ElfShopItemType.Recipe &&
+            (GameSession.Current.progression.blueprints.Contains(stock.IngredientID) || GameSession.Current.unlockedRecipeIds.Contains(stock.IngredientID))) return false;
 
         int unitPrice = GetElfUnitPrice(stock);
         int totalCost = unitPrice * quantity;
@@ -226,7 +235,7 @@ public class ElfShopManager : MonoBehaviour, ISaveParticipant
         }
         else
         {
-            RecipeBookState.UnlockRecipeAnywhere(stock.IngredientID);
+            RestaurantProgress.AcquireBlueprint(stock.IngredientID);
         }
 
         PushToSession();

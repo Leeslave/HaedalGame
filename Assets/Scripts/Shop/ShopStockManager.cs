@@ -138,6 +138,7 @@ public class ShopStockManager : MonoBehaviour, ISaveParticipant
 
     public virtual bool Purchase(int ingredientId, int quantity, int unitPrice)
     {
+        if (quantity <= 0 || unitPrice < 0 || (GameSession.IsActive && !RestaurantProgress.CanManage)) return false;
         int totalCost = unitPrice * quantity;
 
         if (CurrencyManager.Instance.GetCurrency(_gold) < totalCost)
@@ -182,10 +183,7 @@ public class ShopStockManager : MonoBehaviour, ISaveParticipant
 
         if (target.IsRecipe)
         {
-            if (_recipeBookState != null)
-                _recipeBookState.UnlockRecipe(ingredientId);
-            else
-                RecipeBookState.UnlockRecipeAnywhere(ingredientId);
+            RestaurantProgress.AcquireBlueprint(ingredientId);
         }
         else
         {

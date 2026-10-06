@@ -27,6 +27,7 @@ public class ServerAgent : PartTimerAgent
     {
         get
         {
+            if (IsSleeping) return "잠듦 · 눌러서 깨우기";
             switch (state)
             {
                 case ServerState.ApproachingCustomerForOrder: return "주문 받으러 이동";
@@ -48,6 +49,7 @@ public class ServerAgent : PartTimerAgent
 
     public void Initialize(int index)
     {
+        status = SavedStatus(status);
         positionNumber = index;
         initPosition = ServerManager.Instance.GetInitPosition(index);
         state = ServerState.Idle;
@@ -147,7 +149,7 @@ public class ServerAgent : PartTimerAgent
     private IEnumerator TakingOrderRoutine()
     {
         if (curTask.Customer != null) { curTask.Customer.ReceiveOrder(); }
-        yield return new WaitForSeconds(1f);
+        yield return Work(1f);
         FinishTask();
     }
 
@@ -200,8 +202,8 @@ public class ServerAgent : PartTimerAgent
 
     private IEnumerator DeliveringFoodRoutine()
     {
-        if (curTask.Customer != null) { curTask.Customer.ReceiveFood(); }
-        yield return new WaitForSeconds(1f);
+        if (curTask.Customer != null) { curTask.Customer.ServingLuck = status.handy; curTask.Customer.ReceiveFood(); }
+        yield return Work(1f);
         FinishTask();
     }
 

@@ -49,6 +49,7 @@ public class RestaurantGameManager : MonoBehaviour
     {
         if (IsOperating) { return; }
         IsOperating = true;
+        IngredientInventoryService.Instance?.BeginOperation();
 
         if (OperationUIManager.Instance != null) { OperationUIManager.Instance.ShowUI(); }
 
@@ -64,6 +65,7 @@ public class RestaurantGameManager : MonoBehaviour
     public void EndOperation()
     {
         IsOperating = false;
+        IngredientInventoryService.Instance?.EndOperation();
 
         if (OperationEndHandler != null)
         {

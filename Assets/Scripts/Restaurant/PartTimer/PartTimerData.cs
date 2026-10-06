@@ -16,6 +16,8 @@ public class PartTimerStatus
 
 public class PartTimerData
 {
+    public int appearanceSeed;
+    public float stamina = -1;
     public string instanceId;       // 보유 알바 개체 ID (세이브 식별용, 이름·등급이 같아도 구분)
     public string serverName;       // 서빙 알바의 이름
     public string level;               // 서빙 알바의 등급
@@ -52,6 +54,8 @@ public class PartTimerData
     {
         return new EmployeeEntry
         {
+            appearanceSeed = appearanceSeed,
+            stamina = stamina,
             instanceId = instanceId,
             name = serverName,
             grade = level,
@@ -68,6 +72,8 @@ public class PartTimerData
     public static PartTimerData FromEntry(EmployeeEntry entry)
     {
         PartTimerData data = new PartTimerData();
+        data.appearanceSeed = entry.appearanceSeed;
+        data.stamina = entry.stamina;
         data.instanceId = entry.instanceId;
         data.serverName = entry.name;
         data.level = entry.grade;

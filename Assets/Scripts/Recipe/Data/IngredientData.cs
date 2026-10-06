@@ -35,12 +35,15 @@ public class IngredientData
     public bool DefaultUnlock => _defaultUnlock;
     public bool IsBasicSeasoning => _isBasicSeasoning;
 
-    public IngredientData(int ingredientId, string ingredientName, int recipeCode, Sprite icon, bool isBasicSeasoning = false)
+    public IngredientData(int ingredientId, string ingredientName, int recipeCode, Sprite icon, bool isBasicSeasoning = false, int price = 0, bool defaultUnlock = false)
     {
         _ingredientId = ingredientId;
         _ingredientName = ingredientName;
         _recipeCode = recipeCode;
         _icon = icon;
         _isBasicSeasoning = isBasicSeasoning;
+        _price = price;
+        _defaultUnlock = defaultUnlock;
+        _belongIsland = IslandType.StartIsland;
     }
 }

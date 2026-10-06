@@ -71,6 +71,7 @@ public class Seat : MonoBehaviour
     {
         return facingDirection;
     }
+    public void SetFacingDirection(Vector2 direction) { facingDirection = direction; }
 
 
 }

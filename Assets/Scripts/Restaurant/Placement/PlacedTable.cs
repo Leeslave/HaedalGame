@@ -11,17 +11,26 @@ public class PlacedTable : MonoBehaviour
 
     public TableData tableData { get; private set; }
     public Vector2Int anchorCell { get; private set; }
+    public int Skin { get; private set; }
+    public void SetSkin(int skin)
+    {
+        Skin = skin;
+        foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.color = skin == 0 ? Color.white : new Color(.78f, .87f, .94f);
+    }
 
     private List<Vector2Int> obstacleCells = new List<Vector2Int>(); // "테" 타일 위치
     private Seat[] seats;
 
     public void Initialize(TableData data, Vector2Int anchor)
     {
-        tableData = data;
+        tableData = TableVariants.Copy(data);
         anchorCell = anchor;
         if (!_active.Contains(this)) { _active.Add(this); }
 
-        seats = GetComponentsInChildren<Seat>();
+        seats = GetComponentsInChildren<Seat>(true);
+        for (int i = 0; i < seats.Length; i++) seats[i].gameObject.SetActive(i < data.chairTiles.Length);
+        var visual = transform.Find("Visual");
+        if (visual != null) visual.localRotation = Quaternion.Euler(0, 0, data.rotation * 90);
 
         float visualScale = GetComponent<TableGroup>().GetVisualScale();
         Vector3 anchorWorldPos = PathfindingGrid.Instance.GetWorldPos(anchorCell);
@@ -36,6 +45,7 @@ public class PlacedTable : MonoBehaviour
             Vector3 scaledWorldPos = anchorWorldPos + (baseWorldPos - anchorWorldPos) * visualScale;
 
             seats[i].GetSeatPoint().position = scaledWorldPos;
+            seats[i].SetFacingDirection(((Vector2)anchorWorldPos - (Vector2)scaledWorldPos).normalized);
             Vector2Int chairGridPos = PathfindingGrid.Instance.WorldToGridPos(scaledWorldPos);
             seats[i].SetGridPos(chairGridPos);
             chairGridPositions.Add(chairGridPos);
@@ -47,6 +57,7 @@ public class PlacedTable : MonoBehaviour
         // 걸어다니는 문제가 생기지 않는다.
         obstacleCells.Clear();
         obstacleCells.AddRange(TableFootprint.GetBodyCells(chairGridPositions)); // 좌석 칸 자체는 착석 여부에 따라 동적으로 막히므로 제외
+        if (data.tableType == TableType.OneSeat) obstacleCells.Add(anchorCell);
         PathfindingGrid.Instance.RegisterObstacleTiles(obstacleCells);
     }
 
@@ -67,6 +78,7 @@ public class PlacedTable : MonoBehaviour
     private void OnDestroy()
     {
         _active.Remove(this);
+        if (tableData != null && tableData.hideFlags == HideFlags.DontSave) Destroy(tableData);
     }
 
     public List<Vector2Int> GetObstacleCells() { return obstacleCells; }

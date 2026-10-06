@@ -9,12 +9,20 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
     public Action<CurrencyTransaction> OnTransactionProcessed;
 
     private Dictionary<Currency, int> _wallets = new Dictionary<Currency, int>();
-    [SerializeField] private List<Currency> _allCurrencies;
+    [SerializeField] private List<Currency> _allCurrencies = new List<Currency>();
 
     private void InitializeWallets()
     {
+        _wallets.Clear();
+        if (_allCurrencies == null) _allCurrencies = new List<Currency>();
+        if (_allCurrencies.Count == 0)
+        {
+            Currency gold = Resources.Load<Currency>("Data/Gold");
+            if (gold != null) _allCurrencies.Add(gold);
+        }
         foreach (var currency in _allCurrencies)
         {
+            if (currency == null) continue;
             _wallets[currency] = 0;
         }
     }
@@ -28,7 +36,8 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
         }
         else
         {
-            Destroy(gameObject);
+            // 같은 오브젝트에 붙은 씬 UI 등은 유지하고 중복 매니저만 제거한다.
+            Destroy(this);
             return;
         }
 
@@ -39,11 +48,19 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
     private void OnDestroy()
     {
         if (Instance == this)
+        {
             GameSession.Unregister(this);
+            Instance = null;
+        }
     }
 
     public void ProcessTransaction(CurrencyTransaction tx)
     {
+        if (tx.Currency == null) return;
+        // 씬과 Resources에 있는 동종 재화 에셋도 한 지갑으로 처리한다.
+        var canonical = FindCurrency(tx.Currency.CurrencyID);
+        if (canonical == null) { canonical = tx.Currency; _allCurrencies.Add(canonical); }
+        tx.Currency = canonical;
         tx = ApplyGlobalModifiers(tx);
         int finalAmount = tx.FinalAmount;
 
@@ -61,6 +78,8 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
 
     public int GetCurrency(Currency currency)
     {
+        if (currency == null) return -1;
+        currency = FindCurrency(currency.CurrencyID) ?? currency;
         return _wallets.ContainsKey(currency) ? _wallets[currency] : -1;
     }
 
@@ -107,7 +126,7 @@ public class CurrencyManager : MonoBehaviour, ISaveParticipant
             OnCurrencyChanged?.Invoke(pair.Key, pair.Value);
     }
 
-    private Currency FindCurrency(string currencyId)
+    public Currency FindCurrency(string currencyId)
     {
         foreach (Currency currency in _allCurrencies)
         {

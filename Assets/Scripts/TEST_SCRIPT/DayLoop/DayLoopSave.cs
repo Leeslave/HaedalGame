@@ -5,17 +5,15 @@ using UnityEngine;
 ///
 /// 복구 정책: 파일에는 "하루 시작(DayStart)" 체크포인트만 기록한다. (기존 세이브 설계 유지)
 ///  - 영업 도중 종료 → 그날 시작 시점부터 다시. 영업 중 번 골드도 함께 되돌아가므로 수익을 두 번 얻지 않는다.
-///  - 결산 확정 = 다음 날 시작 체크포인트 저장. 날짜 +1, 골드·평점·결산 스냅샷을 한 파일에 함께 기록한다.
-///  - 결산 화면에서 종료 → 이어하기 시 저장된 결산 스냅샷을 다시 보여 준다. (매출 재지급 없음)
-///  - 저장에 실패하면 날짜를 진행시키지 않고 재시도를 요구한다.
+///  - 결산 확정은 메모리에서 당일 자유시간으로 전환한다.
+///  - 파일 저장과 다음 날 전환은 RestaurantProgress.TrySleep에서 함께 수행한다.
 /// </summary>
 public static class DayLoopSave
 {
     public const string FirstDayGuideId = "DayLoopTEST.FirstDayGuide";
 
     /// <summary>
-    /// 오늘 결산을 확정하고 다음 날 시작 체크포인트를 저장한다. 같은 날을 두 번 확정하지 않는다.
-    /// 성공하면 세션이 다음 날로 넘어간다. (InGameTimeManager 등 참여자 모두 복원)
+    /// 오늘 결산을 메모리에 한 번 확정한다. 날짜와 마지막 저장 파일은 유지한다.
     /// </summary>
     public static bool TryCommitDay(DaySettlementRecord record, out string error)
     {
@@ -25,30 +23,18 @@ public static class DayLoopSave
             error = "진행 중인 게임 세션이 없습니다.";
             return false;
         }
+        if (record == null || record.day != GameSession.Current.day) { error = "결산 일차가 현재 일차와 다릅니다."; return false; }
 
         if (GameSession.Current.lastCompletedDay >= record.day)
             return true;   // 이미 확정된 날 (재시도·연타)
 
         GameSaveData candidate = GameSession.CaptureSnapshot();
-        candidate.day = record.day + 1;
         candidate.lastCompletedDay = record.day;
         candidate.lifetimeRevenue += record.revenue;
         candidate.lastSettlement = JsonUtility.FromJson<DaySettlementRecord>(JsonUtility.ToJson(record));
         candidate.settlementPendingReview = true;
-        GameSession.StampCheckpoint(candidate, GameSaveData.ReasonDayEnded);
-
-        if (GameSession.IsDevSession)
-        {
-            Debug.Log($"[DayLoop] 에디터 직접 실행 세션이라 파일 저장 없이 {candidate.day}일차로 넘어갑니다.");
-        }
-        else if (!SaveService.TryWrite(candidate, out error))
-        {
-            Debug.LogError($"[DayLoop] {record.day}일차 결산 저장 실패: {error}");
-            return false;
-        }
-
-        GameSession.ApplyCheckpoint(candidate);
-        Debug.Log($"[DayLoop] {record.day}일차 결산 확정 → {candidate.day}일차 시작 체크포인트 저장");
+        candidate.progression.freeTime = true;
+        GameSession.ApplyRuntime(candidate);
         return true;
     }
 
@@ -59,16 +45,6 @@ public static class DayLoopSave
             return;
 
         GameSession.Current.settlementPendingReview = false;
-        if (GameSession.IsDevSession)
-            return;
-
-        // 체크포인트 직후라 세션 내용이 파일과 같다. 확인 표시만 바꿔 다시 기록한다.
-        GameSaveData copy = GameSession.Current.Clone();
-        copy.saveRevision++;
-        if (!SaveService.TryWrite(copy, out string error))
-            Debug.LogWarning("[DayLoop] 결산 확인 표시 저장 실패 (다음 이어하기 때 결산을 다시 보여 줍니다): " + error);
-        else
-            GameSession.Current.saveRevision = copy.saveRevision;
     }
 
     // ───── 결산 문구 ─────

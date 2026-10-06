@@ -20,7 +20,7 @@ public enum SaveLoadStatus
 /// </summary>
 public static class SaveService
 {
-    private const string FileName = "savegame.json";
+    private const string FileName = "savegame-aitest.json";
 
     private static bool _busy;
 
@@ -111,6 +111,7 @@ public static class SaveService
             return SaveLoadStatus.Corrupted;
         }
 
+        if (parsed.progression == null) parsed.progression = new ProgressionState();
         data = parsed;
         return SaveLoadStatus.Ok;
     }
@@ -124,6 +125,10 @@ public static class SaveService
         if (data.wallets == null || data.ingredients == null || data.employees == null
             || data.menuSlots == null || data.placedTables == null || data.unlockedRecipeIds == null)
             return "필수 데이터가 누락되었습니다.";
+        if (data.progression != null && (data.progression.tools == null || data.progression.blueprints == null
+            || data.progression.research == null || data.progression.ingredientGrades == null || data.progression.menuHistory == null
+            || data.progression.boatParts == null || data.progression.dailyStock == null || data.progression.candidates == null
+            || data.progression.unpaidEmployeeIds == null)) return "진행 데이터가 누락되었습니다.";
         return null;
     }
 
@@ -223,6 +228,7 @@ public static class SaveService
             return false;
 
         summary.Day = data.day;
+        summary.RestaurantLevel = data.restaurantLevel;
         summary.PlayTimeSeconds = data.playTimeSeconds;
 
         if (DateTime.TryParse(data.savedAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime saved))

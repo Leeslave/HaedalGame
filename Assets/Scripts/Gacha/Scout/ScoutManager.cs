@@ -94,7 +94,7 @@ public class ScoutManager : MonoBehaviour, ISaveParticipant
             PartTimerData newData = new PartTimerData();
             newData.status = GachaManager.Instance.GenerateRandomStatus(rolledGrade);
             newData.serverName = "신입 해달";
-            newData.level = rolledGrade.name;
+            newData.level = rolledGrade.GradeName;
 
             CandinateLists.Add(newData);
         }

@@ -49,7 +49,7 @@ public class TodayMenuPanelUI : MonoBehaviour
         if (!ids.Remove(recipe.RecipeId))
             ids.Add(recipe.RecipeId);
 
-        MenuManager.Instance.SetDailyFoodsFromIds(ids);
+        if (!RestaurantProgress.TrySetMenus(ids, out string error)) Debug.Log(error);
         Refresh();
     }
 

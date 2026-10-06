@@ -168,6 +168,8 @@ public class NpcStatusOverlay : MonoBehaviour
         CustomerPatienceComponent patience = customer.cpc;
         bool showGauge = waitingState && patience != null && patience.IsDraining;
         SetGauge(view.chip, showGauge, patience != null ? patience.Ratio : 1f);
+        if (showGauge && patience.RemainingSeconds <= 5)
+            SetChip(view.chip, Mathf.CeilToInt(patience.RemainingSeconds) + "초!", Mathf.PingPong(Time.time * 4, 1) > .5f ? DayLoopUI.Warn : Color.white);
 
         // 식탁 위 음식: 식사 중에만, 앉은 좌석 앞(손님이 바라보는 방향)에 놓는다.
         RecipeData order = customer.coc != null ? customer.coc.GetOrderData() : null;
@@ -202,7 +204,7 @@ public class NpcStatusOverlay : MonoBehaviour
                 color = DayLoopUI.GoldText;
                 return "계산";
             case CustomerState.Exit:
-                if (customer.WasServed) return "잘 먹었어요";
+                if (customer.WasServed) return new[] { "아쉬워요", "괜찮았어요", "잘 먹었어요", "맛있어요!", "최고예요!" }[Mathf.Clamp(Mathf.FloorToInt(customer.LastRating), 0, 4)] + $" {customer.LastRating:0.0}";
                 color = DayLoopUI.Warn;
                 return "그냥 돌아가요";
             default:

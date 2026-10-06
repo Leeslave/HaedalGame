@@ -24,8 +24,7 @@ public class ChefManager : MonoBehaviour
     {
         if (index < 0 || index >= chefInitposition.Length)
         {
-            Debug.LogError($"[ChefManager] 주방 알바 인덱스 {index}에 해당하는 초기 위치가 없습니다. chefInitposition 배열 크기를 확인하세요.");
-            return transform.position;
+            return chefInitposition.Length > 0 ? chefInitposition[index % chefInitposition.Length].position : transform.position;
         }
         return chefInitposition[index].position;
     }
@@ -91,11 +90,11 @@ public class ChefManager : MonoBehaviour
         toolWaiters[CookingType.Pot]  = new Queue<ChefAgent>();
     }
 
-    void Start() { }
+    void Start() { StaffRuntimeBinding.Configure<ChefAgent>(parent, PartTimerRole.Kitchen); }
 
     public void InitializeAgents()
     {
-        activeChefs = new List<ChefAgent>(parent.GetComponentsInChildren<ChefAgent>());
+        activeChefs = StaffRuntimeBinding.Configure<ChefAgent>(parent, PartTimerRole.Kitchen);
         for (int i = 0; i < activeChefs.Count; i++)
             activeChefs[i].Initialize(i);
     }

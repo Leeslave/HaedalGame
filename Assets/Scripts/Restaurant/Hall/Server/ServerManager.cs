@@ -18,8 +18,7 @@ public class ServerManager : MonoBehaviour
     {
         if (index < 0 || index >= serverInitposition.Length)
         {
-            Debug.LogError($"[ServerManager] 서빙 알바 인덱스 {index}에 해당하는 초기 위치가 없습니다. serverInitposition 배열 크기를 확인하세요.");
-            return transform.position;
+            return serverInitposition.Length > 0 ? serverInitposition[index % serverInitposition.Length].position : transform.position;
         }
         return serverInitposition[index].position;
     }
@@ -32,11 +31,11 @@ public class ServerManager : MonoBehaviour
         Instance = this;
     }
 
-    void Start() { }
+    void Start() { StaffRuntimeBinding.Configure<ServerAgent>(parent, PartTimerRole.Serving); }
 
     public void InitializeAgents()
     {
-        activeServers = new List<ServerAgent>(parent.GetComponentsInChildren<ServerAgent>());
+        activeServers = StaffRuntimeBinding.Configure<ServerAgent>(parent, PartTimerRole.Serving);
         for (int i = 0; i < activeServers.Count; i++)
             activeServers[i].Initialize(i);
     }

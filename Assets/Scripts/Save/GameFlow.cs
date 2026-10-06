@@ -88,13 +88,7 @@ public static class GameFlow
         if (string.IsNullOrEmpty(current.nextGuideStep))
             current.nextGuideStep = GuideSteps.IslandStory;
 
-        GameSaveData candidate = GameSession.CaptureSnapshot();
-        GameSession.StampCheckpoint(candidate, GameSaveData.ReasonIntroCompleted);
-
-        if (!SaveService.TryWrite(candidate, out error))
-            return false;
-
-        GameSession.ApplyCheckpoint(candidate);
+        // 첫날 취침 전에는 기존 진행 파일을 교체하지 않는다.
         return true;
     }
 
@@ -117,8 +111,8 @@ public static class GameFlow
     /// <summary>체크포인트(DayStart)에서 하루를 시작한다. 섬 씬으로 이동한다.</summary>
     public static void EnterDayStart()
     {
-        GameSession.OperationCompletedToday = false;
-        SetPhase(GamePhase.DayStart);
+        GameSession.OperationCompletedToday = GameSession.IsActive && GameSession.Current.progression.freeTime;
+        SetPhase(GameSession.OperationCompletedToday ? GamePhase.FreeTime : GamePhase.DayStart);
         LoadScene(GameScenes.Island);
     }
 
@@ -126,6 +120,8 @@ public static class GameFlow
     public static bool TryEnterRestaurant()
     {
         if (GameSession.OperationCompletedToday)
+            return false;
+        if (GameSession.IsActive && GameSession.Current.progression.constructionUntilDay > GameSession.Current.day)
             return false;
 
         SetPhase(GamePhase.Preparation);

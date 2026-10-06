@@ -23,6 +23,7 @@ public class CustomerPatienceComponent : MonoBehaviour
     // 화면 표시용: 남은 인내심 비율(0~1)과, 지금 실제로 줄어들고 있는지 여부
     public float Ratio => defaultPatience > 0f ? Mathf.Clamp01(curPatience / defaultPatience) : 1f;
     public bool IsDraining => isPatience && graceTimer <= 0f;
+    public float RemainingSeconds => curPatience / Mathf.Max(.001f, drainPerSec * (RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.PatienceDrainMultiplier : 1));
 
     /* public Method */
 

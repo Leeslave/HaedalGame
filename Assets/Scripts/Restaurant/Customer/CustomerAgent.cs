@@ -5,6 +5,12 @@ using System.Collections.Generic;
 
 public class CustomerAgent : MonoBehaviour
 {
+    public bool IngredientsReserved;
+    public int FoodQuality;
+    public float ServingLuck;
+    public bool LeftAngry { get; private set; }
+    public float LastRating { get; private set; }
+
     [ReadOnly][SerializeField] private RestaurantGameManager gm;
 
     public CustomerPatienceComponent cpc;
@@ -297,6 +303,7 @@ public class CustomerAgent : MonoBehaviour
         if (coc.GetOrderData() == null) { return; }
         cpc.ChangeState();
         OnOrderTaken?.Invoke(this);
+        if (state == CustomerState.Exit) return;
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
     }
 
@@ -343,6 +350,7 @@ public class CustomerAgent : MonoBehaviour
         if (RestaurantRatingManager.Instance != null && gm != null && gm.ratingSystem != null)
         {
             float score = ComputePersonalRating(order);
+            LastRating = score;
             RestaurantRatingManager.Instance.AddCustomerScore(score);
             tipMultiplier = RestaurantRatingManager.Instance.TipMultiplier;
         }
@@ -350,29 +358,32 @@ public class CustomerAgent : MonoBehaviour
         if (gold == null) { return; }
 
         int amount = Mathf.RoundToInt(order.Price);
-        CurrencyTransaction tx = new CurrencyTransaction(gold, amount, TransactionSource.CustomerPayment, tipMultiplier);
+        int tip = UnityEngine.Random.value < Mathf.Clamp01(.2f + ServingLuck / 100f)
+            ? Mathf.RoundToInt(amount * .1f * tipMultiplier * RestaurantRules.TrashTipMultiplier(RestaurantLitter.Count)) : 0;
+        CurrencyTransaction tx = new CurrencyTransaction(gold, amount + tip, TransactionSource.CustomerPayment);
         CurrencyManager.Instance.ProcessTransaction(tx);
 
         if (DailySalesTracker.Instance != null)
         {
-            int finalAmount = Mathf.RoundToInt(amount * tipMultiplier);
+            int finalAmount = amount + tip;
             DailySalesTracker.Instance.RecordSale(order, finalAmount);
         }
 
         OnAnyPaid?.Invoke(this, order, tx.FinalAmount);
+        RestaurantProgress.RecordSaleForMission(tx.FinalAmount);
     }
 
     // Score = min(5.0, Taste Score + Favorite Bonus)
     private float ComputePersonalRating(RecipeData order)
     {
-        int recipeGrade = RatingSystem.GradeToInt(order.Grade);
+        int recipeGrade = FoodQuality;
         int expectation = RestaurantRatingManager.Instance.CurrentExpectation;
         float taste = gm.ratingSystem.PersonalRating(recipeGrade, expectation);
 
         float favoriteBonus = 0f;
         if (coc.FavoriteRecipeId >= 0 && coc.FavoriteRecipeId == order.RecipeId) { favoriteBonus = 0.5f; }
 
-        return Mathf.Min(5.0f, taste + favoriteBonus);
+        return Mathf.Min(coc.FavoriteOnMenu ? 5.0f : 4.5f, taste + favoriteBonus);
     }
 
     // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
@@ -454,6 +465,7 @@ public class CustomerAgent : MonoBehaviour
 
     private void PatienceExhausted()
     {
+        LeftAngry = true;
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
         nm.SetMoving(false);

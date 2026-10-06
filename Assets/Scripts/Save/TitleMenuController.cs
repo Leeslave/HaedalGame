@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -52,6 +52,18 @@ public class TitleMenuController : MonoBehaviour
 
     private void Start()
     {
+        if (GetComponent<TitleSettingsUI>() == null) gameObject.AddComponent<TitleSettingsUI>();
+        if (_continueSummaryText == null)
+        {
+            var canvas = DayLoopUI.CreateCanvas("Continue summary", 40, gameObject.scene);
+            canvas.transform.SetParent(transform, false);
+            var panel = DayLoopUI.Panel(canvas.transform, DayLoopUI.Cream);
+            DayLoopUI.Place(panel.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 20), new Vector2(800, 96));
+            _continueSummaryText = DayLoopUI.Text(panel.transform, "", 24, DayLoopUI.Ink, TextAlignmentOptions.Center);
+            DayLoopUI.Stretch(_continueSummaryText.rectTransform, 12, 8, 12, 8);
+        }
+        AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1);
+        if (PlayerPrefs.HasKey("Fullscreen")) Screen.fullScreen = PlayerPrefs.GetInt("Fullscreen") != 0;
         if (GameSession.IsActive)
             GameSession.End();
 
@@ -74,7 +86,7 @@ public class TitleMenuController : MonoBehaviour
         {
             TimeSpan playTime = TimeSpan.FromSeconds(summary.PlayTimeSeconds);
             _continueSummaryText.text =
-                $"{summary.Day}일차 · {summary.SavedAtLocal:yyyy.MM.dd HH:mm} 저장 · 플레이 {(int)playTime.TotalHours}시간 {playTime.Minutes}분";
+                $"{summary.Day}일차 · Lv.{summary.RestaurantLevel} · {summary.Gold:N0}G\n{summary.SavedAtLocal:yyyy.MM.dd HH:mm} 저장 · 플레이 {(int)playTime.TotalHours}시간 {playTime.Minutes}분";
         }
         else
         {
@@ -96,7 +108,7 @@ public class TitleMenuController : MonoBehaviour
         }
 
         ShowPopup(
-            "새 게임을 시작하면 시작 연출이 끝난 뒤\n기존 진행이 새 게임으로 교체됩니다.\n시작하시겠습니까?",
+            "새 게임의 첫날을 마치고 잠들면\n기존 진행이 새 게임으로 교체됩니다.\n시작하시겠습니까?",
             "시작", "취소",
             StartNewGame);
     }

@@ -25,6 +25,7 @@ public class RecipeBookState : MonoBehaviour, ISaveParticipant
 
     public void Initialize()
     {
+        if (_database == null) _database = GameDatabase.Recipes;
         _unlockedRecipeIds.Clear();
         _unlockedRecipeIdsInOrder.Clear();
         _acquireOrderByRecipeId.Clear();

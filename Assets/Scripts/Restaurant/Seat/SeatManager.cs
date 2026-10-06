@@ -12,10 +12,17 @@ public class SeatManager : MonoBehaviour
     // 리스트 인덱스가 곧 그 손님이 서 있는 웨이팅 벤치의 인덱스와 대응한다.
     // 웨이팅 벤치(Seat)에는 점유 플래그를 걸지 않으므로 한 벤치에 두 명이 배정되는 일이 구조적으로 불가능하다.
     [ReadOnly][SerializeField] private List<CustomerAgent> waitingLine = new List<CustomerAgent>();
+    private readonly Dictionary<Seat, float> blockedUntil = new Dictionary<Seat, float>();
+    private readonly Dictionary<Seat, int> angryDepartures = new Dictionary<Seat, int>();
+    private bool Available(Seat seat) => !seat.GetIsOccupied() && (!blockedUntil.TryGetValue(seat, out float until) || Time.time >= until);
+    private void Update()
+    {
+        if (waitingLine.Count > 0 && blockedUntil.Count > 0) PromoteNextFromWaitingLine();
+    }
 
     // 화면 표시용 집계
-    public int IndoorSeatCount => seats.Count;
-    public int WaitingBenchCount => waitingBenchSeats.Count;
+    public int IndoorSeatCount => GameSession.IsActive ? Mathf.Min(seats.Count, RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)) : seats.Count;
+    public int WaitingBenchCount => GameSession.IsActive ? Mathf.Min(waitingBenchSeats.Count, RestaurantRules.WaitingLimit(GameSession.Current.restaurantLevel)) : waitingBenchSeats.Count;
     public int WaitingCount => waitingLine.Count;
 
     public void RegisterSeats(List<TableGroup> sortedTables)
@@ -38,8 +45,8 @@ public class SeatManager : MonoBehaviour
 
     public bool HasAvailableSeat()
     {
-        if (seats.Any(s => !s.GetIsOccupied())) { return true; }
-        return waitingLine.Count < waitingBenchSeats.Count;
+        if (seats.Take(IndoorSeatCount).Any(Available)) { return true; }
+        return waitingLine.Count < WaitingBenchCount;
     }
 
     // 손님이 좌석을 배정받으려고 시도하는 함수. 인도어 자리가 없으면 웨이팅 줄 맨 뒤에 등록한다.
@@ -48,18 +55,18 @@ public class SeatManager : MonoBehaviour
     public Seat TryAssignSeat(CustomerAgent customer, out bool indoor, HashSet<Seat> excludeSeats = null)
     {
         indoor = false;
-        for (int i = 0; i < seats.Count; i++)
+        for (int i = 0; i < IndoorSeatCount; i++)
         {
             if (excludeSeats != null && excludeSeats.Contains(seats[i])) { continue; }
 
-            if (!seats[i].GetIsOccupied() && seats[i].TryOccupy(customer))
+            if (Available(seats[i]) && seats[i].TryOccupy(customer))
             {
                 indoor = true;
                 return seats[i];
             }
         }
 
-        if (waitingLine.Count >= waitingBenchSeats.Count) { return null; } // 웨이팅 자리도 꽉 참
+        if (waitingLine.Count >= WaitingBenchCount) { return null; }
 
         waitingLine.Add(customer);
         return waitingBenchSeats[waitingLine.Count - 1];
@@ -82,6 +89,16 @@ public class SeatManager : MonoBehaviour
         }
 
         if (seat == null) { return; }
+        if (customer.LeftAngry)
+        {
+            var table = seat.GetComponentInParent<TableGroup>();
+            foreach (var member in seats.Where(s => s == seat || (table != null && s.GetComponentInParent<TableGroup>() == table)))
+            {
+                angryDepartures.TryGetValue(member, out int count);
+                angryDepartures[member] = count + 1;
+                blockedUntil[member] = Time.time + Mathf.Min(60, 10 * (count + 1));
+            }
+        }
         seat.Vacate();
         PromoteNextFromWaitingLine();
     }
@@ -91,7 +108,7 @@ public class SeatManager : MonoBehaviour
     {
         if (waitingLine.Count == 0) { return; }
 
-        Seat emptySeat = seats.FirstOrDefault(s => !s.GetIsOccupied());
+        Seat emptySeat = seats.Take(IndoorSeatCount).FirstOrDefault(Available);
         if (emptySeat == null) { return; }
 
         CustomerAgent customer = waitingLine[0];

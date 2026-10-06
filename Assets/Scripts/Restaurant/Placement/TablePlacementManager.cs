@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 
@@ -46,9 +46,12 @@ public class TablePlacementManager : MonoBehaviour
 
     public void OnTwoSeatButtonClicked()  { StartPlacing(twoSeatData);  }
     public void OnFourSeatButtonClicked() { StartPlacing(fourSeatData); }
+    public void OnOneSeatButtonClicked() { var data = TableVariants.OneSeat(twoSeatData); StartPlacing(data); Destroy(data); }
+    public void OnRotateClicked() { if (activeGhost != null) activeGhost.Rotate(); }
 
     private void StartPlacing(TableData data)
     {
+        if (!RestaurantProgress.CanManage) return;
         CancelGhost();
         SpawnGhost(data);
         state = PlacementState.PlacingGhost;
@@ -57,6 +60,7 @@ public class TablePlacementManager : MonoBehaviour
     // 기존 테이블 이동 시작 (TableContextMenu에서 호출)
     public void StartMoving(PlacedTable table)
     {
+        if (!RestaurantProgress.CanManage) return;
         CancelGhost();
         movingTable = table;
         // 이동 동안만 장애물 임시 해제
@@ -70,11 +74,21 @@ public class TablePlacementManager : MonoBehaviour
     public void OnConfirmClicked()
     {
         if (activeGhost == null || !activeGhost.IsPlaceable) { return; }
+        if (!RestaurantProgress.CanManage) return;
+        if (GameSession.IsActive)
+        {
+            int seats = 0;
+            foreach (var table in PlacedTable.Active) if (table != movingTable) seats += table.tableData.chairTiles.Length;
+            if (seats + activeGhost.TableData.chairTiles.Length > RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel))
+            { DayCycleController.Instance?.Toast("현재 식당의 좌석 한도를 초과했어요."); return; }
+        }
+        TableSaveLoadManager.Instance.RememberEdit();
 
         Vector2Int anchor  = activeGhost.CurrentCellPos;
         TableData  data    = activeGhost.TableData;
         Vector3    worldPos = activeGhost.SnapPosition;
 
+        int skin = movingTable != null ? movingTable.Skin : 0;
         if (state == PlacementState.Moving && movingTable != null)
         {
             movingTable.MarkRemoved();
@@ -86,6 +100,7 @@ public class TablePlacementManager : MonoBehaviour
         GameObject obj    = Instantiate(data.placedPrefab, worldPos, Quaternion.identity, tableParent);
         PlacedTable placed = obj.GetComponent<PlacedTable>();
         placed.Initialize(data, anchor);
+        placed.SetSkin(skin);
 
         TableSaveLoadManager.Instance.SavePlacement();
         CancelGhost();
@@ -117,6 +132,11 @@ public class TablePlacementManager : MonoBehaviour
 
     private void CancelGhost()
     {
+        if (movingTable != null)
+        {
+            PathfindingGrid.Instance.RegisterObstacleTiles(movingTable.GetObstacleCells());
+            movingTable = null;
+        }
         if (activeGhost == null) { return; }
         Destroy(activeGhost.gameObject);
         activeGhost = null;
@@ -125,6 +145,7 @@ public class TablePlacementManager : MonoBehaviour
     private void Update()
     {
         if (state == PlacementState.Idle) { return; }
+        if (Input.GetKeyDown(KeyCode.R)) OnRotateClicked();
         if (Input.GetKeyDown(KeyCode.Escape)) { OnCancelClicked(); }
         if (Input.GetMouseButton(0)) { OnClickWhilePlacing(); }
     }

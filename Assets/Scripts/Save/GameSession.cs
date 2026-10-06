@@ -64,8 +64,9 @@ public static class GameSession
     public static void Begin(GameSaveData data, bool isDevSession = false)
     {
         Current = data ?? throw new ArgumentNullException(nameof(data));
+        if (Current.progression == null) Current.progression = new ProgressionState();
         IsDevSession = isDevSession;
-        OperationCompletedToday = false;
+        OperationCompletedToday = Current.progression.freeTime;
         UnsavedPlayTime = 0;
         RestoreAll();
     }
@@ -103,6 +104,15 @@ public static class GameSession
     {
         if (IsActive && seconds > 0)
             UnsavedPlayTime += seconds;
+    }
+
+    // 메모리 내 거래: 저장된 플레이 시간을 중복 가산하지 않는다.
+    public static void ApplyRuntime(GameSaveData data)
+    {
+        double elapsed = UnsavedPlayTime;
+        data.playTimeSeconds = Current.playTimeSeconds;
+        Begin(data, IsDevSession);
+        UnsavedPlayTime = elapsed;
     }
 
     private static void RestoreAll()

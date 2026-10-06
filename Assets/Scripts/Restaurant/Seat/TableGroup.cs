@@ -25,7 +25,7 @@ public class TableGroup : MonoBehaviour
         if (visual != null) { visual.localScale *= visualScale; }
     }
     public void SetTableId(int id) { tableId = id; } // 테이블 번호가 변경되면 일괄 적용
-    public Seat[] GetSeats() { return seats; }
+    public Seat[] GetSeats() { return GetComponentsInChildren<Seat>(); }
 
     private void OnEnable()
     {

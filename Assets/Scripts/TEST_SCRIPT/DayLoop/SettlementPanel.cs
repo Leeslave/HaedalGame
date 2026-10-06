@@ -56,11 +56,11 @@ public class SettlementPanel : MonoBehaviour
         switch (state)
         {
             case SaveState.Saving:
-                _status.text = "결산을 저장하는 중…";
+                _status.text = "결산을 확정하는 중…";
                 _status.color = DayLoopUI.InkSoft;
                 break;
             case SaveState.Saved:
-                _status.text = GameSession.IsDevSession ? "결산 확정 (에디터 직접 실행 — 파일 저장 생략)" : "결산이 확정되어 저장됐어요.";
+                _status.text = "오늘 결산을 확정했어요. 집에서 잠들면 저장돼요.";
                 _status.color = DayLoopUI.Good;
                 break;
             default:

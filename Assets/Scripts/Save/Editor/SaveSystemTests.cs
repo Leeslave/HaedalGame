@@ -51,7 +51,7 @@ public class SaveSystemTests
         Assert.IsTrue(data.employees.Exists(e => e.role == "Kitchen" && e.slotIndex >= 0), "주방 인력");
         Assert.IsTrue(data.employees.Exists(e => e.role == "Serving" && e.slotIndex >= 0), "홀 인력");
         Assert.IsTrue(data.placedTables.Count > 0, "좌석");
-        Assert.IsTrue(data.menuSlots.Exists(id => id >= 0), "판매 메뉴");
+        Assert.IsFalse(data.menuSlots.Exists(id => id >= 0), "첫 조리도구를 고른 뒤 메뉴 등록");
         Assert.AreEqual(1, data.dailyRatingHistory.Count, "평점 시드 1개");
         Assert.AreEqual(0, data.dailyRatingHistory[0].day);
 
@@ -61,31 +61,13 @@ public class SaveSystemTests
     }
 
     [Test]
-    public void NewGame_MenuRegistrationReservesIngredientsOnce()
+    public void NewGame_KeepsIngredientsUntilAnOrderIsAccepted()
     {
-        GameSaveData data = NewGameConfig.Load().CreateSaveData();
-        RecipeDatabaseSO db = GameDatabase.Recipes;
-        Assume.That(db != null, "Resources/Data/RecipeDatabaseSO 필요");
-
-        // 보유 수량 + 메뉴판에 올린 레시피의 요구량 = 설정한 시작 수량 (등록 시 1세트 차감 규칙)
-        Dictionary<int, int> reserved = new Dictionary<int, int>();
-        foreach (int recipeId in data.menuSlots)
-        {
-            if (recipeId < 0) continue;
-            Assert.IsTrue(db.TryGetRecipe(recipeId, out RecipeData recipe));
-            foreach (RecipeIngredientRequirement req in recipe.Requirements)
-            {
-                reserved.TryGetValue(req.IngredientId, out int sum);
-                reserved[req.IngredientId] = sum + req.Amount;
-            }
-        }
-
-        foreach (KeyValuePair<int, int> pair in reserved)
-        {
-            IngredientStackEntry stack = data.ingredients.Find(s => s.ingredientId == pair.Key);
-            int remaining = stack != null ? stack.amount : 0;
-            Assert.AreEqual(10, remaining + pair.Value, $"재료 {pair.Key}");
-        }
+        var data = NewGameConfig.Load().CreateSaveData();
+        Assert.AreEqual(3, data.menuSlots.Count);
+        Assert.IsTrue(data.menuSlots.TrueForAll(id => id == -1));
+        for (int id = 1; id <= 10; id++)
+            Assert.AreEqual(30, data.ingredients.Find(s => s.ingredientId == id).amount);
     }
 
     [Test]

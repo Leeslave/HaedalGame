@@ -28,6 +28,7 @@ public class ChefAgent : PartTimerAgent
     {
         get
         {
+            if (IsSleeping) return "잠듦 · 눌러서 깨우기";
             switch (state)
             {
                 case ChefState.WaitingForTool: return "조리도구 대기";
@@ -43,6 +44,7 @@ public class ChefAgent : PartTimerAgent
 
     public void Initialize(int index)
     {
+        status = SavedStatus(status);
         positionNumber = index;
         initPosition = ChefManager.Instance.GetInitPosition(index);
         state = ChefState.Idle;
@@ -151,8 +153,19 @@ public class ChefAgent : PartTimerAgent
     private IEnumerator CookingRoutine()
     {
         float speedMultiplier = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.StaffSpeedMultiplier : 1f;
-        yield return new WaitForSeconds(curTask.CookingTime / speedMultiplier);
+        yield return Work(curTask.CookingTime / (speedMultiplier * (1 + status.cooking / 100f)));
         ChefManager.Instance.ReleaseTool(curType);
+        if (curTask.TryNextStage())
+        {
+            curType = curTask.GetCookingType();
+            stationTransform = ChefManager.Instance.GetCookingToolTransform(curType);
+            if (ChefManager.Instance.RequestTool(curType, this)) Advance(ChefState.ApproachingStation, ApproachingStationRoutine());
+            else Advance(ChefState.WaitingForTool, WaitingForToolRoutine());
+            yield break;
+        }
+        if (curTask.Recipe != null) CookwareRules.RecordUse(curTask.Recipe);
+        if (curTask.Customer != null && Random.value < Mathf.Clamp01(status.handy / 100f))
+            curTask.Customer.FoodQuality = Mathf.Min(5, curTask.Customer.FoodQuality + 1);
         Advance(ChefState.ApproachingDropoff, ApproachingDropoffRoutine());
     }
 

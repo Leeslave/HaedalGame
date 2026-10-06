@@ -19,9 +19,11 @@ public class ServingTaskQueue
         ServingTask best = null;
         foreach (var task in tasks)
         {
+            if (task.Customer == null) continue;
             if (best == null) { best = task; }
 
             if (task.Priority > best.Priority) { best = task; }
+            else if (task.Priority == best.Priority && task.Customer.cpc.RemainingSeconds < best.Customer.cpc.RemainingSeconds) best = task;
         }
 
         return best; // 현재 해야할 일을 리턴 -> 만약 null이라면 서빙 알바는 원래 자리로 이동하기

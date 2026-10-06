@@ -136,6 +136,12 @@ public class DayCycleController : MonoBehaviour
 
     public void CountStaff(out int servers, out int chefs)
     {
+        if (GameSession.IsActive)
+        {
+            servers = GameSession.Current.employees.FindAll(e => e.role == "Serving").Count;
+            chefs = GameSession.Current.employees.FindAll(e => e.role == "Kitchen").Count;
+            return;
+        }
         servers = FindObjectsByType<ServerAgent>(FindObjectsSortMode.None).Length;
         chefs = FindObjectsByType<ChefAgent>(FindObjectsSortMode.None).Length;
     }
@@ -143,16 +149,22 @@ public class DayCycleController : MonoBehaviour
     /// <summary>실제로 영업할 수 없는 조건만 이유를 돌려준다. 영업 가능하면 null.</summary>
     public string GetStartBlockReason()
     {
+        if (GameSession.IsActive && GameSession.Current.progression.constructionUntilDay > GameSession.Current.day) return "공사 중에는 영업할 수 없어요.";
         MenuManager menu = MenuManager.Instance;
         if (menu == null || menu.DailyFoods.Count == 0)
             return "오늘의 메뉴가 없어요. 섬의 메뉴판에서 메뉴를 등록해 주세요.";
 
+        foreach (var food in menu.DailyFoods)
+        {
+            if (GameSession.IsActive && !CookwareRules.CanCook(GameSession.Current, food)) return "메뉴에 필요한 도구 또는 도구 강화가 부족해요.";
+            if (IngredientInventoryService.Instance == null || IngredientInventoryService.Instance.CraftableCount(food) < 1) return "메뉴 재료가 부족해요.";
+        }
         if (ChefManager.Instance != null)
         {
             bool anyCookable = false;
             foreach (RecipeData food in menu.DailyFoods)
             {
-                if (food != null && ChefManager.Instance.GetCookingToolTransform((CookingType)food.ClassId) != null)
+                if (food != null && ChefManager.Instance.GetCookingToolTransform(food.ClassId == 205 ? CookingType.Pan : (CookingType)food.ClassId) != null)
                 {
                     anyCookable = true;
                     break;
@@ -265,7 +277,7 @@ public class DayCycleController : MonoBehaviour
         GameFlow.SetPhase(GamePhase.ClosingReport);
         SetPhase(DayLoopPhase.Settlement);
 
-        _settlement.Show(_record, $"{day + 1}일차 준비하기", GoToNextDay, CommitSettlement);
+        _settlement.Show(_record, "섬에서 쉬기", GoToNextDay, CommitSettlement);
         CommitSettlement();
 
         // 당일 집계와 작업 배정만 초기화한다. (골드·가구·직원·해금은 그대로)

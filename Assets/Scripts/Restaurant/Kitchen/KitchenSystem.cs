@@ -49,9 +49,15 @@ public class KitchenSystem : MonoBehaviour
     public void HandleOrderReceived(CustomerAgent customer)
     {
         RecipeData data = customer.coc.GetOrderData();
-        if (data != null) 
-        { 
-            taskQueue.Enqueue(new CookingTask(customer, (CookingType)data.ClassId, data.CookTime)); 
+        if (data != null)
+        {
+            if (customer.IngredientsReserved) return;
+            var inventory = IngredientInventoryService.Instance;
+            if (inventory == null || !inventory.TryConsumeRecipe(data, out int quality)) { customer.ForceLeave(); return; }
+            customer.IngredientsReserved = true;
+            customer.FoodQuality = quality;
+            var type = (CookingType)data.ClassId;
+            taskQueue.Enqueue(new CookingTask(customer, type, data.CookTime));
         }
         else { Debug.Log("주문한 요리가 없습니다!"); }
     }
