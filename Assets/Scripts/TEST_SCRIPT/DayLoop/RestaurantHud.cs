@@ -5,18 +5,25 @@ using UnityEngine.UI;
 
 /// <summary>
 /// [TEST 하루 루프] 영업 HUD. (HUD-01, HUD-02, CLOSE-01)
-/// 불투명 크림 패널 위에 날짜 / 단계 / 진행도 / 대기열(또는 마감 잔여) / 골드 / 배속·일시정지를 표시한다.
+/// 불투명 크림 패널 위에 날짜 / 단계 / 진행도 / 대기열(또는 마감 잔여) / 평점 / 골드 / 배속·일시정지를 표시한다.
 ///  - 방문: 생성(입장) 기준. 분모는 오늘 입장 예정 손님 수
 ///  - 자리 대기: 실제 대기 줄(SeatManager)의 인원
 ///  - 남은 손님: 아직 퇴장하지 않은 손님 (마감 중 표시)
+///  - 평점: 오늘 받은 평가의 평균(평가 전에는 식당 평점). 평가가 들어올 때마다 강조 이펙트와 점수 팝업
 ///  - 골드: 누적 보유액. 오늘 매출은 따로 표시
+///  - 배속: x1 → x2 → x3
 /// </summary>
 public class RestaurantHud : MonoBehaviour
 {
     private DayCycleController _day;
     private Canvas _canvas;
     private RectTransform _bar;
-    private TMP_Text _dayText, _phaseText, _progressText, _queueText, _goldText, _todayText;
+    private TMP_Text _dayText, _phaseText, _progressText, _queueText, _goldText, _todayText, _ratingText, _ratingSub;
+    private RectTransform _ratingBlock;
+    private RestaurantRatingManager _rating;
+    private float _lastRatingAverage;
+    private int _lastRatingCount;
+    private Coroutine _ratingPunch;
     private Image _phaseChip, _progressFill;
     private Button _speedButton, _pauseButton;
     private CanvasGroup _pauseOverlay;
@@ -33,6 +40,13 @@ public class RestaurantHud : MonoBehaviour
         _day.OnPhaseChanged += HandlePhaseChanged;
         _day.OnToast += ShowToast;
         RestaurantSpeedController.OnFastForwardChanged += HandleSpeedChanged;
+        _rating = RestaurantRatingManager.Instance;
+        if (_rating != null)
+        {
+            _rating.OnTodayAverageChanged += HandleRatingChanged;
+            _lastRatingAverage = _rating.TodayAverage;
+            _lastRatingCount = _rating.TodayScoreCount;
+        }
         HandlePhaseChanged(_day.Phase);
     }
 
@@ -44,6 +58,7 @@ public class RestaurantHud : MonoBehaviour
             _day.OnToast -= ShowToast;
         }
         RestaurantSpeedController.OnFastForwardChanged -= HandleSpeedChanged;
+        if (_rating != null) _rating.OnTodayAverageChanged -= HandleRatingChanged;
     }
 
     private void HandlePhaseChanged(DayLoopPhase phase)
@@ -115,13 +130,116 @@ public class RestaurantHud : MonoBehaviour
         _goldText.text = gold >= 0 ? "보유 " + DayLoopUI.Gold(gold) : "보유 -";
         _todayText.text = "오늘 매출 " + DayLoopUI.SignedGold(_day.Ledger.Revenue);
 
+        RefreshRating();
         RefreshControls();
+    }
+
+    // ───── 평점 ─────
+
+    private void RefreshRating()
+    {
+        string star = StarGlyph();
+        if (_rating == null)
+        {
+            _ratingText.text = star + " -";
+            _ratingSub.text = "평점";
+            return;
+        }
+
+        int count = _rating.TodayScoreCount;
+        if (count == 0)
+        {
+            float restaurant = _rating.RestaurantRating;
+            _ratingText.text = star + " " + (restaurant > 0f ? DayLoopUI.Rating(restaurant) : "-");
+            _ratingText.color = DayLoopUI.GoldText;
+            _ratingSub.text = "오늘 평가 전";
+            return;
+        }
+
+        _ratingText.text = star + " " + DayLoopUI.Rating(_rating.TodayAverage);
+        switch (_rating.CurrentTier)
+        {
+            case RatingBuffTier.Buff:
+                _ratingText.color = DayLoopUI.Good;
+                _ratingSub.text = "호평: 팁·직원 속도 증가";
+                break;
+            case RatingBuffTier.Debuff:
+                _ratingText.color = DayLoopUI.Warn;
+                _ratingSub.text = "혹평: 손님이 빨리 지쳐요";
+                break;
+            default:
+                _ratingText.color = DayLoopUI.GoldText;
+                _ratingSub.text = $"오늘 평가 {count}건";
+                break;
+        }
+    }
+
+    private void HandleRatingChanged(float average)
+    {
+        int count = _rating != null ? _rating.TodayScoreCount : 0;
+        // 방금 들어온 평가 한 건의 점수 = 새 합계 - 이전 합계
+        float score = count > _lastRatingCount ? average * count - _lastRatingAverage * _lastRatingCount : average;
+        _lastRatingAverage = average;
+        _lastRatingCount = count;
+
+        if (!_bar.gameObject.activeSelf) return;
+        RefreshRating();
+        if (_ratingPunch != null) StopCoroutine(_ratingPunch);
+        _ratingPunch = StartCoroutine(RatingPunch());
+        StartCoroutine(RatingPopup(score));
+    }
+
+    private IEnumerator RatingPunch()
+    {
+        const float duration = 0.4f;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Sin(Mathf.Clamp01(t / duration) * Mathf.PI);
+            _ratingBlock.localScale = Vector3.one * (1f + 0.3f * k);
+            yield return null;
+        }
+        _ratingBlock.localScale = Vector3.one;
+        _ratingPunch = null;
+    }
+
+    private IEnumerator RatingPopup(float score)
+    {
+        Color color = score >= 4f ? new Color32(0x7E, 0xE0, 0x9A, 0xFF) : score <= 2f ? new Color32(0xFF, 0x8A, 0x7A, 0xFF) : new Color32(0xF6, 0xC3, 0x3B, 0xFF);
+        Image popup = DayLoopUI.Panel(_ratingBlock, new Color(0.18f, 0.12f, 0.08f, 0.9f), "RatingPopup");
+        popup.raycastTarget = false;
+        popup.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        CanvasGroup group = popup.gameObject.AddComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        RectTransform rt = popup.rectTransform;
+        DayLoopUI.Place(rt, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(150, 48));
+        TMP_Text text = DayLoopUI.Text(popup.transform, StarGlyph() + " " + DayLoopUI.Rating(Mathf.Clamp(score, 0f, 5f)), 30, color, TextAlignmentOptions.Center, FontStyles.Bold);
+        DayLoopUI.Stretch(text.rectTransform);
+
+        const float duration = 1.4f;
+        float t = 0f;
+        while (t < duration && popup != null)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = t / duration;
+            rt.anchoredPosition = new Vector2(0f, -14f - 40f * Mathf.Sqrt(k));
+            group.alpha = k < 0.6f ? 1f : 1f - (k - 0.6f) / 0.4f;
+            yield return null;
+        }
+        if (popup != null) Destroy(popup.gameObject);
+    }
+
+    private static string StarGlyph()
+    {
+        TMP_FontAsset font = DayLoopUI.Font;
+        return font != null && font.HasCharacters("★") ? "★" : "평점";
     }
 
     private void RefreshControls()
     {
         bool fast = RestaurantSpeedController.IsFastForward;
-        DayLoopUI.SetButtonLabel(_speedButton, fast ? "x2 빠르게" : "x1 보통");
+        DayLoopUI.SetButtonLabel(_speedButton, "x" + RestaurantSpeedController.CurrentSpeed + (fast ? " 빠르게" : " 보통"));
         _speedButton.image.color = fast ? DayLoopUI.GoldText : DayLoopUI.Wood;
 
         bool paused = _day != null && _day.IsPaused;
@@ -171,7 +289,7 @@ public class RestaurantHud : MonoBehaviour
         // 상단 바: 화면 위쪽 0~0.11 높이 안에 들어간다. (카메라는 이 영역을 비워 둔다)
         Image bar = DayLoopUI.Panel(_canvas.transform, DayLoopUI.Cream, "TopBar");
         _bar = bar.rectTransform;
-        DayLoopUI.Place(_bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -10), new Vector2(1400, 96));
+        DayLoopUI.Place(_bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -10), new Vector2(1640, 96));
         DayLoopUI.AddOutline(bar, DayLoopUI.Wood, 2.5f);
         HorizontalLayoutGroup row = DayLoopUI.Horizontal(bar, 0, 18, TextAnchor.MiddleLeft);
         row.padding = new RectOffset(28, 18, 10, 10);
@@ -198,7 +316,16 @@ public class RestaurantHud : MonoBehaviour
         _progressFill.rectTransform.offsetMax = Vector2.zero;
 
         _queueText = DayLoopUI.Text(bar.transform, "", 24, DayLoopUI.Ink, TextAlignmentOptions.MidlineLeft);
-        DayLoopUI.Layout(_queueText, preferredWidth: 260, preferredHeight: 70);
+        DayLoopUI.Layout(_queueText, preferredWidth: 230, preferredHeight: 70);
+
+        Image ratingChip = DayLoopUI.Panel(bar.transform, DayLoopUI.CreamDeep, "Rating");
+        _ratingBlock = ratingChip.rectTransform;
+        DayLoopUI.Layout(ratingChip, preferredWidth: 230, preferredHeight: 76);
+        DayLoopUI.Vertical(ratingChip, 4, 0, TextAnchor.MiddleCenter);
+        _ratingText = DayLoopUI.Text(ratingChip.transform, "", 32, DayLoopUI.GoldText, TextAlignmentOptions.Center, FontStyles.Bold);
+        DayLoopUI.Layout(_ratingText, preferredHeight: 40);
+        _ratingSub = DayLoopUI.Text(ratingChip.transform, "", 17, DayLoopUI.InkSoft, TextAlignmentOptions.Center);
+        DayLoopUI.Layout(_ratingSub, preferredHeight: 24);
 
         RectTransform gold = DayLoopUI.Rect("Gold", bar.transform);
         DayLoopUI.Vertical(gold, 0, 0, TextAnchor.MiddleLeft);
@@ -208,7 +335,7 @@ public class RestaurantHud : MonoBehaviour
         _todayText = DayLoopUI.Text(gold, "", 19, DayLoopUI.InkSoft, TextAlignmentOptions.MidlineLeft);
         DayLoopUI.Layout(_todayText, preferredHeight: 26);
 
-        _speedButton = DayLoopUI.Button(bar.transform, "x1 보통", DayLoopUI.Wood, Color.white, 22, RestaurantSpeedController.ToggleFastForward, "Speed");
+        _speedButton = DayLoopUI.Button(bar.transform, "x1 보통", DayLoopUI.Wood, Color.white, 22, RestaurantSpeedController.CycleSpeed, "Speed");
         DayLoopUI.Layout(_speedButton, preferredWidth: 130, preferredHeight: 60);
         _pauseButton = DayLoopUI.Button(bar.transform, "|| 정지", DayLoopUI.Wood, Color.white, 22, () => _day.SetPaused(!_day.IsPaused), "Pause");
         DayLoopUI.Layout(_pauseButton, preferredWidth: 120, preferredHeight: 60);

@@ -24,6 +24,9 @@ public class TablePlacementManager : MonoBehaviour
     private PlacementState       state       = PlacementState.Idle;
     private PlacedTable          movingTable;              // 이동 중인 기존 테이블
 
+    // 배치 모드 동안 켜지는 UI. 다른 UI가 배치 모드 여부를 따라 표시를 맞출 때 쓴다.
+    public GameObject PlacementUI => placementUI;
+
     private void Awake() { Instance = this; placementUI.SetActive(false); }
 
     // ─── 외부 진입 / 퇴출 ────────────────────────────

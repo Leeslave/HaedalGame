@@ -34,7 +34,7 @@ public class RestaurantSpeedButton : MonoBehaviour
 
     private void RefreshVisual(bool isFastForward)
     {
-        if (label != null) { label.text = isFastForward ? "x2" : "x1"; }
+        if (label != null) { label.text = "x" + RestaurantSpeedController.CurrentSpeed; }
         if (icon != null) { icon.color = isFastForward ? activeColor : normalColor; }
     }
 }

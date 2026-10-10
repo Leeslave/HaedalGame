@@ -21,6 +21,7 @@ public static class HaedalDevTools
     private const string NewGameButtonName = "New Start";
     private const string ContinueButtonName = "Continue";
     private const string QuitButtonName = "Exit";
+    private const string SettingsButtonName = "Setting";
 
     [MenuItem("Haedal/Dev Tools/타이틀 씬 자동 설정", false, 0)]
     public static void SetupTitleScene()
@@ -57,15 +58,17 @@ public static class HaedalDevTools
         Button newGame = FindButton(NewGameButtonName);
         Button cont = FindButton(ContinueButtonName);
         Button quit = FindButton(QuitButtonName);
+        Button settings = FindButton(SettingsButtonName);
 
         SerializedObject so = new SerializedObject(title);
         so.FindProperty("_newGameButton").objectReferenceValue = newGame;
         so.FindProperty("_continueButton").objectReferenceValue = cont;
         so.FindProperty("_quitButton").objectReferenceValue = quit;
+        so.FindProperty("_settingsButton").objectReferenceValue = settings;
         so.FindProperty("_intro").objectReferenceValue = intro;
         so.ApplyModifiedProperties();
 
-        report.AppendLine($"• 버튼 연결: 새로하기 {Mark(newGame)} / 이어하기 {Mark(cont)} / 종료 {Mark(quit)}");
+        report.AppendLine($"• 버튼 연결: 새로하기 {Mark(newGame)} / 이어하기 {Mark(cont)} / 종료 {Mark(quit)} / 설정 {Mark(settings)}");
 
         // 코드에서 클릭을 연결하므로, 수동으로 OnClick에 넣어 둔 같은 메서드가 있으면 중복 호출되지 않게 지운다.
         int removed = RemoveManualTitleListeners(newGame) + RemoveManualTitleListeners(cont) + RemoveManualTitleListeners(quit);

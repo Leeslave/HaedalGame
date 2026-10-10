@@ -14,6 +14,8 @@ public class TitleMenuController : MonoBehaviour
     [SerializeField] private Button _newGameButton;
     [SerializeField] private Button _continueButton;
     [SerializeField] private Button _quitButton;
+    [Tooltip("비우면 씬에서 이름이 Setting인 버튼을 찾는다")]
+    [SerializeField] private Button _settingsButton;
 
     [Header("이어하기")]
     [Tooltip("비워도 된다. 세이브 요약(일차·저장 시각·플레이 시간)을 표시할 텍스트")]
@@ -30,6 +32,8 @@ public class TitleMenuController : MonoBehaviour
         BindButton(_newGameButton, OnClickNewGame, nameof(_newGameButton));
         BindButton(_continueButton, OnClickContinue, nameof(_continueButton));
         BindButton(_quitButton, OnClickQuit, nameof(_quitButton));
+        if (_settingsButton == null) _settingsButton = FindSceneButton("Setting");
+        BindButton(_settingsButton, OnClickSettings, nameof(_settingsButton));
     }
 
     private void OnDestroy()
@@ -37,6 +41,20 @@ public class TitleMenuController : MonoBehaviour
         if (_newGameButton != null) _newGameButton.onClick.RemoveListener(OnClickNewGame);
         if (_continueButton != null) _continueButton.onClick.RemoveListener(OnClickContinue);
         if (_quitButton != null) _quitButton.onClick.RemoveListener(OnClickQuit);
+        if (_settingsButton != null) _settingsButton.onClick.RemoveListener(OnClickSettings);
+    }
+
+    private Button FindSceneButton(string objectName)
+    {
+        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+        {
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+            {
+                if (button.name == objectName)
+                    return button;
+            }
+        }
+        return null;
     }
 
     private void BindButton(Button button, UnityEngine.Events.UnityAction action, string fieldName)
@@ -52,18 +70,9 @@ public class TitleMenuController : MonoBehaviour
 
     private void Start()
     {
-        if (GetComponent<TitleSettingsUI>() == null) gameObject.AddComponent<TitleSettingsUI>();
-        if (_continueSummaryText == null)
-        {
-            var canvas = DayLoopUI.CreateCanvas("Continue summary", 40, gameObject.scene);
-            canvas.transform.SetParent(transform, false);
-            var panel = DayLoopUI.Panel(canvas.transform, DayLoopUI.Cream);
-            DayLoopUI.Place(panel.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 20), new Vector2(800, 96));
-            _continueSummaryText = DayLoopUI.Text(panel.transform, "", 24, DayLoopUI.Ink, TextAlignmentOptions.Center);
-            DayLoopUI.Stretch(_continueSummaryText.rectTransform, 12, 8, 12, 8);
-        }
-        AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1);
-        if (PlayerPrefs.HasKey("Fullscreen")) Screen.fullScreen = PlayerPrefs.GetInt("Fullscreen") != 0;
+        GameSettings.ApplySaved();
+        // 타이틀에는 하단 메뉴 바(알바·레시피·구인·인테리어·정보)가 필요 없다.
+        if (PopupManager.Instance != null) PopupManager.Instance.SetNavigatorVisible(false);
         if (GameSession.IsActive)
             GameSession.End();
 
@@ -135,6 +144,14 @@ public class TitleMenuController : MonoBehaviour
 
         Debug.LogError($"[Title] 이어하기 실패 ({status}): {error}");
         ShowPopup(message + "\n세이브 파일은 변경되지 않았습니다.", "다시 시도", "닫기", OnClickContinue, RefreshContinue);
+    }
+
+    public void OnClickSettings()
+    {
+        if (_busy)
+            return;
+
+        SettingsWindow.Open(gameObject.scene);
     }
 
     public void OnClickQuit()

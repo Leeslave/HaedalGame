@@ -20,7 +20,7 @@ public class RestaurantManagementUI : MonoBehaviour
     private void Start()
     {
         if (!GameSession.IsActive) return;
-        AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1);
+        GameSettings.ApplySaved();
         if (IngredientInventoryService.Instance == null) new GameObject("Ingredient inventory").AddComponent<IngredientInventoryService>();
         if (CurrencyManager.Instance == null) new GameObject("Currency wallets").AddComponent<CurrencyManager>();
         if (ElfShopManager.Instance == null) new GameObject("Elf shop").AddComponent<ElfShopManager>();
@@ -225,17 +225,11 @@ public class RestaurantManagementUI : MonoBehaviour
                 Note("파일 저장은 취침할 때 이루어져요. 그전에 종료하면 마지막으로 저장한 아침으로 돌아가요.");
                 break;
             case "설정":
-                Row($"전체 음량 {AudioListener.volume:P0}", ("줄이기", () => SetVolume(-.1f)), ("높이기", () => SetVolume(.1f)));
-                Row(Screen.fullScreen ? "전체 화면" : "창 모드", ("전환", () => { Screen.fullScreen = !Screen.fullScreen; PlayerPrefs.SetInt("Fullscreen", Screen.fullScreen ? 1 : 0); PlayerPrefs.Save(); Refresh(); }));
+                Row("소리·화면 설정", ("열기", () => SettingsWindow.Open(gameObject.scene)));
                 Row(s.progression.timedResearch ? "연구: 시간 경과 + 실습" : "연구: 실습", ("연구 방식", () => { s.progression.timedResearch = !s.progression.timedResearch; Refresh(); }));
                 Row("타이틀로 돌아가면 오늘의 저장하지 않은 진행을 잃어요.", ("돌아가기", () => { Clear(); Note("마지막 취침 이후 진행을 버리고 타이틀로 돌아갈까요?"); Row("", ("돌아가기", GameFlow.ReturnToTitle), ("계속하기", Refresh)); }));
                 break;
         }
-    }
-    private void SetVolume(float delta)
-    {
-        AudioListener.volume = Mathf.Clamp01(AudioListener.volume + delta);
-        PlayerPrefs.SetFloat("MasterVolume", AudioListener.volume); PlayerPrefs.Save(); Refresh();
     }
     private void PlaceTable(int seats)
     {

@@ -3,16 +3,17 @@ using UnityEngine;
 /// <summary>
 /// [TEST 하루 루프] 식당 구역 카메라 구도. (VIEW-02)
 /// 식당 구역(CameraZone.Restaurant)에서 배경 맵과 주방·테이블·대기석·입구·출구 전체를 담는다.
-/// 위쪽 운영 HUD와 아래쪽 첫 손님 안내창 영역은 비워 둔다.
+/// 게임 화면을 최대한 크게 보여 주고, 안내창·도구 모음 같은 UI는 게임 화면 위에 겹쳐 띄운다.
+/// 위쪽 운영 HUD 띠만 비워 둔다. (식당 건물이 맵 위쪽에 있어 HUD에 가려지지 않게)
 ///  - 화면비가 바뀌어도(16:9, 16:10, 4:3, 21:9) 핵심 영역이 잘리지 않도록 가로·세로 중 더 빡빡한 쪽에 맞춘다.
 ///  - 손님처럼 움직이는 오브젝트는 범위에서 제외해 구도가 출렁이지 않는다. 고정 시설 배치만 주기적으로 확인한다.
 ///  - 월드 카메라만 조정하며 UI 스케일은 각 Canvas가 따로 처리한다.
 /// </summary>
 public class RestaurantCameraFramer : MonoBehaviour
 {
-    private const float HudTopFraction = 0.14f;
-    private const float BottomFraction = 0.18f;
-    private const float Padding = 1.2f; // 맵 가장자리 직원의 상태 문구까지 들어갈 여백
+    private const float HudTopFraction = 0.10f;
+    private const float BottomFraction = 0f;
+    private const float Padding = 0.5f; // 맵 가장자리 직원의 상태 문구까지 들어갈 여백
 
     private Camera _camera;
     private float _originalSize;

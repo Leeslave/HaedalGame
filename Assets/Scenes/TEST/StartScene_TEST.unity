@@ -2480,6 +2480,7 @@ MonoBehaviour:
   _newGameButton: {fileID: 329913817}
   _continueButton: {fileID: 2057836978}
   _quitButton: {fileID: 500565338}
+  _settingsButton: {fileID: 1773106774}
   _continueSummaryText: {fileID: 0}
   _intro: {fileID: 1763033155}
 --- !u!4 &1763033157

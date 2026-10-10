@@ -28,6 +28,13 @@ public class PopupManager : MonoBehaviour
         RefreshDimPanel();
     }
 
+    /// <summary>하단 메뉴 바(알바·레시피·구인·인테리어·정보)를 보이거나 숨긴다. 타이틀처럼 메뉴가 필요 없는 씬에서 사용.</summary>
+    public void SetNavigatorVisible(bool visible)
+    {
+        if (_navCanvasGroup != null)
+            _navCanvasGroup.gameObject.SetActive(visible);
+    }
+
     public void OpenPopup(UIPopup popup)
     {
         if (popup == null)

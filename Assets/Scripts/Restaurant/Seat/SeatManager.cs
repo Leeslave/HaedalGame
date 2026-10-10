@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -14,6 +15,10 @@ public class SeatManager : MonoBehaviour
     [ReadOnly][SerializeField] private List<CustomerAgent> waitingLine = new List<CustomerAgent>();
     private readonly Dictionary<Seat, float> blockedUntil = new Dictionary<Seat, float>();
     private readonly Dictionary<Seat, int> angryDepartures = new Dictionary<Seat, int>();
+    // 맨 앞 손님이 자리로 떠난 뒤 남은 손님들이 앞으로 당겨 앉기까지의 시간차.
+    // 동시에 움직이면 뒷사람이 자리로 간 것처럼 보이므로 앞사람이 먼저 출발하게 한다.
+    private const float WaitingLineShiftDelay = 0.8f;
+    private Coroutine repositionRoutine;
     private bool Available(Seat seat) => !seat.GetIsOccupied() && (!blockedUntil.TryGetValue(seat, out float until) || Time.time >= until);
     private void Update()
     {
@@ -68,6 +73,8 @@ public class SeatManager : MonoBehaviour
 
         if (waitingLine.Count >= WaitingBenchCount) { return null; }
 
+        // 앞당기기가 예약된 상태라면 먼저 끝내 둬야 새 손님에게 줄 벤치가 비어 있다.
+        FlushWaitingLineReposition();
         waitingLine.Add(customer);
         return waitingBenchSeats[waitingLine.Count - 1];
     }
@@ -126,11 +133,33 @@ public class SeatManager : MonoBehaviour
     }
 
     // 대기줄 순서에 맞춰 남은 손님들을 각자의 웨이팅 벤치 위치로 재배치한다(점유 플래그 조작 없음).
+    // 바로 옮기지 않고 WaitingLineShiftDelay 뒤에 옮긴다. 그 사이에 다시 요청되면 마지막 요청 기준으로 한 번만 옮긴다.
     private void RepositionWaitingLine()
+    {
+        if (repositionRoutine != null) { StopCoroutine(repositionRoutine); }
+        repositionRoutine = StartCoroutine(RepositionAfterDelay());
+    }
+
+    private IEnumerator RepositionAfterDelay()
+    {
+        yield return new WaitForSeconds(WaitingLineShiftDelay);
+        repositionRoutine = null;
+        RepositionWaitingLineNow();
+    }
+
+    private void FlushWaitingLineReposition()
+    {
+        if (repositionRoutine == null) { return; }
+        StopCoroutine(repositionRoutine);
+        repositionRoutine = null;
+        RepositionWaitingLineNow();
+    }
+
+    private void RepositionWaitingLineNow()
     {
         for (int i = 0; i < waitingLine.Count; i++)
         {
-            waitingLine[i].MoveWaitingSeat(waitingBenchSeats[i]);
+            if (waitingLine[i] != null) { waitingLine[i].MoveWaitingSeat(waitingBenchSeats[i]); }
         }
     }
 }

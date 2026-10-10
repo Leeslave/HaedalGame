@@ -33,6 +33,8 @@ public class DayCycleController : MonoBehaviour
     public DayLoopPhase Phase { get; private set; } = DayLoopPhase.Preparation;
     public DayLedger Ledger { get; } = new DayLedger();
     public bool IsPaused { get; private set; }
+    /// <summary>안내(튜토리얼)를 읽는 동안의 정지. 플레이어 정지(IsPaused)와 별개로 관리한다.</summary>
+    public bool IsGuidePaused { get; private set; }
     public CustomerSpawner Spawner => _rgm != null ? _rgm.customerSpawner : null;
     public IReadOnlyList<ServerAgent> Servers => _servers;
 
@@ -47,6 +49,12 @@ public class DayCycleController : MonoBehaviour
     private bool _committed;
     private DaySettlementRecord _record;
     private int _openDay;
+
+    // 준비 화면 메뉴판의 임시 문구 (씬에 들어 있는 TMP 텍스트를 실제 값으로 바꾼다)
+    private const string RestaurantName = "해달식당";
+    private const int MenuBoardLines = 5;
+    private TMP_Text _boardDay, _boardRating, _boardName, _boardMenu;
+    private float _nextBoardRefresh;
 
     /// <summary>현재 일차. 세션 값이 기준이다.</summary>
     public int Day
@@ -84,6 +92,10 @@ public class DayCycleController : MonoBehaviour
         PreOperationUIManager.StartBlocker = GetStartBlockReason;
         PreOperationUIManager.OnStartBlocked = HandleStartBlocked;
 
+        // 배속은 Time.timeScale로 걸어 조리·식사·손님 생성까지 같은 비율로 빨라지게 한다.
+        RestaurantSpeedController.AppliedByTimeScale = true;
+        RestaurantSpeedController.OnFastForwardChanged += HandleSpeedChanged;
+
         // 다음 날 준비는 x1, 정지 해제 상태로 시작한다.
         RestaurantSpeedController.SetFastForward(false);
         SetPaused(false);
@@ -93,6 +105,7 @@ public class DayCycleController : MonoBehaviour
         _hud.Init(this);
         gameObject.AddComponent<NpcStatusOverlay>().Init(this);
         gameObject.AddComponent<FirstDayGuide>().Init(this);
+        gameObject.AddComponent<PlacementToolbar>();
 
         SetPhase(DayLoopPhase.Preparation);
     }
@@ -108,6 +121,8 @@ public class DayCycleController : MonoBehaviour
         }
         if (PreOperationUIManager.StartBlocker == (Func<string>)GetStartBlockReason) PreOperationUIManager.StartBlocker = null;
         if (PreOperationUIManager.OnStartBlocked == (Action<string>)HandleStartBlocked) PreOperationUIManager.OnStartBlocked = null;
+        RestaurantSpeedController.OnFastForwardChanged -= HandleSpeedChanged;
+        RestaurantSpeedController.AppliedByTimeScale = false;
         Time.timeScale = 1f;
         if (Instance == this) Instance = null;
     }
@@ -115,6 +130,13 @@ public class DayCycleController : MonoBehaviour
     private void SetPhase(DayLoopPhase phase)
     {
         Phase = phase;
+        if (phase != DayLoopPhase.Open && phase != DayLoopPhase.Closing)
+        {
+            IsGuidePaused = false;
+            ApplyTimeScale();
+        }
+        if (phase == DayLoopPhase.Preparation)
+            RefreshPreparationBoard();
         OnPhaseChanged?.Invoke(phase);
     }
 
@@ -129,7 +151,27 @@ public class DayCycleController : MonoBehaviour
             paused = false;
 
         IsPaused = paused;
-        Time.timeScale = paused ? 0f : 1f;
+        ApplyTimeScale();
+    }
+
+    /// <summary>안내를 읽는 동안 게임 시간을 멈춘다. 영업 중에만 멈출 수 있다.</summary>
+    public void SetGuidePaused(bool paused)
+    {
+        if (paused && Phase != DayLoopPhase.Open && Phase != DayLoopPhase.Closing)
+            paused = false;
+
+        IsGuidePaused = paused;
+        ApplyTimeScale();
+    }
+
+    private void HandleSpeedChanged(bool fast)
+    {
+        ApplyTimeScale();
+    }
+
+    private void ApplyTimeScale()
+    {
+        Time.timeScale = IsPaused || IsGuidePaused ? 0f : RestaurantSpeedController.CurrentSpeed;
     }
 
     // ───── 준비 (GUIDE-01) ─────
@@ -218,6 +260,12 @@ public class DayCycleController : MonoBehaviour
 
     private void Update()
     {
+        if (Phase == DayLoopPhase.Preparation && Time.unscaledTime >= _nextBoardRefresh)
+        {
+            _nextBoardRefresh = Time.unscaledTime + 0.5f;
+            RefreshPreparationBoard();
+        }
+
         if ((Phase != DayLoopPhase.Open && Phase != DayLoopPhase.Closing) || _settling) return;
 
         // 영업·마감 정지 방지: 남은 손님이 있는데 오래 아무 진행이 없으면 미대접으로 내보낸다.
@@ -247,6 +295,7 @@ public class DayCycleController : MonoBehaviour
     private IEnumerator SettleRoutine()
     {
         SetPaused(false);
+        SetGuidePaused(false);
         RestaurantSpeedController.SetFastForward(false);
         if (OperationUIManager.Instance != null) OperationUIManager.Instance.HideUI();
 
@@ -322,9 +371,21 @@ public class DayCycleController : MonoBehaviour
         {
             string value = text.text != null ? text.text.Trim() : "";
 
-            // 준비 화면의 임시 날짜(예: 2026/04/08)를 실제 일차로 바꾼다.
+            // 한글 글리프가 없는 기본 폰트(LiberationSans)를 쓰는 텍스트는 글자가 깨지므로 한글 폰트로 바꾼다.
+            // (자리 배치에서 테이블을 눌렀을 때 뜨는 이동·삭제·취소 메뉴 등)
+            if (text.font != null && text.font.name.StartsWith("LiberationSans") && ContainsHangul(value) && DayLoopUI.Font != null)
+                text.font = DayLoopUI.Font;
+
+            // 준비 화면 메뉴판의 임시 문구(날짜·평점·식당 이름·오늘의 메뉴)는 실제 값으로 바꾼다.
+            bool onBoard = text.transform.root.name == "PreOperation";
             if (System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{4}/\d{1,2}/\d{1,2}$"))
-                text.text = $"{Day}일차";
+                _boardDay = text;
+            else if (onBoard && value.StartsWith("평점"))
+                _boardRating = text;
+            else if (onBoard && value.EndsWith("레스토랑"))
+                _boardName = text;
+            else if (onBoard && value.StartsWith("오늘의 메뉴"))
+                _boardMenu = text;
 
             // 개발용 작업 목록 버튼은 개발 빌드에서만 보이고, 상단 HUD와 겹치지 않게 왼쪽 아래로 옮긴다.
             if (value == "주방 Task" || value == "서빙 Task")
@@ -349,6 +410,53 @@ public class DayCycleController : MonoBehaviour
         {
             foreach (TestCurrencyUI test in FindObjectsByType<TestCurrencyUI>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 test.gameObject.SetActive(false);
+        }
+    }
+
+    private static bool ContainsHangul(string value)
+    {
+        foreach (char c in value)
+        {
+            if (c >= '\uAC00' && c <= '\uD7A3') return true;
+        }
+        return false;
+    }
+
+    private void RefreshPreparationBoard()
+    {
+        if (_boardDay != null)
+            _boardDay.text = $"{Day}일차";
+
+        if (_boardName != null)
+            _boardName.text = RestaurantName;
+
+        if (_boardRating != null)
+        {
+            RestaurantRatingManager rating = RestaurantRatingManager.Instance;
+            float value = rating != null ? rating.RestaurantRating : 0f;
+            _boardRating.text = value > 0f ? $"평점 : {DayLoopUI.Rating(value)}/5.0" : "평점 : -/5.0";
+        }
+
+        if (_boardMenu != null)
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder("오늘의 메뉴\n\n");
+            MenuManager menu = MenuManager.Instance;
+            int count = menu != null ? menu.DailyFoods.Count : 0;
+            if (count == 0)
+            {
+                sb.Append("등록된 메뉴 없음");
+            }
+            else
+            {
+                int shown = count > MenuBoardLines ? MenuBoardLines - 1 : count;
+                for (int i = 0; i < shown; i++)
+                {
+                    RecipeData food = menu.DailyFoods[i];
+                    if (food != null) sb.Append(food.RecipeName).Append('\n');
+                }
+                if (shown < count) sb.Append("외 ").Append(count - shown).Append("개");
+            }
+            _boardMenu.text = sb.ToString().TrimEnd('\n');
         }
     }
 

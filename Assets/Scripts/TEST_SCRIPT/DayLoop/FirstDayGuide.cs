@@ -7,13 +7,15 @@ using UnityEngine.UI;
 /// [TEST 하루 루프] 준비 화면 안내 카드와 첫 손님 안내. (GUIDE-01)
 ///  - 준비 카드(매일): 날짜·보유 골드·오늘의 메뉴·배치 직원·이용 가능 좌석, 영업 가능 여부와 이유
 ///  - 첫날(안내 미완료): 첫 손님 한 명을 따라 입장 → 주문 → 조리 → 운반 → 식사 → 계산을 짧게 설명
-///    자동 처리 단계는 설명만 하고 입력을 요구하지 않는다. 건너뛰기 가능. 완료 여부는 세션에 기록되어
-///    결산 체크포인트와 함께 저장된다. (새 게임에서만 다시 보인다)
+///    새 단계가 나오면 게임을 잠깐 멈추고, [확인]을 누르면 이어서 진행한다. 건너뛰기 가능.
+///    완료 여부는 세션에 기록되어 결산 체크포인트와 함께 저장된다. (새 게임에서만 다시 보인다)
+///  - 직원 잠듦(한 번만): 영업 중 처음으로 직원이 지쳐 잠들면 게임을 멈추고 깨우는 방법을 알려 준다.
 ///  - 첫 손님만 식사 시간을 줄여 첫 수익까지의 시간을 앞당긴다. (일반 영업 속도는 그대로)
 /// </summary>
 public class FirstDayGuide : MonoBehaviour
 {
     private const float FirstGuestEatSeconds = 4f;
+    private const string StaffSleepGuideId = "DayLoopTEST.StaffSleepGuide";
 
     private enum Step { None, Enter, Waiting, Choosing, OrderReady, Cooking, Carrying, Eating, Paid, Done }
 
@@ -30,11 +32,14 @@ public class FirstDayGuide : MonoBehaviour
     // 영업 안내
     private RectTransform _guideBar;
     private TMP_Text _guideStep, _guideText, _guideHint;
+    private Button _continueButton;
+    private System.Action _onContinue;
     private bool _guideActive;
+    private bool _sleepGuideActive;
+    private float _nextSleepCheck;
     private CustomerAgent _followed;
     private Step _step;
     private int _paidAmount;
-    private float _closeAt = -1f;
     private float _nextFollowSearch;
 
     public void Init(DayCycleController day)
@@ -83,9 +88,17 @@ public class FirstDayGuide : MonoBehaviour
         }
 
         if (phase == DayLoopPhase.Settlement)
+        {
             EndGuide(false);
+            EndSleepGuide(false);
+        }
 
-        _guideBar.gameObject.SetActive(_guideActive);
+        RefreshGuideBar();
+    }
+
+    private void RefreshGuideBar()
+    {
+        _guideBar.gameObject.SetActive(_guideActive || _sleepGuideActive);
     }
 
     private void Update()
@@ -98,6 +111,8 @@ public class FirstDayGuide : MonoBehaviour
 
         if (_guideActive)
             UpdateGuide();
+        else
+            CheckStaffSleep();
     }
 
     // ───── 준비 카드 ─────
@@ -188,11 +203,7 @@ public class FirstDayGuide : MonoBehaviour
 
     private void UpdateGuide()
     {
-        if (_closeAt > 0f)
-        {
-            if (Time.unscaledTime >= _closeAt) EndGuide(true);
-            return;
-        }
+        if (_onContinue != null) return;   // 안내를 읽는 중 (게임 정지)
 
         // 따라가던 손님이 계산 없이 나가면 아직 남아 있는 다른 손님을 따라간다.
         if (_followed == null || (_followed.State == CustomerState.Exit && !_followed.WasServed))
@@ -268,16 +279,40 @@ public class FirstDayGuide : MonoBehaviour
                 SetGuide("4. 조리 (자동)", "주방 직원이 주문한 요리를 만들고 있어요.", "직원 발밑에 지금 하는 일이 표시돼요.");
                 break;
             case Step.Carrying:
-                SetGuide("5. 음식 운반 (자동)", "홀 직원이 음식을 들고 손님 자리로 가요.", "직원 머리 위 아이콘이 운반 중인 음식이에요.");
+                SetGuide("5. 음식 운반 (자동)", "홀 직원이 음식을 들고 손님 자리로 가요.", "직원 머리 위에 운반 중인 음식이 보여요.");
                 break;
             case Step.Eating:
                 SetGuide("6. 식사", "음식이 식탁에 놓이고 손님이 식사 중이에요.", "");
                 break;
             case Step.Paid:
-                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "위쪽 [x1/x2]로 배속, [|| 정지]로 일시정지할 수 있어요.");
-                _closeAt = Time.unscaledTime + 6f;
-                break;
+                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "위쪽 배속 버튼(x1·x2·x3)으로 빠르게, [|| 정지]로 일시정지할 수 있어요.");
+                WaitForContinue(() => EndGuide(true));
+                return;
         }
+
+        WaitForContinue(null);
+    }
+
+    // 게임을 멈추고 [확인]을 기다린다. 확인하면 then을 실행하고 이어서 진행한다.
+    private void WaitForContinue(System.Action then)
+    {
+        _onContinue = then ?? (() => { });
+        _continueButton.gameObject.SetActive(true);
+        _day.SetGuidePaused(true);
+    }
+
+    private void Continue()
+    {
+        System.Action then = _onContinue;
+        ClearContinue();
+        then?.Invoke();
+    }
+
+    private void ClearContinue()
+    {
+        _onContinue = null;
+        if (_continueButton != null) _continueButton.gameObject.SetActive(false);
+        _day.SetGuidePaused(false);
     }
 
     private void SetGuide(string step, string text, string hint)
@@ -290,7 +325,8 @@ public class FirstDayGuide : MonoBehaviour
 
     private void SkipGuide()
     {
-        EndGuide(true);
+        if (_sleepGuideActive) EndSleepGuide(true);
+        else EndGuide(true);
     }
 
     private void EndGuide(bool completed)
@@ -298,9 +334,43 @@ public class FirstDayGuide : MonoBehaviour
         if (completed)
             GameSession.TryMarkTutorialCompleted(DayLoopSave.FirstDayGuideId);
 
+        if (_guideActive) ClearContinue();
         _guideActive = false;
-        _closeAt = -1f;
-        if (_guideBar != null) _guideBar.gameObject.SetActive(false);
+        if (_guideBar != null) RefreshGuideBar();
+    }
+
+    // ───── 직원 잠듦 안내 ─────
+
+    private void CheckStaffSleep()
+    {
+        if (_sleepGuideActive || Time.unscaledTime < _nextSleepCheck) return;
+        if (_day.Phase != DayLoopPhase.Open && _day.Phase != DayLoopPhase.Closing) return;
+        _nextSleepCheck = Time.unscaledTime + 0.5f;
+
+        if (!GameSession.TryGetTutorialCompleted(StaffSleepGuideId, out bool completed) || completed) return;
+
+        foreach (PartTimerAgent agent in FindObjectsByType<PartTimerAgent>(FindObjectsSortMode.None))
+        {
+            if (!agent.IsSleeping) continue;
+
+            _sleepGuideActive = true;
+            string role = agent is ChefAgent ? "주방" : "홀";
+            SetGuide("직원 잠듦", $"지친 {role} 직원이 잠들었어요. 자는 동안에는 일이 멈춰요.",
+                "잠든 직원(발밑에 '잠듦' 표시)을 클릭하면 깨울 수 있어요. 체력이 낮을수록 잘 잠들어요.");
+            RefreshGuideBar();
+            WaitForContinue(() => EndSleepGuide(true));
+            return;
+        }
+    }
+
+    private void EndSleepGuide(bool completed)
+    {
+        if (completed)
+            GameSession.TryMarkTutorialCompleted(StaffSleepGuideId);
+
+        if (_sleepGuideActive && _onContinue != null) ClearContinue();
+        _sleepGuideActive = false;
+        if (_guideBar != null) RefreshGuideBar();
     }
 
     // ───── 조립 ─────
@@ -355,6 +425,10 @@ public class FirstDayGuide : MonoBehaviour
         DayLoopUI.Layout(_guideText, preferredHeight: 44);
         _guideHint = DayLoopUI.Text(texts, "", 21, DayLoopUI.InkSoft, TextAlignmentOptions.MidlineLeft);
         DayLoopUI.Layout(_guideHint, preferredHeight: 30);
+
+        _continueButton = DayLoopUI.Button(bar.transform, "확인", DayLoopUI.Sea, Color.white, 24, Continue, "Continue");
+        DayLoopUI.Layout(_continueButton, preferredWidth: 130, preferredHeight: 56);
+        _continueButton.gameObject.SetActive(false);
 
         Button skip = DayLoopUI.Button(bar.transform, "안내 건너뛰기", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, 21, SkipGuide, "Skip");
         DayLoopUI.Layout(skip, preferredWidth: 170, preferredHeight: 56);

@@ -5,9 +5,11 @@ using UnityEngine;
 
 /// <summary>
 /// [TEST 하루 루프] 월드 상태 표시. (NPC-01, NPC-02, ECON-01, ART-10/11 임시 표현)
-///  - 손님: 발밑 상태 칩(글자) + 인내심이 실제로 줄어드는 동안 게이지. 색만으로 상태를 구분하지 않는다.
+///  - 손님: 진행 중 상태(자리 대기·요리 기다리는 중 등)는 글자 없이 인내심 게이지만 보여 준다.
+///          인내심이 5초 이하로 남았을 때와 퇴장 반응(평점)만 글자로 띄운다.
 ///  - 식사 중: 주문한 메뉴 아이콘을 좌석 앞 식탁 위치에 표시
 ///  - 홀 직원: 음식 운반 중에는 머리 위에 같은 메뉴 아이콘. 서빙 순간 직원 쪽 아이콘이 사라지고 식탁에 나타난다.
+///    메뉴 아이콘이 아직 없는 음식은 아이콘 대신 음식 이름표를 같은 자리에 띄운다.
 ///  - 직원: 역할·현재 작업 상태 칩
 ///  - 계산: 실제 지급 이벤트 금액으로 +nG 팝업 (오늘 첫 수익은 크게)
 /// 표시만 담당하며 손님·직원의 행동이나 지급에는 관여하지 않는다.
@@ -34,6 +36,7 @@ public class NpcStatusOverlay : MonoBehaviour
         public SpriteRenderer body;
         public Chip chip;
         public SpriteRenderer food;
+        public Chip foodTag;
     }
 
     private class StaffView
@@ -41,6 +44,7 @@ public class NpcStatusOverlay : MonoBehaviour
         public SpriteRenderer body;
         public Chip chip;
         public SpriteRenderer food;
+        public Chip foodTag;
     }
 
     private DayCycleController _day;
@@ -96,6 +100,7 @@ public class NpcStatusOverlay : MonoBehaviour
             body = customer.GetComponentInChildren<SpriteRenderer>(),
             chip = CreateChip("Customer"),
             food = CreateIcon("TableFood"),
+            foodTag = CreateChip("TableFoodTag"),
         };
     }
 
@@ -116,6 +121,7 @@ public class NpcStatusOverlay : MonoBehaviour
             body = agent.GetComponentInChildren<SpriteRenderer>(),
             chip = CreateChip("Staff"),
             food = CreateIcon("CarriedFood"),
+            foodTag = CreateChip("CarriedFoodTag"),
         };
     }
 
@@ -135,6 +141,7 @@ public class NpcStatusOverlay : MonoBehaviour
             CustomerView view = _customers[dead];
             Destroy(view.chip.root.gameObject);
             Destroy(view.food.gameObject);
+            Destroy(view.foodTag.root.gameObject);
             _customers.Remove(dead);
         }
 
@@ -149,6 +156,7 @@ public class NpcStatusOverlay : MonoBehaviour
             StaffView view = _staff[dead];
             Destroy(view.chip.root.gameObject);
             Destroy(view.food.gameObject);
+            Destroy(view.foodTag.root.gameObject);
             _staff.Remove(dead);
         }
     }
@@ -160,7 +168,9 @@ public class NpcStatusOverlay : MonoBehaviour
         Bounds bounds = GetBounds(customer.transform, view.body);
         CustomerState state = customer.State;
 
-        string label = CustomerLabel(customer, state, out Color textColor);
+        // 진행 중 상태는 글자를 띄우지 않는다. (게이지와 캐릭터 동작으로 충분하다)
+        Color textColor = DayLoopUI.Ink;
+        string label = ShowsCustomerLabel(state) ? CustomerLabel(customer, state, out textColor) : "";
         SetChip(view.chip, label, textColor);
         view.chip.root.position = new Vector3(bounds.center.x, bounds.min.y - ChipHeight * 0.6f, 0f);
 
@@ -174,16 +184,18 @@ public class NpcStatusOverlay : MonoBehaviour
         // 식탁 위 음식: 식사 중에만, 앉은 좌석 앞(손님이 바라보는 방향)에 놓는다.
         RecipeData order = customer.coc != null ? customer.coc.GetOrderData() : null;
         Seat seat = customer.GetCurrentSeat();
-        bool eating = state == CustomerState.Eating && order != null && order.Icon != null && seat != null;
-        view.food.gameObject.SetActive(eating);
+        bool eating = state == CustomerState.Eating && order != null && seat != null;
+        Vector3 tablePos = Vector3.zero;
         if (eating)
         {
-            SetIcon(view.food, order.Icon);
             Vector2 facing = seat.GetFacingDirection();
             Vector3 basePos = seat.GetSeatPoint() != null ? seat.GetSeatPoint().position : customer.transform.position;
-            view.food.transform.position = basePos + (Vector3)(facing.normalized * 0.6f);
+            tablePos = basePos + (Vector3)(facing.normalized * 0.6f);
         }
+        ShowFood(view.food, view.foodTag, eating ? order : null, tablePos);
     }
+
+    private static bool ShowsCustomerLabel(CustomerState state) => state == CustomerState.Paying || state == CustomerState.Exit;
 
     private static string CustomerLabel(CustomerAgent customer, CustomerState state, out Color color)
     {
@@ -238,13 +250,24 @@ public class NpcStatusOverlay : MonoBehaviour
         view.chip.root.position = new Vector3(bounds.center.x, bounds.min.y - ChipHeight * 0.6f, 0f);
         SetGauge(view.chip, false, 1f);
 
-        bool carrying = carried != null && carried.Icon != null;
-        view.food.gameObject.SetActive(carrying);
-        if (carrying)
+        ShowFood(view.food, view.foodTag, carried, new Vector3(bounds.center.x, bounds.max.y + IconSize * 0.45f, 0f));
+    }
+
+    // 음식 아이콘을 보여 준다. 아이콘이 없는 메뉴는 같은 자리에 음식 이름표를 띄운다. food가 null이면 모두 숨긴다.
+    private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position)
+    {
+        bool hasIcon = food != null && food.Icon != null;
+        icon.gameObject.SetActive(hasIcon);
+        if (hasIcon)
         {
-            SetIcon(view.food, carried.Icon);
-            view.food.transform.position = new Vector3(bounds.center.x, bounds.max.y + IconSize * 0.45f, 0f);
+            SetIcon(icon, food.Icon);
+            icon.transform.position = position;
         }
+
+        bool showTag = food != null && !hasIcon;
+        SetChip(tag, showTag ? food.RecipeName : "", DayLoopUI.WoodDark);
+        SetGauge(tag, false, 1f);
+        if (showTag) tag.root.position = position;
     }
 
     // ───── 결제 팝업 ─────
@@ -363,6 +386,10 @@ public class NpcStatusOverlay : MonoBehaviour
         if (chip.shown == label) return;
         chip.shown = label;
         chip.text.text = label;
+        bool visible = !string.IsNullOrEmpty(label);
+        chip.background.enabled = visible;
+        chip.text.enabled = visible;
+        if (!visible) return;
         float width = chip.text.GetPreferredValues(label).x + 0.36f;
         chip.background.size = new Vector2(Mathf.Max(0.6f, width), ChipHeight);
     }
