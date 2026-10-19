@@ -77,7 +77,23 @@ public class TitleMenuController : MonoBehaviour
             GameSession.End();
 
         GameFlow.SetPhase(GamePhase.Title);
+        EnsureSummaryLabel();
         RefreshContinue();
+    }
+
+    // 씬에 요약 텍스트가 연결되지 않았으면 [이어하기] 버튼 바로 아래에 작은 요약 띠를 만든다. (UI 시안: 저장 요약은 이어하기에 붙인다)
+    private void EnsureSummaryLabel()
+    {
+        if (_continueSummaryText != null || _continueButton == null || !(_continueButton.transform is RectTransform buttonRect))
+            return;
+
+        Image pill = DayLoopUI.Panel(buttonRect, new Color(DayLoopUI.Kit.Line.r, DayLoopUI.Kit.Line.g, DayLoopUI.Kit.Line.b, 0.78f), "[Title] SaveSummary");
+        pill.raycastTarget = false;
+        pill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        DayLoopUI.Place(pill.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -8f), new Vector2(Mathf.Max(460f, buttonRect.rect.width), 66f));
+        TextMeshProUGUI text = DayLoopUI.Text(pill.transform, "", 21, DayLoopUI.Kit.Sail, TextAlignmentOptions.Center, FontStyles.Bold);
+        DayLoopUI.Stretch(text.rectTransform, 12, 4, 12, 4);
+        _continueSummaryText = text;
     }
 
     private void RefreshContinue()
@@ -90,6 +106,10 @@ public class TitleMenuController : MonoBehaviour
 
         if (_continueSummaryText == null)
             return;
+
+        // 요약 띠는 보여 줄 내용이 있을 때만 보인다.
+        if (_continueSummaryText.transform.parent != null && _continueSummaryText.transform.parent.name == "[Title] SaveSummary")
+            _continueSummaryText.transform.parent.gameObject.SetActive(hasFile);
 
         if (hasValidSave)
         {

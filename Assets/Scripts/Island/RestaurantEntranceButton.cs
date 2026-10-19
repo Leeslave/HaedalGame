@@ -16,6 +16,10 @@ public class RestaurantEntranceButton : MonoBehaviour
             return;
         }
 
+        // 섬 HUD가 있으면 오늘의 메뉴·직원·재료 부족을 보여 주는 식당 카드로 확인한다.
+        if (IslandDayHud.TryShowRestaurantCard(OnConfirmStartOperation))
+            return;
+
         PopupManager.Instance.ShowConfirmPopup(
             "오늘의 장사를 시작하시겠습니까?",
             "예",
