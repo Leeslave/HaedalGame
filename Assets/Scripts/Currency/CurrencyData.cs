@@ -29,7 +29,7 @@ public class Currency : ScriptableObject
 /// <summary>
 /// ��ȭ�� ȹ��/�Һ� ��ó
 /// </summary>
-public enum TransactionSource{TestGet, TestUse, GotchaUse, ShopPurchase, BlacksmithUpgrade}
+public enum TransactionSource{TestGet, TestUse, GotchaUse, ShopPurchase, BlacksmithUpgrade, CustomerPayment}
 public struct CurrencyTransaction
 {
     [Header("Data")]

@@ -186,6 +186,7 @@ GameObject:
   - component: {fileID: 8040445746276745871}
   - component: {fileID: 2311663486876112204}
   - component: {fileID: 5411762675735787181}
+  - component: {fileID: 9200000001}
   m_Layer: 5
   m_Name: ClosingCard
   m_TagString: Untagged
@@ -708,3 +709,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7493765295923683848}
   m_CullTransparentMesh: 1
+--- !u!114 &9200000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4195259478478717653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a8b9c0d1e2f43a4b5c6d7e8f9a0b1c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClosingStatCardUI
+  headerText: {fileID: 1696752590884702902}
+  subText1: {fileID: 8591480888265176387}
+  subText2: {fileID: 5042816226962081363}
+  subText3: {fileID: 6473866245233405859}

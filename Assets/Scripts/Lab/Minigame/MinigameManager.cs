@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// 미니게임 오케스트레이터 (기획서 7.3).
 /// Initialize(레시피 조회) → StartMinigame(재료 차감 + 페이즈 순회) → Evaluate(평균) → 결과 발행.
-/// 실제 페이즈 컨트롤러(M4/M5)가 아직 없으면 baseScore로 자동 통과시켜 전체 흐름을 테스트할 수 있다.
+/// 모든 페이즈 연결을 확인한 뒤 재료를 원자적으로 소비한다.
 /// </summary>
 public class MinigameManager : MonoBehaviour
 {
@@ -25,7 +25,6 @@ public class MinigameManager : MonoBehaviour
 
     [Header("Rules")]
     [SerializeField] private float _successThreshold = 4f;          // 평균 이 값 이상이면 성공(기획서 4.11)
-    [SerializeField] private bool _autoCompleteMissingPhases = true; // 컨트롤러 없는 페이즈 자동 통과(테스트용)
 
     // 이벤트 (기획서 7.1)
     public event Action<RecipeData> OnMinigameStarted;
@@ -85,13 +84,11 @@ public class MinigameManager : MonoBehaviour
 
         IngredientInventoryService inv = ResolveInventory();
 
-        if (!HasAllIngredients(inv))
-        {
-            Debug.Log("[Minigame] 연구에 필요한 재료가 부족합니다.");
-            return false;
-        }
-
-        DeductIngredients(inv);
+        // 잘못 연결된 실습은 재료를 차감하기 전에 거절한다.
+        if (_phaseSet.Phases.Count == 0) return false;
+        foreach (var phase in _phaseSet.Phases)
+            if (phase == null || ResolveController(phase.ActionType) == null) return false;
+        if (inv == null || !inv.TryConsumeRecipe(_recipe, out _)) return false;
 
         _context = new MinigameContext
         {
@@ -126,31 +123,13 @@ public class MinigameManager : MonoBehaviour
 
             MinigamePhaseController controller = ResolveController(phase.ActionType);
 
-            if (controller == null)
-            {
-                if (!_autoCompleteMissingPhases)
-                {
-                    Debug.LogError($"[Minigame] No controller for {phase.ActionType}. Aborting.");
-                    break;
-                }
-
-                // 컨트롤러 미구현 페이즈: baseScore로 자동 통과 (M4/M5 전 흐름 테스트용)
-                _pendingResult = new PhaseScoreResult(phase.PhaseName, phase.BaseScore);
-                _phaseDone = true;
-            }
-            else
-            {
-                _phaseDone = false;
-                _pendingResult = null;
-
-                controller.OnCompleted += HandlePhaseCompleted;
-                controller.Begin(phase, _context);
-
-                while (!_phaseDone)
-                    yield return null;
-
-                controller.OnCompleted -= HandlePhaseCompleted;
-            }
+            if (controller == null) { _running = false; yield break; }
+            _phaseDone = false;
+            _pendingResult = null;
+            controller.OnCompleted += HandlePhaseCompleted;
+            controller.Begin(phase, _context);
+            while (!_phaseDone) yield return null;
+            controller.OnCompleted -= HandlePhaseCompleted;
 
             PhaseScoreResult result = _pendingResult ?? new PhaseScoreResult(phase.PhaseName, 0f);
             result.Passed = result.Score >= _successThreshold;
@@ -188,7 +167,7 @@ public class MinigameManager : MonoBehaviour
             Recipe = _recipe,
             PhaseResults = new List<PhaseScoreResult>(_results),
             AverageScore = average,
-            Success = average >= _successThreshold
+            Success = _results.Count == _phaseSet.Phases.Count && average >= _successThreshold
         };
     }
 
@@ -208,27 +187,15 @@ public class MinigameManager : MonoBehaviour
         return _inventory != null ? _inventory : IngredientInventoryService.Instance;
     }
 
-    private bool HasAllIngredients(IngredientInventoryService inv)
+    private void OnDisable()
     {
-        if (inv == null)
-            return false;
-
-        IReadOnlyList<RecipeIngredientRequirement> reqs = _recipe.Requirements;
-
-        for (int i = 0; i < reqs.Count; i++)
+        StopAllCoroutines();
+        foreach (var controller in _phaseControllers)
         {
-            if (!inv.HasEnough(reqs[i].IngredientId, reqs[i].Amount))
-                return false;
+            if (controller == null) continue;
+            controller.OnCompleted -= HandlePhaseCompleted;
+            if (_running) controller.Abort();
         }
-
-        return true;
-    }
-
-    private void DeductIngredients(IngredientInventoryService inv)
-    {
-        IReadOnlyList<RecipeIngredientRequirement> reqs = _recipe.Requirements;
-
-        for (int i = 0; i < reqs.Count; i++)
-            inv.Consume(reqs[i].IngredientId, reqs[i].Amount);
+        _running = false;
     }
 }

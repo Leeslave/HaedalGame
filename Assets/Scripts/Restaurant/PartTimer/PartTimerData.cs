@@ -16,6 +16,9 @@ public class PartTimerStatus
 
 public class PartTimerData
 {
+    public int appearanceSeed;
+    public float stamina = -1;
+    public string instanceId;       // 보유 알바 개체 ID (세이브 식별용, 이름·등급이 같아도 구분)
     public string serverName;       // 서빙 알바의 이름
     public string level;               // 서빙 알바의 등급
     public PartTimerStatus status;     // 서빙 알바의 status
@@ -45,5 +48,44 @@ public class PartTimerData
                 wage = 10000;
                 break;
         }
+    }
+
+    public EmployeeEntry ToEntry(int slotIndex)
+    {
+        return new EmployeeEntry
+        {
+            appearanceSeed = appearanceSeed,
+            stamina = stamina,
+            instanceId = instanceId,
+            name = serverName,
+            grade = level,
+            serving = status != null ? status.serving : 0f,
+            cooking = status != null ? status.cooking : 0f,
+            handy = status != null ? status.handy : 0f,
+            hp = status != null ? status.hp : 0f,
+            wage = wage,
+            role = CurrentRole.ToString(),
+            slotIndex = CurrentRole == PartTimerRole.None ? -1 : slotIndex,
+        };
+    }
+
+    public static PartTimerData FromEntry(EmployeeEntry entry)
+    {
+        PartTimerData data = new PartTimerData();
+        data.appearanceSeed = entry.appearanceSeed;
+        data.stamina = entry.stamina;
+        data.instanceId = entry.instanceId;
+        data.serverName = entry.name;
+        data.level = entry.grade;
+        data.wage = entry.wage;
+        data.status = new PartTimerStatus
+        {
+            serving = entry.serving,
+            cooking = entry.cooking,
+            handy = entry.handy,
+            hp = entry.hp,
+        };
+        data.CurrentRole = System.Enum.TryParse(entry.role, out PartTimerRole role) ? role : PartTimerRole.None;
+        return data;
     }
 }

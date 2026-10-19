@@ -3,17 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 조리 도구별 현재 레벨과 사용 요리 횟수를 보관한다.
-/// RestaurantLevelManager와 동일하게 PlayerPrefs로 저장한다 (키: 도구 에셋 이름).
+/// 조리 도구별 현재 레벨과 사용 요리 횟수를 보관한다. (키: 도구 에셋 이름)
+/// 저장은 통합 세이브(GameSession) 체크포인트에서 한다.
 /// 사용 횟수는 식당에서 요리할 때 오르는 값 — 식당 조리 시스템이 생기면 AddUseCount()를 호출해 연결한다.
 /// (미니게임과는 무관. 현재는 연결처 없음)
 /// </summary>
-public class CookwareLevelState : MonoBehaviour
+public class CookwareLevelState : MonoBehaviour, ISaveParticipant
 {
     public static CookwareLevelState Instance { get; private set; }
-
-    private const string LevelKeyPrefix = "CookwareLevel_";
-    private const string UseCountKeyPrefix = "CookwareUseCount_";
 
     private readonly Dictionary<string, int> _levelCache = new Dictionary<string, int>();
     private readonly Dictionary<string, int> _useCountCache = new Dictionary<string, int>();
@@ -29,7 +26,48 @@ public class CookwareLevelState : MonoBehaviour
         else
         {
             Destroy(gameObject);
+            return;
         }
+
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.cookware.Clear();
+
+        HashSet<string> keys = new HashSet<string>(_levelCache.Keys);
+        keys.UnionWith(_useCountCache.Keys);
+
+        foreach (string key in keys)
+        {
+            _levelCache.TryGetValue(key, out int level);
+            _useCountCache.TryGetValue(key, out int useCount);
+            data.cookware.Add(new CookwareEntry { toolId = key, level = Mathf.Max(1, level), useCount = useCount });
+        }
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _levelCache.Clear();
+        _useCountCache.Clear();
+
+        foreach (CookwareEntry entry in data.cookware)
+        {
+            if (entry == null || string.IsNullOrEmpty(entry.toolId))
+                continue;
+
+            _levelCache[entry.toolId] = Mathf.Max(1, entry.level);
+            _useCountCache[entry.toolId] = Mathf.Max(0, entry.useCount);
+        }
+
+        OnChanged?.Invoke();
     }
 
     public int GetLevel(CookwareUpgradeSO tool)
@@ -37,15 +75,7 @@ public class CookwareLevelState : MonoBehaviour
         if (tool == null)
             return 1;
 
-        string key = tool.name;
-
-        if (!_levelCache.TryGetValue(key, out int level))
-        {
-            level = PlayerPrefs.GetInt(LevelKeyPrefix + key, 1);
-            _levelCache[key] = level;
-        }
-
-        return level;
+        return _levelCache.TryGetValue(tool.name, out int level) ? level : 1;
     }
 
     public void SetLevel(CookwareUpgradeSO tool, int level)
@@ -53,13 +83,8 @@ public class CookwareLevelState : MonoBehaviour
         if (tool == null)
             return;
 
-        level = Mathf.Max(1, level);
-
-        string key = tool.name;
-        _levelCache[key] = level;
-
-        PlayerPrefs.SetInt(LevelKeyPrefix + key, level);
-        PlayerPrefs.Save();
+        _levelCache[tool.name] = Mathf.Max(1, level);
+        PushToSession();
 
         OnChanged?.Invoke();
     }
@@ -74,15 +99,7 @@ public class CookwareLevelState : MonoBehaviour
         if (tool == null)
             return 0;
 
-        string key = tool.name;
-
-        if (!_useCountCache.TryGetValue(key, out int count))
-        {
-            count = PlayerPrefs.GetInt(UseCountKeyPrefix + key, 0);
-            _useCountCache[key] = count;
-        }
-
-        return count;
+        return _useCountCache.TryGetValue(tool.name, out int count) ? count : 0;
     }
 
     public void AddUseCount(CookwareUpgradeSO tool, int amount = 1)
@@ -90,13 +107,8 @@ public class CookwareLevelState : MonoBehaviour
         if (tool == null || amount <= 0)
             return;
 
-        string key = tool.name;
-        int count = GetUseCount(tool) + amount;
-
-        _useCountCache[key] = count;
-
-        PlayerPrefs.SetInt(UseCountKeyPrefix + key, count);
-        PlayerPrefs.Save();
+        _useCountCache[tool.name] = GetUseCount(tool) + amount;
+        PushToSession();
 
         OnChanged?.Invoke();
     }
@@ -107,36 +119,26 @@ public class CookwareLevelState : MonoBehaviour
         if (tool == null || amount <= 0)
             return;
 
-        string key = tool.name;
-        int count = Mathf.Max(0, GetUseCount(tool) - amount);
-
-        _useCountCache[key] = count;
-
-        PlayerPrefs.SetInt(UseCountKeyPrefix + key, count);
-        PlayerPrefs.Save();
+        _useCountCache[tool.name] = Mathf.Max(0, GetUseCount(tool) - amount);
+        PushToSession();
 
         OnChanged?.Invoke();
     }
 
-    /// <summary>테스트용: 모든 캐시/저장을 초기화한다. (PlayerPrefs 키는 도구별이라 개별 삭제)</summary>
+    /// <summary>테스트용: 모든 도구 레벨과 사용 횟수를 초기화한다.</summary>
     public void ResetAll(IEnumerable<CookwareUpgradeSO> tools)
     {
-        if (tools != null)
-        {
-            foreach (CookwareUpgradeSO tool in tools)
-            {
-                if (tool == null)
-                    continue;
-
-                PlayerPrefs.DeleteKey(LevelKeyPrefix + tool.name);
-                PlayerPrefs.DeleteKey(UseCountKeyPrefix + tool.name);
-            }
-        }
-
         _levelCache.Clear();
         _useCountCache.Clear();
-        PlayerPrefs.Save();
+        PushToSession();
 
         OnChanged?.Invoke();
+    }
+
+    // 세션에 즉시 반영한다. 파일 저장은 체크포인트에서만 한다.
+    private void PushToSession()
+    {
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
     }
 }

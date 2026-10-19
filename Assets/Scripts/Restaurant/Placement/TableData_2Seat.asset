@@ -16,6 +16,7 @@ MonoBehaviour:
   tableType: 0
   gridWidth: 4
   gridHeight: 4
+  visualScale: 1.5
   tableTiles:
   - {x: 0, y: 0}
   chairTiles:

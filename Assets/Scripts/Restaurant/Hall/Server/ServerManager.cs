@@ -12,7 +12,17 @@ public class ServerManager : MonoBehaviour
     [SerializeField] private Transform kitchen;
     [SerializeField] private GameObject parent;
     public Vector2 GetKitchenPosition() { return kitchen.position; }
-    public Vector2 GetInitPosition(int n) { return serverInitposition[n-1].position; }
+
+    // index는 0-based. 씬에 배치된 알바 순서를 그대로 사용하므로 인스펙터에서 별도로 맞춰줄 필요가 없다.
+    public Vector2 GetInitPosition(int index)
+    {
+        if (index < 0 || index >= serverInitposition.Length)
+        {
+            return serverInitposition.Length > 0 ? serverInitposition[index % serverInitposition.Length].position : transform.position;
+        }
+        return serverInitposition[index].position;
+    }
+
     [ReadOnly][SerializeField] private List<ServerAgent> activeServers;
 
 
@@ -21,13 +31,13 @@ public class ServerManager : MonoBehaviour
         Instance = this;
     }
 
-    void Start() { }
+    void Start() { StaffRuntimeBinding.Configure<ServerAgent>(parent, PartTimerRole.Serving); }
 
     public void InitializeAgents()
     {
-        activeServers = new List<ServerAgent>(parent.GetComponentsInChildren<ServerAgent>());
-        foreach (ServerAgent agent in activeServers)
-            agent.Initialize();
+        activeServers = StaffRuntimeBinding.Configure<ServerAgent>(parent, PartTimerRole.Serving);
+        for (int i = 0; i < activeServers.Count; i++)
+            activeServers[i].Initialize(i);
     }
 
     public void HireServer(PartTimerData target)

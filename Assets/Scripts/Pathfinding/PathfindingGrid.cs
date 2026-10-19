@@ -110,6 +110,114 @@ public class PathfindingGrid : MonoBehaviour
     }
 
 
+    // 후보 칸들을 실제로 막지 않고(가상 적용) 임시로만 walkable=false로 가정한 뒤,
+    // 그래도 나머지 이동 가능 영역이 하나로 계속 연결돼 있는지 BFS로 검사한다.
+    // 배치 확정 전 Ghost 미리보기 단계에서 "통로를 완전히 막아버리는 배치"를 걸러내는 데 사용.
+    public bool WouldStayConnected(List<Vector2Int> candidateBlockedCells)
+    {
+        Vector2Int? reference = FindReferenceWalkableCell(candidateBlockedCells);
+        if (reference == null) { return true; } // 참조할 이동 가능 칸이 없으면 판단 불필요
+
+        HashSet<Vector2Int> reachableBefore = FloodFillWalkable(reference.Value);
+
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (nodes.TryGetValue(cell, out PathNode node)) { node.walkable = false; }
+        }
+
+        HashSet<Vector2Int> reachableAfter = FloodFillWalkable(reference.Value);
+
+        // 위에서 candidateBlockedCells는 배치 유효성 검사(CheckTileValid)를 이미 통과한
+        // 칸들이므로, 가상 적용 전에는 항상 walkable=true였다. 그대로 복원한다.
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (nodes.TryGetValue(cell, out PathNode node)) { node.walkable = true; }
+        }
+
+        int removedFromReachable = 0;
+        foreach (Vector2Int cell in candidateBlockedCells)
+        {
+            if (reachableBefore.Contains(cell)) { removedFromReachable++; }
+        }
+
+        // 후보 칸들만큼만 줄어들었다면(= 다른 영역을 갈라놓지 않았다면) 여전히 연결된 것
+        return reachableAfter.Count == reachableBefore.Count - removedFromReachable;
+    }
+
+    private Vector2Int? FindReferenceWalkableCell(List<Vector2Int> excluding)
+    {
+        foreach (KeyValuePair<Vector2Int, PathNode> kv in nodes)
+        {
+            if (kv.Value.walkable && !excluding.Contains(kv.Key)) { return kv.Key; }
+        }
+        return null;
+    }
+
+    private HashSet<Vector2Int> FloodFillWalkable(Vector2Int start)
+    {
+        HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+
+        visited.Add(start);
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            PathNode current = nodes[queue.Dequeue()];
+            foreach (PathNode neighbor in GetNeighbors(current))
+            {
+                if (!neighbor.walkable || visited.Contains(neighbor.gridPos)) { continue; }
+                visited.Add(neighbor.gridPos);
+                queue.Enqueue(neighbor.gridPos);
+            }
+        }
+        return visited;
+    }
+
+    // 목적지 칸이 막혀 있을 때(조리대·카운터 등 장애물 위의 작업 지점) 대신 설 칸을 찾는다.
+    // target 주변 radius 칸 이내의 walkable 칸 중 (걸어가는 거리 + 작업 지점과의 거리 × 2)가 가장 작은 칸을 고른다.
+    // 작업 지점에 붙은 칸이라도 카운터 반대편(홀 쪽)이라 멀리 돌아가야 하면 고르지 않고,
+    // 가깝게 닿는 칸이라도 작업 지점에서 떨어져 있으면 불리하게 한다.
+    public PathNode FindClosestReachableNear(PathNode from, PathNode target, int radius)
+    {
+        if (from == null || target == null) { return null; }
+
+        // from에서 BFS로 걸음 수를 구한다 (from 자체가 장애물 위여도 이웃의 walkable 칸으로 나아갈 수 있다)
+        Dictionary<PathNode, int> steps = new Dictionary<PathNode, int> { { from, 0 } };
+        Queue<PathNode> queue = new Queue<PathNode>();
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            PathNode current = queue.Dequeue();
+            foreach (PathNode neighbor in GetNeighbors(current))
+            {
+                if (!neighbor.walkable || steps.ContainsKey(neighbor)) { continue; }
+                steps[neighbor] = steps[current] + 1;
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        PathNode best = null;
+        int bestCost = int.MaxValue;
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                PathNode node = GetNode(target.gridPos + new Vector2Int(dx, dy));
+                if (node == null || !node.walkable || !steps.TryGetValue(node, out int walk)) { continue; }
+
+                int cost = walk + 2 * (Mathf.Abs(dx) + Mathf.Abs(dy));
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
+                    best = node;
+                }
+            }
+        }
+        return best;
+    }
+
     // 런타임에서 그리드 리빌드
     public void RebuildGrid()
     {
@@ -125,4 +233,7 @@ public class PathfindingGrid : MonoBehaviour
 
     // 배치 시스템에서 스냅 계산 용
     public Tilemap FloorMap => floorMap;
+
+    // Pathfinder가 오픈리스트 힙 크기를 미리 할당할 때 사용
+    public int NodeCount => nodes.Count;
 }

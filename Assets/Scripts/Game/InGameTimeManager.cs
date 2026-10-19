@@ -2,17 +2,14 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 인게임 시간 시스템 플레이스홀더.
-/// 실제 게임 시간 흐름 시스템 구현 전까지 사용.
-/// AdvanceDay()를 호출하면 하루가 지나며 OnDayAdvanced 이벤트 발생.
+/// 현재 일차 보관. 값의 기준은 GameSession이며 파일 저장은 체크포인트에서만 한다.
+/// 날짜 증가는 하루 종료 처리(잠자기)만 수행해야 한다.
 /// </summary>
-public class InGameTimeManager : MonoBehaviour
+public class InGameTimeManager : MonoBehaviour, ISaveParticipant
 {
     public static InGameTimeManager Instance { get; private set; }
 
-    private const string SaveKey = "InGameDay";
-
-    private int _currentDay;
+    private int _currentDay = 1;
     public int CurrentDay => _currentDay;
 
     public Action<int> OnDayAdvanced;
@@ -30,15 +27,29 @@ public class InGameTimeManager : MonoBehaviour
             return;
         }
 
-        _currentDay = PlayerPrefs.GetInt(SaveKey, 0);
+        GameSession.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            GameSession.Unregister(this);
     }
 
     // 추후 실제 게임 시간 시스템으로 교체 예정
     public void AdvanceDay()
     {
         _currentDay++;
-        PlayerPrefs.SetInt(SaveKey, _currentDay);
-        PlayerPrefs.Save();
         OnDayAdvanced?.Invoke(_currentDay);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.day = _currentDay;
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _currentDay = Mathf.Max(1, data.day);
     }
 }

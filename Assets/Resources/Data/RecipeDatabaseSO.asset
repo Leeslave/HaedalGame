@@ -1,0 +1,942 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1347211bc665fe74abfc7f697d387292, type: 3}
+  m_Name: RecipeDatabaseSO
+  m_EditorClassIdentifier: Assembly-CSharp::RecipeDatabaseSO
+  _ingredients:
+  - _ingredientId: 1
+    _ingredientName: "새우"
+    _recipeCode: 1001
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 2
+    _ingredientName: "가리비"
+    _recipeCode: 1002
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 3
+    _ingredientName: "오징어"
+    _recipeCode: 1003
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 4
+    _ingredientName: "조개"
+    _recipeCode: 1004
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 5
+    _ingredientName: "광어"
+    _recipeCode: 1005
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 6
+    _ingredientName: "문어"
+    _recipeCode: 1006
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 7
+    _ingredientName: "고등어"
+    _recipeCode: 1007
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 8
+    _ingredientName: "연어"
+    _recipeCode: 1008
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 9
+    _ingredientName: "바지락"
+    _recipeCode: 1009
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 10
+    _ingredientName: "흰살생선"
+    _recipeCode: 1010
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 11
+    _ingredientName: "튀김가루"
+    _recipeCode: 1011
+    _price: 8
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 12
+    _ingredientName: "소금"
+    _recipeCode: 1012
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 13
+    _ingredientName: "설탕"
+    _recipeCode: 1013
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 14
+    _ingredientName: "식용유"
+    _recipeCode: 1014
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 15
+    _ingredientName: "전분"
+    _recipeCode: 1015
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 16
+    _ingredientName: "후추"
+    _recipeCode: 1016
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 17
+    _ingredientName: "밀가루"
+    _recipeCode: 1017
+    _price: 0
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 1
+  - _ingredientId: 18
+    _ingredientName: "식초"
+    _recipeCode: 1018
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 19
+    _ingredientName: "와사비"
+    _recipeCode: 1019
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 20
+    _ingredientName: "간장"
+    _recipeCode: 1020
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 21
+    _ingredientName: "미림"
+    _recipeCode: 1021
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 22
+    _ingredientName: "레몬"
+    _recipeCode: 1022
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 23
+    _ingredientName: "마늘"
+    _recipeCode: 1023
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 24
+    _ingredientName: "된장"
+    _recipeCode: 1024
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 25
+    _ingredientName: "생강"
+    _recipeCode: 1025
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 26
+    _ingredientName: "계란"
+    _recipeCode: 1026
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 27
+    _ingredientName: "꿀"
+    _recipeCode: 1027
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  - _ingredientId: 28
+    _ingredientName: "겨자"
+    _recipeCode: 1028
+    _price: 5
+    _belongIsland: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _isBasicSeasoning: 0
+  _recipes:
+  - _recipeId: 1
+    _recipeName: "가리비 구이"
+    _recipeGrade: 0
+    _unlockType: 101
+    _classId: 201
+    _cookTime: 3
+    _rawRecipeText: "1002"
+    _requirements:
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _price: 50
+    _categories:
+    - 2
+    _grade: F
+    _description: "가리비 구이"
+  - _recipeId: 2
+    _recipeName: "새우 구이"
+    _recipeGrade: 0
+    _unlockType: 101
+    _classId: 201
+    _cookTime: 3
+    _rawRecipeText: "1001 1012"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _price: 50
+    _categories:
+    - 2
+    _grade: F
+    _description: "새우 구이"
+  - _recipeId: 3
+    _recipeName: "조개 찜"
+    _recipeGrade: 0
+    _unlockType: 101
+    _classId: 204
+    _cookTime: 3
+    _rawRecipeText: "1004"
+    _requirements:
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "조개"
+      _amount: 3
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _price: 50
+    _categories:
+    - 2
+    _grade: F
+    _description: "조개 찜"
+  - _recipeId: 4
+    _recipeName: "광어 회"
+    _recipeGrade: 0
+    _unlockType: 101
+    _classId: 202
+    _cookTime: 3
+    _rawRecipeText: "1005"
+    _requirements:
+    - _ingredientId: 5
+      _recipeCode: 1005
+      _ingredientName: "광어"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 1
+    _price: 50
+    _categories:
+    - 2
+    _grade: F
+    _description: "광어 회"
+  - _recipeId: 5
+    _recipeName: "문어 숙회"
+    _recipeGrade: 1
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 4
+    _rawRecipeText: "1006 1012"
+    _requirements:
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "문어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 80
+    _categories:
+    - 2
+    _grade: F
+    _description: "문어 숙회"
+  - _recipeId: 6
+    _recipeName: "새우 튀김"
+    _recipeGrade: 1
+    _unlockType: 102
+    _classId: 203
+    _cookTime: 4
+    _rawRecipeText: "1001 1011"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 11
+      _recipeCode: 1011
+      _ingredientName: "튀김가루"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 80
+    _categories:
+    - 2
+    _grade: F
+    _description: "새우 튀김"
+  - _recipeId: 7
+    _recipeName: "고등어 구이"
+    _recipeGrade: 1
+    _unlockType: 102
+    _classId: 201
+    _cookTime: 4
+    _rawRecipeText: "1007 1012"
+    _requirements:
+    - _ingredientId: 7
+      _recipeCode: 1007
+      _ingredientName: "고등어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 80
+    _categories:
+    - 2
+    _grade: F
+    _description: "고등어 구이"
+  - _recipeId: 8
+    _recipeName: "오징어 숙회"
+    _recipeGrade: 2
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 6
+    _rawRecipeText: "1003 1012"
+    _requirements:
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "오징어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 130
+    _categories:
+    - 2
+    _grade: F
+    _description: "오징어 숙회"
+  - _recipeId: 9
+    _recipeName: "바지락 술찜"
+    _recipeGrade: 2
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 6
+    _rawRecipeText: "1009 1021 1023"
+    _requirements:
+    - _ingredientId: 9
+      _recipeCode: 1009
+      _ingredientName: "바지락"
+      _amount: 3
+    - _ingredientId: 21
+      _recipeCode: 1021
+      _ingredientName: "미림"
+      _amount: 1
+    - _ingredientId: 23
+      _recipeCode: 1023
+      _ingredientName: "마늘"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 130
+    _categories:
+    - 2
+    _grade: F
+    _description: "바지락 술찜"
+  - _recipeId: 10
+    _recipeName: "연어 간장구이"
+    _recipeGrade: 2
+    _unlockType: 102
+    _classId: 201
+    _cookTime: 6
+    _rawRecipeText: "1008 1013 1020 1021"
+    _requirements:
+    - _ingredientId: 8
+      _recipeCode: 1008
+      _ingredientName: "연어"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "설탕"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    - _ingredientId: 21
+      _recipeCode: 1021
+      _ingredientName: "미림"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 130
+    _categories:
+    - 2
+    _grade: F
+    _description: "연어 간장구이"
+  - _recipeId: 11
+    _recipeName: "가리비 간장구이"
+    _recipeGrade: 2
+    _unlockType: 102
+    _classId: 201
+    _cookTime: 6
+    _rawRecipeText: "1002 1013 1014 1020"
+    _requirements:
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "설탕"
+      _amount: 1
+    - _ingredientId: 14
+      _recipeCode: 1014
+      _ingredientName: "식용유"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 130
+    _categories:
+    - 2
+    _grade: F
+    _description: "가리비 간장구이"
+  - _recipeId: 12
+    _recipeName: "생선가스"
+    _recipeGrade: 3
+    _unlockType: 102
+    _classId: 203
+    _cookTime: 9
+    _rawRecipeText: "1010 1011 1012 1017 1026"
+    _requirements:
+    - _ingredientId: 10
+      _recipeCode: 1010
+      _ingredientName: "흰살생선"
+      _amount: 1
+    - _ingredientId: 11
+      _recipeCode: 1011
+      _ingredientName: "튀김가루"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 17
+      _recipeCode: 1017
+      _ingredientName: "밀가루"
+      _amount: 1
+    - _ingredientId: 26
+      _recipeCode: 1026
+      _ingredientName: "계란"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 200
+    _categories:
+    - 2
+    _grade: F
+    _description: "생선가스"
+  - _recipeId: 13
+    _recipeName: "새우 완자탕"
+    _recipeGrade: 3
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 9
+    _rawRecipeText: "1001 1012 1015 1016 1020"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 2
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 15
+      _recipeCode: 1015
+      _ingredientName: "전분"
+      _amount: 1
+    - _ingredientId: 16
+      _recipeCode: 1016
+      _ingredientName: "후추"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 200
+    _categories:
+    - 2
+    _grade: F
+    _description: "새우 완자탕"
+  - _recipeId: 14
+    _recipeName: "고등어 된장조림"
+    _recipeGrade: 3
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 9
+    _rawRecipeText: "1007 1013 1021 1024 1025"
+    _requirements:
+    - _ingredientId: 7
+      _recipeCode: 1007
+      _ingredientName: "고등어"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "설탕"
+      _amount: 1
+    - _ingredientId: 21
+      _recipeCode: 1021
+      _ingredientName: "미림"
+      _amount: 1
+    - _ingredientId: 24
+      _recipeCode: 1024
+      _ingredientName: "된장"
+      _amount: 1
+    - _ingredientId: 25
+      _recipeCode: 1025
+      _ingredientName: "생강"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 200
+    _categories:
+    - 2
+    _grade: F
+    _description: "고등어 된장조림"
+  - _recipeId: 15
+    _recipeName: "문어 초무침"
+    _recipeGrade: 3
+    _unlockType: 102
+    _classId: 202
+    _cookTime: 9
+    _rawRecipeText: "1006 1012 1013 1018 1028"
+    _requirements:
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "문어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "설탕"
+      _amount: 1
+    - _ingredientId: 18
+      _recipeCode: 1018
+      _ingredientName: "식초"
+      _amount: 1
+    - _ingredientId: 28
+      _recipeCode: 1028
+      _ingredientName: "겨자"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 200
+    _categories:
+    - 2
+    _grade: F
+    _description: "문어 초무침"
+  - _recipeId: 16
+    _recipeName: "해물 크림스튜"
+    _recipeGrade: 4
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 13
+    _rawRecipeText: "1001 1002 1003 1012 1014 1016 1017"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "오징어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 14
+      _recipeCode: 1014
+      _ingredientName: "식용유"
+      _amount: 1
+    - _ingredientId: 16
+      _recipeCode: 1016
+      _ingredientName: "후추"
+      _amount: 1
+    - _ingredientId: 17
+      _recipeCode: 1017
+      _ingredientName: "밀가루"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 300
+    _categories:
+    - 2
+    _grade: F
+    _description: "해물 크림스튜"
+  - _recipeId: 17
+    _recipeName: "연어 스테이크 레몬소스"
+    _recipeGrade: 4
+    _unlockType: 102
+    _classId: 201
+    _cookTime: 13
+    _rawRecipeText: "1008 1012 1014 1016 1022 1027"
+    _requirements:
+    - _ingredientId: 8
+      _recipeCode: 1008
+      _ingredientName: "연어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 14
+      _recipeCode: 1014
+      _ingredientName: "식용유"
+      _amount: 1
+    - _ingredientId: 16
+      _recipeCode: 1016
+      _ingredientName: "후추"
+      _amount: 1
+    - _ingredientId: 22
+      _recipeCode: 1022
+      _ingredientName: "레몬"
+      _amount: 1
+    - _ingredientId: 27
+      _recipeCode: 1027
+      _ingredientName: "꿀"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 300
+    _categories:
+    - 2
+    _grade: F
+    _description: "연어 스테이크 레몬소스"
+  - _recipeId: 18
+    _recipeName: "해물 튀김 모둠"
+    _recipeGrade: 4
+    _unlockType: 102
+    _classId: 203
+    _cookTime: 13
+    _rawRecipeText: "1001 1003 1004 1011 1012 1017 1026"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 3
+      _recipeCode: 1003
+      _ingredientName: "오징어"
+      _amount: 1
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "조개"
+      _amount: 2
+    - _ingredientId: 11
+      _recipeCode: 1011
+      _ingredientName: "튀김가루"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 17
+      _recipeCode: 1017
+      _ingredientName: "밀가루"
+      _amount: 1
+    - _ingredientId: 26
+      _recipeCode: 1026
+      _ingredientName: "계란"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 300
+    _categories:
+    - 2
+    _grade: F
+    _description: "해물 튀김 모둠"
+  - _recipeId: 19
+    _recipeName: "광어 간장찜"
+    _recipeGrade: 4
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 13
+    _rawRecipeText: "1005 1013 1020 1021 1023 1025"
+    _requirements:
+    - _ingredientId: 5
+      _recipeCode: 1005
+      _ingredientName: "광어"
+      _amount: 1
+    - _ingredientId: 13
+      _recipeCode: 1013
+      _ingredientName: "설탕"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    - _ingredientId: 21
+      _recipeCode: 1021
+      _ingredientName: "미림"
+      _amount: 1
+    - _ingredientId: 23
+      _recipeCode: 1023
+      _ingredientName: "마늘"
+      _amount: 1
+    - _ingredientId: 25
+      _recipeCode: 1025
+      _ingredientName: "생강"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 300
+    _categories:
+    - 2
+    _grade: F
+    _description: "광어 간장찜"
+  - _recipeId: 20
+    _recipeName: "해산물 전골"
+    _recipeGrade: 5
+    _unlockType: 102
+    _classId: 204
+    _cookTime: 18
+    _rawRecipeText: "1001 1002 1004 1006 1020 1023 1024 1025"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    - _ingredientId: 4
+      _recipeCode: 1004
+      _ingredientName: "조개"
+      _amount: 3
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "문어"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    - _ingredientId: 23
+      _recipeCode: 1023
+      _ingredientName: "마늘"
+      _amount: 1
+    - _ingredientId: 24
+      _recipeCode: 1024
+      _ingredientName: "된장"
+      _amount: 1
+    - _ingredientId: 25
+      _recipeCode: 1025
+      _ingredientName: "생강"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 450
+    _categories:
+    - 2
+    _grade: F
+    _description: "해산물 전골"
+  - _recipeId: 21
+    _recipeName: "해물 된장구이 모둠"
+    _recipeGrade: 5
+    _unlockType: 102
+    _classId: 201
+    _cookTime: 18
+    _rawRecipeText: "1001 1002 1008 1021 1024 1025 1027"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    - _ingredientId: 8
+      _recipeCode: 1008
+      _ingredientName: "연어"
+      _amount: 1
+    - _ingredientId: 21
+      _recipeCode: 1021
+      _ingredientName: "미림"
+      _amount: 1
+    - _ingredientId: 24
+      _recipeCode: 1024
+      _ingredientName: "된장"
+      _amount: 1
+    - _ingredientId: 25
+      _recipeCode: 1025
+      _ingredientName: "생강"
+      _amount: 1
+    - _ingredientId: 27
+      _recipeCode: 1027
+      _ingredientName: "꿀"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 450
+    _categories:
+    - 2
+    _grade: F
+    _description: "해물 된장구이 모둠"
+  - _recipeId: 22
+    _recipeName: "바다의 진미 플래터"
+    _recipeGrade: 5
+    _unlockType: 102
+    _classId: 205
+    _cookTime: 18
+    _rawRecipeText: "1001 1002 1005 1006 1012 1019 1020 1022"
+    _requirements:
+    - _ingredientId: 1
+      _recipeCode: 1001
+      _ingredientName: "새우"
+      _amount: 1
+    - _ingredientId: 2
+      _recipeCode: 1002
+      _ingredientName: "가리비"
+      _amount: 1
+    - _ingredientId: 5
+      _recipeCode: 1005
+      _ingredientName: "광어"
+      _amount: 1
+    - _ingredientId: 6
+      _recipeCode: 1006
+      _ingredientName: "문어"
+      _amount: 1
+    - _ingredientId: 12
+      _recipeCode: 1012
+      _ingredientName: "소금"
+      _amount: 1
+    - _ingredientId: 19
+      _recipeCode: 1019
+      _ingredientName: "와사비"
+      _amount: 1
+    - _ingredientId: 20
+      _recipeCode: 1020
+      _ingredientName: "간장"
+      _amount: 1
+    - _ingredientId: 22
+      _recipeCode: 1022
+      _ingredientName: "레몬"
+      _amount: 1
+    _icon: {fileID: 0}
+    _defaultUnlock: 0
+    _price: 450
+    _categories:
+    - 2
+    _grade: F
+    _description: "바다의 진미 플래터"

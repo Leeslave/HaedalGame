@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class IngredientUnlockState : MonoBehaviour
+public class IngredientUnlockState : MonoBehaviour, ISaveParticipant
 {
     [SerializeField]
     private RecipeDatabaseSO _database;
 
+    [Tooltip("사용 안 함. 해금 상태는 통합 세이브(GameSession)로 저장한다. 씬 참조 유지를 위해 필드만 남겨 둔다.")]
     [SerializeField]
     private IngredientUnlockSaveService _saveService;
 
@@ -27,32 +28,42 @@ public class IngredientUnlockState : MonoBehaviour
         _unlockedIngredientIdsInOrder.Clear();
         _acquireOrderByIngredientId.Clear();
 
-        IngredientUnlockSaveData saveData = _saveService != null ? _saveService.Load() : null;
+        // 세션이 있으면 Register에서 세션 데이터로 다시 복원된다. 없으면 DB 기본 해금만 적용한다.
+        AddDefaultUnlockedIngredientsIfMissing();
 
-        if (
-            saveData != null
-            && saveData.unlockedIngredientIdsInOrder != null
-            && saveData.unlockedIngredientIdsInOrder.Count > 0
-        )
+        GameSession.Register(this);
+        OnChanged?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        GameSession.Unregister(this);
+    }
+
+    public void CaptureState(GameSaveData data)
+    {
+        data.unlockedIngredientIds.Clear();
+        data.unlockedIngredientIds.AddRange(_unlockedIngredientIdsInOrder);
+    }
+
+    public void RestoreState(GameSaveData data)
+    {
+        _unlockedIngredientIds.Clear();
+        _unlockedIngredientIdsInOrder.Clear();
+        _acquireOrderByIngredientId.Clear();
+
+        foreach (int ingredientId in data.unlockedIngredientIds)
         {
-            for (int i = 0; i < saveData.unlockedIngredientIdsInOrder.Count; i++)
+            if (_database != null && !_database.TryGetIngredientById(ingredientId, out _))
             {
-                int ingredientId = saveData.unlockedIngredientIdsInOrder[i];
-
-                if (_database == null || !_database.TryGetIngredientById(ingredientId, out _))
-                    continue;
-
-                AddUnlockedIngredientInternal(ingredientId);
+                Debug.LogWarning($"[IngredientUnlockState] 세이브의 ID {ingredientId}가 DB에 없어 건너뜁니다.");
+                continue;
             }
 
-            AddDefaultUnlockedIngredientsIfMissing();
-        }
-        else
-        {
-            AddDefaultUnlockedIngredientsIfMissing();
-            Save();
+            AddUnlockedIngredientInternal(ingredientId);
         }
 
+        AddDefaultUnlockedIngredientsIfMissing();
         OnChanged?.Invoke();
     }
 
@@ -133,13 +144,10 @@ public class IngredientUnlockState : MonoBehaviour
         return result;
     }
 
+    /// <summary>현재 해금 상태를 세션에 반영한다. 파일 저장은 체크포인트에서만 한다.</summary>
     public void Save()
     {
-        if (_saveService == null)
-            return;
-
-        IngredientUnlockSaveData data = new IngredientUnlockSaveData();
-        data.unlockedIngredientIdsInOrder.AddRange(_unlockedIngredientIdsInOrder);
-        _saveService.Save(data);
+        if (GameSession.IsActive)
+            CaptureState(GameSession.Current);
     }
 }

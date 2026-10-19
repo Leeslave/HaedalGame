@@ -62,7 +62,7 @@ public class RecipeData
         Sprite icon,
         List<RecipeCategory> categories = null,
         string grade = null,
-        string description = null)
+        string description = null, float price = 0, bool defaultUnlock = false, int recipeGrade = 0)
     {
         _recipeId = recipeId;
         _recipeName = recipeName;
@@ -75,5 +75,8 @@ public class RecipeData
         _categories = categories ?? new List<RecipeCategory>();
         _grade = grade ?? string.Empty;
         _description = description ?? string.Empty;
+        _price = price;
+        _defaultUnlock = defaultUnlock;
+        _recipeGrade = recipeGrade;
     }
 }

@@ -5,6 +5,12 @@ using System.Collections.Generic;
 
 public class CustomerAgent : MonoBehaviour
 {
+    public bool IngredientsReserved;
+    public int FoodQuality;
+    public float ServingLuck;
+    public bool LeftAngry { get; private set; }
+    public float LastRating { get; private set; }
+
     [ReadOnly][SerializeField] private RestaurantGameManager gm;
 
     public CustomerPatienceComponent cpc;
@@ -18,9 +24,11 @@ public class CustomerAgent : MonoBehaviour
     [SerializeField] private float payDuration = 2f;
     [SerializeField] private float stateChangeDuration = 1.0f;
 
+    [Header("Payment")]
+    [SerializeField] private Currency gold;
+
     [Header("Other")]
     private bool indoor = false;
-    private int seatNumber;
     private bool isWaiting = false;
 
 
@@ -30,10 +38,29 @@ public class CustomerAgent : MonoBehaviour
     public Action<CustomerAgent> OnExited;
 
 
+    // 화면 표시·집계용 관찰 이벤트. 손님의 행동에는 관여하지 않는다.
+    public static event Action<CustomerAgent> OnAnySpawned;
+    public static event Action<CustomerAgent, CustomerState> OnAnyStateChanged;
+    public static event Action<CustomerAgent, RecipeData, int> OnAnyPaid;   // 실제 지급된 금액(팁 포함)
+
     private CustomerState state;
     private RatingFlag ratingFlag = RatingFlag.None;
 
+    public CustomerState State => state;
+    public bool IsInWaitingLine => isWaiting;
+
+    // 식사를 마치고 결제까지 완료했는지(= 대접받았는지) 여부. 일일 결산의 손님 수 집계에 쓰인다.
+    public bool WasServed { get; private set; }
+
     private Seat currentSeat;
+    public Seat GetCurrentSeat() { return currentSeat; }
+
+    private const float BaseMoveSpeed = 3f;
+    private float MoveSpeed => BaseMoveSpeed * RestaurantSpeedController.SpeedMultiplier;
+
+    // MoveToSeat에서 경로 탐색에 실패한 좌석들. 만석+대기열 만석 상태에서 유일하게 빈 좌석이
+    // 도달 불가능할 경우, 같은 좌석을 무한히 재배정받아 TrySeat<->MoveToSeat이 무한 반복되는 것을 막기 위함.
+    private readonly HashSet<Seat> failedSeats = new HashSet<Seat>();
 
     /* [ Awake & Start ] */
     private void Awake()
@@ -52,7 +79,24 @@ public class CustomerAgent : MonoBehaviour
 
         cpc.OnPatienceExhausted += PatienceExhausted;
         cpc.OnWaitingProgress += cuc.ChangeEmotion;
+        OnAnySpawned?.Invoke(this);
         InitPatience(patienceValue);
+    }
+
+    // 이 손님의 식사 시간만 바꾼다. (첫 손님 안내 등 개별 조정용)
+    public void OverrideEatDuration(float seconds)
+    {
+        if (seconds > 0f) { eatDuration = seconds; }
+    }
+
+    // 마감이 끝나지 않는 상황(도달 불가 등)을 풀기 위해 손님을 미대접으로 내보낸다. 이미 계산했으면 대접으로 남는다.
+    public void ForceLeave()
+    {
+        if (state == CustomerState.Exit) { return; }
+        Debug.LogWarning($"[{name}] 진행이 멈춘 손님을 퇴장시킵니다. (상태: {state})");
+        ratingFlag = RatingFlag.Low;
+        StopAllCoroutines();
+        ChangeState(CustomerState.Exit);
     }
 
     private void InitPatience(float patienceValue)
@@ -72,7 +116,6 @@ public class CustomerAgent : MonoBehaviour
             ChangeState(CustomerState.Exit);
             return;
         }
-        seatNumber = currentSeat.seatNumber;
 
         StartCoroutine(WaitStateChange(CustomerState.Enter));
     }
@@ -83,6 +126,7 @@ public class CustomerAgent : MonoBehaviour
     private void ChangeState(CustomerState nextState)
     {
         state = nextState;
+        OnAnyStateChanged?.Invoke(this, state);
         switch (state)
         {
             case CustomerState.Enter:
@@ -123,14 +167,13 @@ public class CustomerAgent : MonoBehaviour
         // 경로 탐색 실패로 자리를 반납하고 재시도하는 경우이므로 다시 잡아본다.
         if (currentSeat == null)
         {
-            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
+            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor, failedSeats);
             if (currentSeat == null) // 만약 재시도했는데도 자리가 없는 경우
             {
                 ratingFlag = RatingFlag.Low;
                 ChangeState(CustomerState.Exit);
                 return;
             }
-            seatNumber = currentSeat.seatNumber;
         }
 
         //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
@@ -146,7 +189,8 @@ public class CustomerAgent : MonoBehaviour
         if (startNode == null || endNode == null)
         {
             Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, !indoor);
+            failedSeats.Add(seat);
+            gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
@@ -157,7 +201,8 @@ public class CustomerAgent : MonoBehaviour
         if (path == null)
         {
             Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
-            gm.seatManager.ReleaseSeat(seat, !indoor);
+            failedSeats.Add(seat);
+            gm.seatManager.ReleaseSeat(this, seat, !indoor);
             currentSeat = null;
             TrySeat();
             yield break;
@@ -169,7 +214,7 @@ public class CustomerAgent : MonoBehaviour
         {
             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
                 Vector2 dir = (waypoint - transform.position).normalized;
                 nm.SetDirection(dir);
                 yield return null;
@@ -179,7 +224,7 @@ public class CustomerAgent : MonoBehaviour
         // A* 경로는 타일 중심까지만 안내하므로, 테이블 크기에 비례해 옮겨진 실제 좌석 좌표까지 마지막으로 미세 이동
         while (Vector2.Distance(transform.position, target) > 0.05f)
         {
-            transform.position = Vector2.MoveTowards(transform.position, target, 3f * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, target, MoveSpeed * Time.deltaTime);
             Vector2 dir = (target - transform.position).normalized;
             nm.SetDirection(dir);
             yield return null;
@@ -205,12 +250,20 @@ public class CustomerAgent : MonoBehaviour
         nm.SetMoving(false);
         cuc.CloseBubble();
         StopAllCoroutines();
-        TaskLogger.Instance.LogServing($"현재 손님이 {seatNumber}번 좌석에 앉았습니다.");
+        TaskLogger.Instance.LogServing("현재 손님이 좌석에 앉았습니다.");
         StartCoroutine(MoveToSeat(newSeat));
     }
 
     public void MoveWaitingSeat(Seat newSeat)
     {
+        Seat oldSeat = currentSeat;
+        if (oldSeat == newSeat) { return; } // 대기열 앞당김으로 위치가 바뀌지 않은 손님은 처리할 필요 없음
+
+        // 대기 벤치 슬롯 이동도 착석/퇴장과 동일하게 타일 walkable을 갱신해야 한다.
+        // (그렇지 않으면 옮겨간 벤치는 통행 가능으로, 비워둔 벤치는 통행 불가로 남는 버그가 생긴다)
+        if (oldSeat != null) { oldSeat.Vacate(); }
+        newSeat.OnCustomerSeated();
+
         currentSeat = newSeat;
         transform.position = newSeat.GetSeatPoint().position;
         nm.ApplySeatSortingOrder(newSeat.GetSeatedSortingOrderOffset());
@@ -229,6 +282,14 @@ public class CustomerAgent : MonoBehaviour
         cuc.ShowBubble(2);
         yield return new WaitForSeconds(3f); // 이 값은 랜덤으로 줘도 됨
         coc.GenerateOrder();
+        if (coc.GetOrderData() == null)
+        {
+            // 오늘의 메뉴가 비어 주문할 수 없으면 기다리지 않고 미대접으로 퇴장한다. (마감이 끝나지 않는 상황 방지)
+            ratingFlag = RatingFlag.Low;
+            cuc.CloseBubble();
+            StartCoroutine(WaitStateChange(CustomerState.Exit));
+            yield break;
+        }
         Debug.Log("메뉴를 골랏습니다");
         cuc.ShowBubble(0, coc.GetOrderData().Icon);
         cpc.ResetGraceTimer();
@@ -242,6 +303,7 @@ public class CustomerAgent : MonoBehaviour
         if (coc.GetOrderData() == null) { return; }
         cpc.ChangeState();
         OnOrderTaken?.Invoke(this);
+        if (state == CustomerState.Exit) return;
         StartCoroutine(WaitStateChange(CustomerState.WaitingForFood));
     }
 
@@ -271,8 +333,57 @@ public class CustomerAgent : MonoBehaviour
     // CustomState.Paying
     private IEnumerator Paying()
     {
+        ProcessPayment();
         yield return new WaitForSeconds(payDuration);
         StartCoroutine(WaitStateChange(CustomerState.Exit));
+    }
+
+    private void ProcessPayment()
+    {
+        RecipeData order = coc.GetOrderData();
+        if (order == null) { return; }
+
+        WasServed = true;
+
+        float tipMultiplier = 1f;
+
+        if (RestaurantRatingManager.Instance != null && gm != null && gm.ratingSystem != null)
+        {
+            float score = ComputePersonalRating(order);
+            LastRating = score;
+            RestaurantRatingManager.Instance.AddCustomerScore(score);
+            tipMultiplier = RestaurantRatingManager.Instance.TipMultiplier;
+        }
+
+        if (gold == null) { return; }
+
+        int amount = Mathf.RoundToInt(order.Price);
+        int tip = UnityEngine.Random.value < Mathf.Clamp01(.2f + ServingLuck / 100f)
+            ? Mathf.RoundToInt(amount * .1f * tipMultiplier * RestaurantRules.TrashTipMultiplier(RestaurantLitter.Count)) : 0;
+        CurrencyTransaction tx = new CurrencyTransaction(gold, amount + tip, TransactionSource.CustomerPayment);
+        CurrencyManager.Instance.ProcessTransaction(tx);
+
+        if (DailySalesTracker.Instance != null)
+        {
+            int finalAmount = amount + tip;
+            DailySalesTracker.Instance.RecordSale(order, finalAmount);
+        }
+
+        OnAnyPaid?.Invoke(this, order, tx.FinalAmount);
+        RestaurantProgress.RecordSaleForMission(tx.FinalAmount);
+    }
+
+    // Score = min(5.0, Taste Score + Favorite Bonus)
+    private float ComputePersonalRating(RecipeData order)
+    {
+        int recipeGrade = FoodQuality;
+        int expectation = RestaurantRatingManager.Instance.CurrentExpectation;
+        float taste = gm.ratingSystem.PersonalRating(recipeGrade, expectation);
+
+        float favoriteBonus = 0f;
+        if (coc.FavoriteRecipeId >= 0 && coc.FavoriteRecipeId == order.RecipeId) { favoriteBonus = 0.5f; }
+
+        return Mathf.Min(coc.FavoriteOnMenu ? 5.0f : 4.5f, taste + favoriteBonus);
     }
 
     // 각 스테이트가 끝날때 마다 1초 정도 기다리고 다음 스테이트로 이동
@@ -293,12 +404,14 @@ public class CustomerAgent : MonoBehaviour
 
         if (currentSeat != null)
         {
-            gm.seatManager.ReleaseSeat(currentSeat, isWaiting);
+            gm.seatManager.ReleaseSeat(this, currentSeat, isWaiting);
             currentSeat = null;
         }
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
         nm.ResetSortingOrder();
         nm.SetMoving(false);
+        cpc.OnPatienceExhausted -= PatienceExhausted;
+        cpc.OnWaitingProgress -= cuc.ChangeEmotion;
         StopAllCoroutines();
         StartCoroutine(MoveToExit());
     }
@@ -334,7 +447,7 @@ public class CustomerAgent : MonoBehaviour
         {
             while (Vector2.Distance(transform.position, waypoint) > 0.05f)
             {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, 3f * Time.deltaTime);
+                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
                 Vector2 dir = (waypoint - transform.position).normalized;
                 nm.SetDirection(dir);
                 yield return null;
@@ -352,6 +465,7 @@ public class CustomerAgent : MonoBehaviour
 
     private void PatienceExhausted()
     {
+        LeftAngry = true;
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
         nm.SetMoving(false);

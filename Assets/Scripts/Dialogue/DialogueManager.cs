@@ -702,12 +702,19 @@ public class DialogueManager : MonoBehaviour
         if (Instance != null && Instance._ignoreSavedProgress)
             return false;
 
+        // 진행 세이브가 있으면 그 기록이 기준이다. (체크포인트 이후 본 기록은 되돌아가면 함께 되돌아간다)
+        if (GameSession.TryGetDialogueCompleted(scriptId, out bool completed))
+            return completed;
+
         return PlayerPrefs.GetInt(CompletedKeyPrefix + scriptId, 0) == 1;
     }
 
     public static void MarkCompleted(string scriptId)
     {
         if (string.IsNullOrEmpty(scriptId))
+            return;
+
+        if (GameSession.TryMarkDialogueCompleted(scriptId))
             return;
 
         PlayerPrefs.SetInt(CompletedKeyPrefix + scriptId, 1);
@@ -717,6 +724,9 @@ public class DialogueManager : MonoBehaviour
     public static void ResetProgress(string scriptId)
     {
         if (string.IsNullOrEmpty(scriptId))
+            return;
+
+        if (GameSession.TryResetDialogue(scriptId))
             return;
 
         PlayerPrefs.DeleteKey(CompletedKeyPrefix + scriptId);

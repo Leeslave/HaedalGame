@@ -5,18 +5,32 @@ using UnityEngine;
 [RequireComponent(typeof(TableGroup))]
 public class PlacedTable : MonoBehaviour
 {
+    // 현재 씬에 배치되어 있는(철거·이동 전) 테이블 목록. Destroy는 프레임 끝에 처리되므로 씬 검색 대신 이 목록으로 배치를 저장한다.
+    private static readonly List<PlacedTable> _active = new List<PlacedTable>();
+    public static IReadOnlyList<PlacedTable> Active => _active;
+
     public TableData tableData { get; private set; }
     public Vector2Int anchorCell { get; private set; }
+    public int Skin { get; private set; }
+    public void SetSkin(int skin)
+    {
+        Skin = skin;
+        foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.color = skin == 0 ? Color.white : new Color(.78f, .87f, .94f);
+    }
 
     private List<Vector2Int> obstacleCells = new List<Vector2Int>(); // "테" 타일 위치
     private Seat[] seats;
 
     public void Initialize(TableData data, Vector2Int anchor)
     {
-        tableData = data;
+        tableData = TableVariants.Copy(data);
         anchorCell = anchor;
+        if (!_active.Contains(this)) { _active.Add(this); }
 
-        seats = GetComponentsInChildren<Seat>();
+        seats = GetComponentsInChildren<Seat>(true);
+        for (int i = 0; i < seats.Length; i++) seats[i].gameObject.SetActive(i < data.chairTiles.Length);
+        var visual = transform.Find("Visual");
+        if (visual != null) visual.localRotation = Quaternion.Euler(0, 0, data.rotation * 90);
 
         float visualScale = GetComponent<TableGroup>().GetVisualScale();
         Vector3 anchorWorldPos = PathfindingGrid.Instance.GetWorldPos(anchorCell);
@@ -31,6 +45,7 @@ public class PlacedTable : MonoBehaviour
             Vector3 scaledWorldPos = anchorWorldPos + (baseWorldPos - anchorWorldPos) * visualScale;
 
             seats[i].GetSeatPoint().position = scaledWorldPos;
+            seats[i].SetFacingDirection(((Vector2)anchorWorldPos - (Vector2)scaledWorldPos).normalized);
             Vector2Int chairGridPos = PathfindingGrid.Instance.WorldToGridPos(scaledWorldPos);
             seats[i].SetGridPos(chairGridPos);
             chairGridPositions.Add(chairGridPos);
@@ -41,26 +56,8 @@ public class PlacedTable : MonoBehaviour
         // 테이블을 키운 만큼 장애물 범위도 같이 넓어져서, 손님이 커진 테이블 그림을 가로질러
         // 걸어다니는 문제가 생기지 않는다.
         obstacleCells.Clear();
-        if (chairGridPositions.Count > 0)
-        {
-            Vector2Int min = chairGridPositions[0];
-            Vector2Int max = chairGridPositions[0];
-            foreach (Vector2Int pos in chairGridPositions)
-            {
-                min = Vector2Int.Min(min, pos);
-                max = Vector2Int.Max(max, pos);
-            }
-
-            for (int x = min.x; x <= max.x; x++)
-            {
-                for (int y = min.y; y <= max.y; y++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    if (chairGridPositions.Contains(cell)) { continue; } // 좌석 칸 자체는 착석 여부에 따라 동적으로 막히므로 제외
-                    obstacleCells.Add(cell);
-                }
-            }
-        }
+        obstacleCells.AddRange(TableFootprint.GetBodyCells(chairGridPositions)); // 좌석 칸 자체는 착석 여부에 따라 동적으로 막히므로 제외
+        if (data.tableType == TableType.OneSeat) obstacleCells.Add(anchorCell);
         PathfindingGrid.Instance.RegisterObstacleTiles(obstacleCells);
     }
 
@@ -68,7 +65,20 @@ public class PlacedTable : MonoBehaviour
     public void RemoveTable()
     {
         PathfindingGrid.Instance.UnregisterObstacleTiles(obstacleCells);
+        MarkRemoved();
         Destroy(gameObject);
+    }
+
+    // 배치 목록에서 즉시 뺀다. (이동 확정처럼 장애물 처리를 따로 한 뒤 Destroy하는 경우에도 호출)
+    public void MarkRemoved()
+    {
+        _active.Remove(this);
+    }
+
+    private void OnDestroy()
+    {
+        _active.Remove(this);
+        if (tableData != null && tableData.hideFlags == HideFlags.DontSave) Destroy(tableData);
     }
 
     public List<Vector2Int> GetObstacleCells() { return obstacleCells; }

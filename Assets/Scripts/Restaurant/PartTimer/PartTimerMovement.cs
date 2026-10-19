@@ -35,7 +35,7 @@ public class PartTimerMovement : MonoBehaviour
     {
         if (curDir == null) { return; }
         if (!isMoving) { return; }
-        stepTimer += Time.deltaTime;
+        stepTimer += Time.deltaTime * RestaurantSpeedController.SpeedMultiplier;
         if (stepTimer >= stepInterval)
         {
             stepTimer = 0;

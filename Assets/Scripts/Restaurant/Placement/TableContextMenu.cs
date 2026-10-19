@@ -13,6 +13,7 @@ public class TableContextMenu : MonoBehaviour
 
     public void Show(PlacedTable table)
     {
+        if (!RestaurantProgress.CanManage) return;
         selectedTable         = table;
         transform.position    = table.transform.position;
         menuRoot.SetActive(true);
@@ -34,6 +35,7 @@ public class TableContextMenu : MonoBehaviour
     public void OnRemoveClicked()
     {
         if (selectedTable == null) { return; }
+        TableSaveLoadManager.Instance.RememberEdit();
         selectedTable.RemoveTable();
         TableSaveLoadManager.Instance.SavePlacement();
         Hide();

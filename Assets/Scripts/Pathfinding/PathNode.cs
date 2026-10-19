@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class PathNode
+public class PathNode : IHeapItem<PathNode>
 {
     public Vector2Int gridPos;
     public Vector3 worldPos;
@@ -11,6 +11,8 @@ public class PathNode
     public int hCost; // 현재 노드 -> 목표 휴리스틱 비용
 
     public PathNode parent;
+
+    public int HeapIndex { get; set; }
 
     public int FCost()
     {
@@ -24,4 +26,15 @@ public class PathNode
         walkable = _walkable;
     }
 
+    // 힙에서 우선순위가 높을수록(CompareTo 결과가 클수록) 먼저 꺼내진다.
+    // FCost가 낮을수록, 동률이면 hCost가 낮을수록 우선순위가 높아야 하므로 부호를 뒤집는다.
+    public int CompareTo(PathNode other)
+    {
+        int compare = FCost().CompareTo(other.FCost());
+        if (compare == 0)
+        {
+            compare = hCost.CompareTo(other.hCost);
+        }
+        return -compare;
+    }
 }

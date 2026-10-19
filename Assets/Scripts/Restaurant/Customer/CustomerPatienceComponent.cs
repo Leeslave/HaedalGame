@@ -20,6 +20,11 @@ public class CustomerPatienceComponent : MonoBehaviour
     public event Action OnPatienceExhausted;            // 만약 인내심이 바닥났을 경우 실행하는 이벤트
     public event Action OnWaitingProgress;
 
+    // 화면 표시용: 남은 인내심 비율(0~1)과, 지금 실제로 줄어들고 있는지 여부
+    public float Ratio => defaultPatience > 0f ? Mathf.Clamp01(curPatience / defaultPatience) : 1f;
+    public bool IsDraining => isPatience && graceTimer <= 0f;
+    public float RemainingSeconds => curPatience / Mathf.Max(.001f, drainPerSec * (RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.PatienceDrainMultiplier : 1));
+
     /* public Method */
 
     public void SetDrainRate(float value)               // 감소 수치 변경 시.
@@ -73,8 +78,8 @@ public class CustomerPatienceComponent : MonoBehaviour
             }
             else                                        // 인내심 방어 시간이 전부 떨어졌을 경우
             {
-                
-                curPatience -= drainPerSec * Time.deltaTime;
+                float drainMultiplier = RestaurantRatingManager.Instance != null ? RestaurantRatingManager.Instance.PatienceDrainMultiplier : 1f;
+                curPatience -= drainPerSec * drainMultiplier * RestaurantSpeedController.SpeedMultiplier * Time.deltaTime;
                 if (isWaiting) { ForWaiting(); }
                 if (curPatience <= 0)
                 {

@@ -15,7 +15,7 @@ public static class RecipeCsvMapper
             int ingredientId = row.GetInt("ing_n");
             string ingredientName = row.Get("ing_name");
             int recipeCode = row.GetInt("rec_n");
-            bool isBasicSeasoning = row.GetBool("basic");
+            bool isBasicSeasoning = row.GetBool("basic") || row.GetInt("ing_type") == 302;
 
             Sprite icon = null;
 
@@ -25,7 +25,8 @@ public static class RecipeCsvMapper
                 Debug.LogWarning($"Ingredient icon not found. ing_n={ingredientId}, name={ingredientName}");
 #endif
 
-            return new IngredientData(ingredientId, ingredientName, recipeCode, icon, isBasicSeasoning);
+            return new IngredientData(ingredientId, ingredientName, recipeCode, icon, isBasicSeasoning,
+                row.GetInt("price", isBasicSeasoning ? 0 : row.GetInt("ing_type") == 303 ? 5 : 8), true);
         });
     }
 
@@ -75,8 +76,8 @@ public static class RecipeCsvMapper
                 requirements,
                 icon,
                 categories,
-                grade,
-                description);
+                "F",
+                description, row.GetFloat("price"), unlockType == 101, ParseStars(grade));
         });
     }
 
@@ -100,6 +101,12 @@ public static class RecipeCsvMapper
         }
 
         return result;
+    }
+
+    private static int ParseStars(string text)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(text ?? "", @"\d+");
+        return match.Success ? int.Parse(match.Value) : 0;
     }
 
     public static Dictionary<int, IngredientData> BuildIngredientMapByRecipeCode(List<IngredientData> ingredients)
@@ -135,6 +142,9 @@ public static class RecipeCsvMapper
             return result;
 
         List<int> recipeCodes = row.GetIntList("recipe", ' ', '\t', ',', ';', '|');
+        List<int> amounts = row.GetIntList("recipe_cnt", ' ', '\t', ',', ';', '|');
+        if (amounts.Count > 0 && amounts.Count != recipeCodes.Count)
+            throw new System.FormatException($"Recipe {recipeId}: recipe_cnt 길이가 recipe와 다릅니다.");
         Dictionary<int, int> amountByRecipeCode = new Dictionary<int, int>();
 
         for (int i = 0; i < recipeCodes.Count; i++)
@@ -142,9 +152,9 @@ public static class RecipeCsvMapper
             int recipeCode = recipeCodes[i];
 
             if (amountByRecipeCode.ContainsKey(recipeCode))
-                amountByRecipeCode[recipeCode]++;
+                amountByRecipeCode[recipeCode] += amounts.Count == 0 ? 1 : amounts[i];
             else
-                amountByRecipeCode.Add(recipeCode, 1);
+                amountByRecipeCode.Add(recipeCode, amounts.Count == 0 ? 1 : amounts[i]);
         }
 
         foreach (KeyValuePair<int, int> pair in amountByRecipeCode)

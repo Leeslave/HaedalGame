@@ -7,6 +7,7 @@ public class ConfirmPopupUI : UIPopup
 {
     private Action _onClickConfirmButton;
     private Action _onClickDenyButton;
+    private bool _handled; // 닫힘 연출 중 버튼 연타로 콜백이 두 번 실행되는 것을 막는다.
 
     [SerializeField] private Button _confirmButton;
     [SerializeField] private Button _denyButton;
@@ -44,6 +45,10 @@ public class ConfirmPopupUI : UIPopup
         _confirmButtonText.text = confirmText;
         _denyButtonText.text = denyText;
 
+        // 거절 문구가 비어 있으면 확인 버튼 하나짜리 알림 팝업으로 쓴다.
+        _denyButton.gameObject.SetActive(!string.IsNullOrEmpty(denyText));
+        _handled = false;
+
         _onClickConfirmButton = onConfirm;
         _onClickDenyButton = onDeny;
     }
@@ -62,11 +67,15 @@ public class ConfirmPopupUI : UIPopup
 
     private void HandleClickConfirm()
     {
+        if (_handled) return;
+        _handled = true;
         _onClickConfirmButton?.Invoke();
     }
 
     private void HandleClickDeny()
     {
+        if (_handled) return;
+        _handled = true;
         _onClickDenyButton?.Invoke();
     }
 }

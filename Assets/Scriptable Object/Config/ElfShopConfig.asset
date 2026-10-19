@@ -12,6 +12,84 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a4b53c09ddcf0e409577b2a4e8bbe27, type: 3}
   m_Name: ElfShopConfig
   m_EditorClassIdentifier: Assembly-CSharp::ElfShopConfigSO
-  _redElfIngredientIds: 0100000002000000030000000400000005000000
-  _blueElfRecipeIds: 0100000002000000030000000400000005000000
-  _yellowElfIngredientIds: 0100000002000000030000000400000005000000
+  _redElfItems:
+  - ItemId: 1
+    ItemType: 0
+  - ItemId: 2
+    ItemType: 0
+  - ItemId: 3
+    ItemType: 0
+  - ItemId: 4
+    ItemType: 0
+  - ItemId: 5
+    ItemType: 0
+  - ItemId: 6
+    ItemType: 0
+  - ItemId: 7
+    ItemType: 0
+  - ItemId: 8
+    ItemType: 0
+  - ItemId: 9
+    ItemType: 0
+  - ItemId: 10
+    ItemType: 0
+  _blueElfItems:
+  - ItemId: 5
+    ItemType: 1
+  - ItemId: 6
+    ItemType: 1
+  - ItemId: 7
+    ItemType: 1
+  - ItemId: 8
+    ItemType: 1
+  - ItemId: 9
+    ItemType: 1
+  - ItemId: 10
+    ItemType: 1
+  - ItemId: 11
+    ItemType: 1
+  - ItemId: 12
+    ItemType: 1
+  - ItemId: 13
+    ItemType: 1
+  - ItemId: 14
+    ItemType: 1
+  - ItemId: 15
+    ItemType: 1
+  - ItemId: 16
+    ItemType: 1
+  - ItemId: 17
+    ItemType: 1
+  - ItemId: 18
+    ItemType: 1
+  - ItemId: 19
+    ItemType: 1
+  - ItemId: 20
+    ItemType: 1
+  - ItemId: 21
+    ItemType: 1
+  - ItemId: 22
+    ItemType: 1
+  _yellowElfItems:
+  - ItemId: 18
+    ItemType: 0
+  - ItemId: 19
+    ItemType: 0
+  - ItemId: 20
+    ItemType: 0
+  - ItemId: 21
+    ItemType: 0
+  - ItemId: 22
+    ItemType: 0
+  - ItemId: 23
+    ItemType: 0
+  - ItemId: 24
+    ItemType: 0
+  - ItemId: 25
+    ItemType: 0
+  - ItemId: 26
+    ItemType: 0
+  - ItemId: 27
+    ItemType: 0
+  - ItemId: 28
+    ItemType: 0
