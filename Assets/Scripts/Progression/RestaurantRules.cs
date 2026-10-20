@@ -70,6 +70,9 @@ public static class RestaurantRules
 [Serializable]
 public class ProgressionState
 {
+    public ExpeditionState expedition = new ExpeditionState();
+    public List<FurnitureStock> furniture = new List<FurnitureStock>();
+    public List<int> unlockedTableSkins = new List<int> { 0, 1 };
     public bool freeTime;
     public int constructionUntilDay;
     public int pendingRestaurantLevel;
@@ -97,6 +100,22 @@ public class ProgressionState
     public bool timedResearch;
     public int tableSkin;
     public bool firstToolChosen;
+}
+
+[Serializable]
+public class ExpeditionState
+{
+    public int destination = -1;
+    public int departureDay;
+    public int returnDay;
+    public List<string> employeeIds = new List<string>();
+}
+
+[Serializable]
+public class FurnitureStock
+{
+    public int seats;
+    public int amount;
 }
 
 [Serializable]

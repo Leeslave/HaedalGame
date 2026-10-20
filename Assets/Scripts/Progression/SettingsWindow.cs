@@ -22,7 +22,9 @@ public class SettingsWindow : MonoBehaviour
     private readonly List<Slider> _sliders = new List<Slider>();
     private readonly List<TMP_Text> _sliderValues = new List<TMP_Text>();
     private Button _muteButton;
-    private TMP_Text _modeValue, _resolutionValue, _qualityValue;
+    private RectTransform _muteKnob;
+    private TMP_Text _modeValue, _resolutionValue;
+    private readonly List<Button> _qualityButtons = new List<Button>();
 
     private GameSettings.Values _working;
     private List<Vector2Int> _resolutions;
@@ -161,13 +163,15 @@ public class SettingsWindow : MonoBehaviour
             _sliders[i].interactable = !_working.muted;
         }
 
-        DayLoopUI.SetButtonLabel(_muteButton, _working.muted ? "켜짐" : "꺼짐");
-        DayLoopUI.SetButtonColors(_muteButton, _working.muted ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand, _working.muted ? Color.white : DayLoopUI.Kit.Line);
+        _muteButton.image.color = _working.muted ? DayLoopUI.Kit.Sea : DayLoopUI.Kit.Divider;
+        DayLoopUI.Place(_muteKnob, new Vector2(_working.muted ? 1 : 0, .5f), new Vector2(_working.muted ? 1 : 0, .5f), new Vector2(_working.muted ? -7.5f : 7.5f, 0), new Vector2(42, 42));
 
         _modeValue.text = _working.fullscreen ? "전체 화면" : "창 모드";
         Vector2Int size = _resolutions[ResolutionIndex()];
         _resolutionValue.text = $"{size.x} x {size.y}";
-        _qualityValue.text = _qualities.Count > 0 ? _qualities[QualityIndex()].Key : "-";
+        for (int i = 0; i < _qualityButtons.Count; i++)
+            DayLoopUI.SetButtonColors(_qualityButtons[i], i == QualityIndex() ? DayLoopUI.Kit.Sea : DayLoopUI.Kit.Sand,
+                i == QualityIndex() ? Color.white : DayLoopUI.Kit.Ink);
     }
 
     // ───── 조립 ─────
@@ -178,21 +182,26 @@ public class SettingsWindow : MonoBehaviour
         DayLoopUI.Stretch(_root);
 
         // 뒤쪽 화면 클릭을 막는 어두운 배경
-        Image dim = DayLoopUI.Panel(_root, DayLoopUI.Dim, "Dim", false);
+        Image dim = ReferenceTitleView.Picture(_root, "TitleBackground");
         DayLoopUI.Stretch(dim.rectTransform);
 
-        // 돛천 카드 + 나무 제목 리본
-        Image frame = DayLoopUI.Card(_root, DayLoopUI.Kit.Sail, "Frame", 4f, 8f);
-        DayLoopUI.Place(frame.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(1440, 860));
-        DayLoopUI.Ribbon(frame.transform, "환경 설정", DayLoopUI.Kit.Wood, 400f, 44f);
+        var rail = DayLoopUI.ScreenRail(_root, "SettingsRail");
+        DayLoopUI.Layout(DayLoopUI.Text(rail, "환경 설정", 54, Color.white, style: FontStyles.Bold), preferredHeight: 80);
+        DayLoopUI.RailButton(rail, "적용\n<size=65%>바꾼 설정을 저장해요</size>", Confirm, true, 110);
+        DayLoopUI.RailButton(rail, "기본값으로", ResetToDefaults);
+        DayLoopUI.Spacer(rail);
+        var cancel = DayLoopUI.RailButton(rail, "취소", Cancel);
+        DayLoopUI.SetButtonColors(cancel, DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line);
+        foreach (var icon in cancel.GetComponentsInChildren<Image>()) if (icon != cancel.image) icon.color = DayLoopUI.Kit.Line;
 
-        Button close = DayLoopUI.KitButton(frame.transform, "X", DayLoopUI.Kit.Awning, Color.white, 30, Cancel, "Close");
-        DayLoopUI.Place((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-22, -22), new Vector2(64, 64));
+        Image frame = DayLoopUI.Card(_root, DayLoopUI.Kit.Sail, "Frame", 4f, 8f);
+        frame.rectTransform.anchorMin = Vector2.zero; frame.rectTransform.anchorMax = Vector2.one;
+        frame.rectTransform.offsetMin = new Vector2(450, 39); frame.rectTransform.offsetMax = new Vector2(-30, -30);
 
         // 소리 | 화면 두 칸을 한 번에 보여 준다. (탭 전환 없음)
         RectTransform columns = DayLoopUI.Rect("Columns", frame.transform);
-        DayLoopUI.Stretch(columns, 44, 96, 44, 150);
-        HorizontalLayoutGroup columnLayout = DayLoopUI.Horizontal(columns, 0, 28);
+        DayLoopUI.Stretch(columns, 45, 42, 45, 42);
+        HorizontalLayoutGroup columnLayout = DayLoopUI.Horizontal(columns, 0, 27);
         columnLayout.childForceExpandWidth = true;
         columnLayout.childForceExpandHeight = true;
 
@@ -202,38 +211,41 @@ public class SettingsWindow : MonoBehaviour
         {
             int channel = i;
             RectTransform row = Row(_soundPage, labels[i]);
+            DayLoopUI.Layout(row, preferredHeight: 42);
             Slider slider = BuildSlider(row, value => SetVolume(channel, value));
             DayLoopUI.Layout(slider, flexibleWidth: 1, preferredHeight: 44);
             TMP_Text value = DayLoopUI.Text(row, "100%", 26, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineRight, FontStyles.Bold);
-            DayLoopUI.Layout(value, preferredWidth: 84, preferredHeight: 50);
+            DesignFonts.Apply(value, true);
+            DayLoopUI.Layout(value, preferredWidth: 66, preferredHeight: 42);
             _sliders.Add(slider);
             _sliderValues.Add(value);
         }
         DayLoopUI.Spacer(_soundPage);
         RectTransform muteRow = Row(_soundPage, "전체 음소거");
-        DayLoopUI.Spacer(muteRow);
-        _muteButton = DayLoopUI.KitButton(muteRow, "꺼짐", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 24, ToggleMute, "Mute");
-        DayLoopUI.Layout(_muteButton, preferredWidth: 130, preferredHeight: 56);
+        _muteButton = DayLoopUI.KitButton(muteRow, "", DayLoopUI.Kit.Divider, DayLoopUI.Kit.Line, 24, ToggleMute, "Mute");
+        _muteButton.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+        DayLoopUI.Layout(_muteButton, preferredWidth: 126, preferredHeight: 60);
+        foreach (var shadow in _muteButton.GetComponents<Shadow>()) if (!(shadow is Outline)) shadow.effectDistance = Vector2.zero;
+        var knob = DayLoopUI.Chunky(DayLoopUI.Panel(_muteButton.transform, Color.white, "Knob"), 3, 0);
+        knob.sprite = DayLoopUI.Circle; knob.type = Image.Type.Simple; knob.raycastTarget = false; _muteKnob = knob.rectTransform;
 
         _screenPage = Column(columns, "화면", "ScreenPage");
         _modeValue = Selector(_screenPage, "화면 모드", StepMode);
         _resolutionValue = Selector(_screenPage, "해상도", StepResolution);
-        _qualityValue = Selector(_screenPage, "그래픽 품질", StepQuality);
+        var qualityRow = Row(_screenPage, "그래픽 품질");
+        string[] qualityNames = { "낮음", "보통", "높음" };
+        for (int i = 0; i < qualityNames.Length; i++)
+        {
+            int index = i;
+            var button = DayLoopUI.KitButton(qualityRow, qualityNames[i], DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 24, () => {
+                if (_qualities.Count > 0) _working.quality = _qualities[Mathf.Min(index, _qualities.Count - 1)].Value;
+                Refresh();
+            });
+            DayLoopUI.Layout(button, preferredWidth: 0, flexibleWidth: 1, preferredHeight: 63).minWidth = 0; _qualityButtons.Add(button);
+        }
         DayLoopUI.Spacer(_screenPage);
         TMP_Text note = DayLoopUI.Text(_screenPage, "해상도는 16:9 비율만 보여요. 바꾼 설정은 [적용]을 눌러야 저장돼요.", 21, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.BottomLeft, FontStyles.Bold);
-        DayLoopUI.Layout(note, preferredHeight: 60);
-
-        // 하단 버튼
-        RectTransform footer = DayLoopUI.Rect("Footer", frame.transform);
-        DayLoopUI.Place(footer, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(1352, 76));
-        DayLoopUI.Horizontal(footer, 0, 18, TextAnchor.MiddleCenter);
-        Button reset = DayLoopUI.KitButton(footer, "기본값으로", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 26, ResetToDefaults, "Reset");
-        DayLoopUI.Layout(reset, preferredWidth: 220, preferredHeight: 68);
-        DayLoopUI.Spacer(footer);
-        Button cancel = DayLoopUI.KitButton(footer, "취소", DayLoopUI.Kit.WoodLight, Color.white, 28, Cancel, "Cancel");
-        DayLoopUI.Layout(cancel, preferredWidth: 180, preferredHeight: 68);
-        Button apply = DayLoopUI.KitButton(footer, "적용", DayLoopUI.Kit.Sea, Color.white, 28, Confirm, "Apply");
-        DayLoopUI.Layout(apply, preferredWidth: 220, preferredHeight: 68);
+        DayLoopUI.Layout(note, preferredHeight: 60); note.fontSize = 19.5f;
 
         _root.gameObject.SetActive(false);
     }
@@ -241,20 +253,21 @@ public class SettingsWindow : MonoBehaviour
     private static RectTransform Column(Transform parent, string title, string name)
     {
         Image column = DayLoopUI.Chunky(DayLoopUI.Panel(parent, Color.white, name), 3f, 0f);
-        VerticalLayoutGroup layout = DayLoopUI.Vertical(column, 0, 16);
-        layout.padding = new RectOffset(28, 28, 22, 24);
+        DayLoopUI.Layout(column, preferredWidth: 0, flexibleWidth: 1, flexibleHeight: 1).minWidth = 0;
+        VerticalLayoutGroup layout = DayLoopUI.Vertical(column, 0, 21);
+        layout.padding = new RectOffset(27, 27, 24, 24);
         TMP_Text heading = DayLoopUI.Text(column.transform, title, 32, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(heading, preferredHeight: 48);
+        DayLoopUI.Layout(heading, preferredHeight: 40);
         return column.rectTransform;
     }
 
     private static RectTransform Row(Transform page, string label)
     {
         RectTransform row = DayLoopUI.Rect(label, page);
-        DayLoopUI.Layout(row, preferredHeight: 64);
-        DayLoopUI.Horizontal(row, 0, 16);
+        DayLoopUI.Layout(row, preferredHeight: 66);
+        DayLoopUI.Horizontal(row, 0, 12);
         TMP_Text text = DayLoopUI.Text(row, label, 25, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(text, preferredWidth: 170, preferredHeight: 50);
+        DayLoopUI.Layout(text, preferredWidth: 165, preferredHeight: 50).minWidth = 165;
         return row;
     }
 
@@ -262,14 +275,14 @@ public class SettingsWindow : MonoBehaviour
     {
         RectTransform row = Row(page, label);
         Button prev = DayLoopUI.KitButton(row, Glyph("◀", "<"), DayLoopUI.Kit.Wood, Color.white, 22, () => step(-1), "Prev");
-        DayLoopUI.Layout(prev, preferredWidth: 60, preferredHeight: 56);
+        DayLoopUI.Layout(prev, preferredWidth: 66, preferredHeight: 66);
         Image box = DayLoopUI.Panel(row, DayLoopUI.Kit.Sail, "Value");
         DayLoopUI.Chunky(box, 2f, 0f);
-        DayLoopUI.Layout(box, flexibleWidth: 1, preferredHeight: 56);
+        DayLoopUI.Layout(box, flexibleWidth: 1, preferredHeight: 66).minWidth = 0;
         TMP_Text value = DayLoopUI.Text(box.transform, "", 26, DayLoopUI.Kit.Line, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Stretch(value.rectTransform, 8, 0, 8, 0);
         Button next = DayLoopUI.KitButton(row, Glyph("▶", ">"), DayLoopUI.Kit.Wood, Color.white, 22, () => step(1), "Next");
-        DayLoopUI.Layout(next, preferredWidth: 60, preferredHeight: 56);
+        DayLoopUI.Layout(next, preferredWidth: 66, preferredHeight: 66);
         return value;
     }
 

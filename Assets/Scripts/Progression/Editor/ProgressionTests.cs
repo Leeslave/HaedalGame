@@ -212,6 +212,68 @@ public class ProgressionTests
         Assert.AreEqual(0, GameSession.Current.progression.pendingRestaurantLevel);
         Assert.AreEqual(499, RestaurantProgress.Gold(GameSession.Current));
     }
+    [Test] public void ShoppingCart_RejectsWholeOrder_WhenOneItemIsOutOfStock()
+    {
+        var items = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning).Take(2).ToList();
+        GameSession.Current.wallets[0].amount = 100000;
+        string before = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        var cart = new Dictionary<int, int> { { items[0].IngredientId, 3 }, { items[1].IngredientId, 51 } };
+        Assert.IsFalse(RestaurantProgress.TryBuyIngredients(cart, out _));
+        Assert.AreEqual(before, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+    }
+    [Test] public void ShoppingCart_RejectsWholeOrder_WhenGoldIsInsufficient()
+    {
+        var item = GameDatabase.Recipes.Ingredients.First(i => !i.IsBasicSeasoning);
+        GameSession.Current.wallets[0].amount = 0;
+        string before = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        Assert.IsFalse(RestaurantProgress.TryBuyIngredients(new Dictionary<int, int> { { item.IngredientId, 2 } }, out _));
+        Assert.AreEqual(before, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+    }
+    [Test] public void ShoppingCart_PurchasesAllItems_AndDeductsExactGoldAndStock()
+    {
+        var items = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning).Take(2).ToList();
+        GameSession.Current.wallets[0].amount = 100000;
+        GameSession.Current.progression.dailyStock.Clear();
+        var cart = items.ToDictionary(i => i.IngredientId, i => 3);
+        var counts = items.ToDictionary(i => i.IngredientId, i => inventory.GetCount(i.IngredientId));
+        int cost = items.Sum(i => RestaurantProgress.RegularUnitPrice(i) * 3);
+        Assert.IsTrue(RestaurantProgress.TryBuyIngredients(cart, out string error), error);
+        Assert.AreEqual(100000 - cost, RestaurantProgress.Gold(GameSession.Current));
+        foreach (var item in items)
+        {
+            Assert.AreEqual(counts[item.IngredientId] + 3, inventory.GetCount(item.IngredientId));
+            Assert.AreEqual(47, GameSession.Current.progression.dailyStock.Single(x => x.itemId == item.IngredientId).currentStock);
+        }
+    }
+    [Test] public void FurniturePurchase_ChargesOnce_AndRejectsInsufficientFunds()
+    {
+        GameSession.Current.wallets[0].amount = 200;
+        Assert.IsTrue(RestaurantProgress.TryBuyFurniture(4, out string error), error);
+        Assert.AreEqual(40, RestaurantProgress.Gold(GameSession.Current));
+        Assert.AreEqual(1, RestaurantProgress.FurnitureCount(GameSession.Current, 4));
+        Assert.IsFalse(RestaurantProgress.TryBuyFurniture(4, out _));
+        Assert.AreEqual(40, RestaurantProgress.Gold(GameSession.Current));
+        Assert.AreEqual(1, RestaurantProgress.FurnitureCount(GameSession.Current, 4));
+    }
+    [Test] public void Expedition_ReturnsRewardsOnce_AndProtectsOperatingStaff()
+    {
+        var s = GameSession.Current;
+        string employee = s.employees[0].instanceId;
+        s.progression.freeTime = false;
+        Assert.IsFalse(RestaurantProgress.TryDepart(0, new[] { employee }, out _));
+        s.progression.freeTime = true;
+        Assert.IsTrue(RestaurantProgress.TryDepart(0, new[] { employee }, out string error), error);
+        Assert.IsTrue(ReferenceExpedition.IsAway(GameSession.Current, employee));
+        Assert.IsFalse(RestaurantProgress.TryDismiss(employee, out _));
+        Assert.IsFalse(RestaurantProgress.TryClaimExpedition(out _));
+        GameSession.Current.day++;
+        var rewards = ReferenceExpedition.Rewards(GameSession.Current);
+        Assert.IsNotEmpty(rewards);
+        var before = rewards.Keys.ToDictionary(id => id, id => inventory.GetCount(id));
+        Assert.IsTrue(RestaurantProgress.TryClaimExpedition(out error), error);
+        foreach (var item in rewards) Assert.AreEqual(before[item.Key] + item.Value, inventory.GetCount(item.Key));
+        Assert.IsFalse(RestaurantProgress.TryClaimExpedition(out _));
+    }
     [Test] public void RestaurantLevel_FollowsLevelTable()
     {
         Assert.AreEqual(180, RestaurantRules.DailyVisitors(10));

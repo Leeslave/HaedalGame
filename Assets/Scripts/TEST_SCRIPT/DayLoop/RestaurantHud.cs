@@ -25,7 +25,9 @@ public class RestaurantHud : MonoBehaviour
     private int _lastRatingCount;
     private Coroutine _ratingPunch;
     private Image _phaseChip, _progressFill;
-    private Button _speedButton, _pauseButton;
+    private Button _pauseButton;
+    private readonly Button[] _speedButtons = new Button[3];
+    private TMP_Text _stockText;
     private CanvasGroup _pauseOverlay;
     private RectTransform _toast;
     private CanvasGroup _toastGroup;
@@ -130,6 +132,18 @@ public class RestaurantHud : MonoBehaviour
         _goldText.text = gold >= 0 ? "보유 " + DayLoopUI.Gold(gold) : "보유 -";
         _todayText.text = "오늘 매출 " + DayLoopUI.SignedGold(_day.Ledger.Revenue);
 
+        if (GameSession.IsActive && _stockText != null)
+        {
+            var lines = new System.Collections.Generic.List<string>();
+            foreach (int id in GameSession.Current.menuSlots)
+            {
+                if (!GameDatabase.TryGetRecipe(id, out var recipe)) continue;
+                int count = IngredientInventoryService.Instance != null ? IngredientInventoryService.Instance.CraftableCount(recipe) : 0;
+                string amount = count > 0 ? count + "인분" : "품절";
+                lines.Add($"{recipe.RecipeName}  <color={DayLoopUI.Hex(count > 0 ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.WarnInk)}>{amount}</color>");
+            }
+            _stockText.text = lines.Count > 0 ? string.Join("\n", lines) : "오늘의 메뉴가 없어요";
+        }
         RefreshRating();
         RefreshControls();
     }
@@ -238,13 +252,13 @@ public class RestaurantHud : MonoBehaviour
 
     private void RefreshControls()
     {
-        bool fast = RestaurantSpeedController.IsFastForward;
-        DayLoopUI.SetButtonLabel(_speedButton, "x" + RestaurantSpeedController.CurrentSpeed + (fast ? " 빠르게" : " 보통"));
-        _speedButton.image.color = fast ? DayLoopUI.GoldText : DayLoopUI.Wood;
+        for (int i = 0; i < _speedButtons.Length; i++)
+            DayLoopUI.SetButtonColors(_speedButtons[i], i == RestaurantSpeedController.SpeedIndex ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand,
+                i == RestaurantSpeedController.SpeedIndex ? Color.white : DayLoopUI.Kit.Ink);
 
         bool paused = _day != null && _day.IsPaused;
-        DayLoopUI.SetButtonLabel(_pauseButton, paused ? "▶ 계속" : "|| 정지");
-        _pauseButton.image.color = paused ? DayLoopUI.Coral : DayLoopUI.Wood;
+        DayLoopUI.SetButtonLabel(_pauseButton, paused ? "계속하기" : "II  일시정지");
+        _pauseButton.image.color = paused ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.WoodLight;
         SetPauseOverlay(paused);
     }
 
@@ -286,65 +300,65 @@ public class RestaurantHud : MonoBehaviour
         _canvas = DayLoopUI.CreateCanvas("[DayLoop] HUD", 40, gameObject.scene);
         _canvas.transform.SetParent(transform, false);
 
-        // 상단 바: 화면 위쪽 0~0.11 높이 안에 들어간다. (카메라는 이 영역을 비워 둔다)
-        Image bar = DayLoopUI.Panel(_canvas.transform, DayLoopUI.Cream, "TopBar");
-        _bar = bar.rectTransform;
-        DayLoopUI.Place(_bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -10), new Vector2(1640, 96));
-        DayLoopUI.AddOutline(bar, DayLoopUI.Wood, 2.5f);
-        HorizontalLayoutGroup row = DayLoopUI.Horizontal(bar, 0, 18, TextAnchor.MiddleLeft);
-        row.padding = new RectOffset(28, 18, 10, 10);
-
-        _dayText = DayLoopUI.Text(bar.transform, "1일차", 38, DayLoopUI.WoodDark, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_dayText, preferredWidth: 140, preferredHeight: 70);
-
-        _phaseChip = DayLoopUI.Panel(bar.transform, DayLoopUI.Good, "PhaseChip");
-        DayLoopUI.Layout(_phaseChip, preferredWidth: 150, preferredHeight: 52);
-        _phaseText = DayLoopUI.Text(_phaseChip.transform, "영업 중", 26, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
+        RectTransform rail = DayLoopUI.ScreenRail(_canvas.transform, "OperationRail");
+        _bar = (RectTransform)rail.parent;
+        Image status = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Today");
+        DayLoopUI.Layout(status, preferredHeight: 290);
+        var statusLayout = DayLoopUI.Vertical(status, 20, 8);
+        RectTransform heading = DayLoopUI.Rect("DayAndPhase", status.transform);
+        DayLoopUI.Horizontal(heading, 0, 12);
+        DayLoopUI.Layout(heading, preferredHeight: 54);
+        _dayText = DayLoopUI.Text(heading, "", 38, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_dayText, flexibleWidth: 1, preferredHeight: 50);
+        _phaseChip = DayLoopUI.Panel(heading, DayLoopUI.Kit.Kelp, "Phase");
+        DayLoopUI.Layout(_phaseChip, preferredWidth: 124, preferredHeight: 42);
+        _phaseText = DayLoopUI.Text(_phaseChip.transform, "", 22, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Stretch(_phaseText.rectTransform);
-
-        RectTransform progress = DayLoopUI.Rect("Progress", bar.transform);
-        DayLoopUI.Vertical(progress, 0, 6, TextAnchor.MiddleLeft);
-        DayLoopUI.Layout(progress, preferredWidth: 240, preferredHeight: 70);
-        _progressText = DayLoopUI.Text(progress, "", 24, DayLoopUI.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_progressText, preferredHeight: 32);
-        Image track = DayLoopUI.Panel(progress, DayLoopUI.CreamDeep, "Track");
-        DayLoopUI.Layout(track, preferredHeight: 12);
-        _progressFill = DayLoopUI.Panel(track.transform, DayLoopUI.Sea, "Fill");
-        _progressFill.rectTransform.anchorMin = Vector2.zero;
-        _progressFill.rectTransform.anchorMax = new Vector2(0, 1);
-        _progressFill.rectTransform.offsetMin = Vector2.zero;
-        _progressFill.rectTransform.offsetMax = Vector2.zero;
-
-        _queueText = DayLoopUI.Text(bar.transform, "", 24, DayLoopUI.Ink, TextAlignmentOptions.MidlineLeft);
-        DayLoopUI.Layout(_queueText, preferredWidth: 230, preferredHeight: 70);
-
-        Image ratingChip = DayLoopUI.Panel(bar.transform, DayLoopUI.CreamDeep, "Rating");
-        _ratingBlock = ratingChip.rectTransform;
-        DayLoopUI.Layout(ratingChip, preferredWidth: 230, preferredHeight: 76);
-        DayLoopUI.Vertical(ratingChip, 4, 0, TextAnchor.MiddleCenter);
-        _ratingText = DayLoopUI.Text(ratingChip.transform, "", 32, DayLoopUI.GoldText, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Layout(_ratingText, preferredHeight: 40);
-        _ratingSub = DayLoopUI.Text(ratingChip.transform, "", 17, DayLoopUI.InkSoft, TextAlignmentOptions.Center);
-        DayLoopUI.Layout(_ratingSub, preferredHeight: 24);
-
-        RectTransform gold = DayLoopUI.Rect("Gold", bar.transform);
-        DayLoopUI.Vertical(gold, 0, 0, TextAnchor.MiddleLeft);
-        DayLoopUI.Layout(gold, preferredWidth: 200, preferredHeight: 70, flexibleWidth: 1);
-        _goldText = DayLoopUI.Text(gold, "", 26, DayLoopUI.GoldText, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        _progressText = DayLoopUI.Text(status.transform, "", 25, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_progressText, preferredHeight: 34);
+        _progressFill = DayLoopUI.Bar(status.transform, 0, DayLoopUI.Kit.Coin);
+        DayLoopUI.Layout(_progressFill.transform.parent, preferredHeight: 16);
+        _queueText = DayLoopUI.Text(status.transform, "", 24, DayLoopUI.Kit.Ink);
+        DayLoopUI.Layout(_queueText, preferredHeight: 32);
+        _todayText = DayLoopUI.Text(status.transform, "", 25, DayLoopUI.Kit.GoodInk, style: FontStyles.Bold);
+        DayLoopUI.Layout(_todayText, preferredHeight: 34);
+        _goldText = DayLoopUI.Text(status.transform, "", 25, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
         DayLoopUI.Layout(_goldText, preferredHeight: 34);
-        _todayText = DayLoopUI.Text(gold, "", 19, DayLoopUI.InkSoft, TextAlignmentOptions.MidlineLeft);
-        DayLoopUI.Layout(_todayText, preferredHeight: 26);
 
-        _speedButton = DayLoopUI.Button(bar.transform, "x1 보통", DayLoopUI.Wood, Color.white, 22, RestaurantSpeedController.CycleSpeed, "Speed");
-        DayLoopUI.Layout(_speedButton, preferredWidth: 130, preferredHeight: 60);
-        _pauseButton = DayLoopUI.Button(bar.transform, "|| 정지", DayLoopUI.Wood, Color.white, 22, () => _day.SetPaused(!_day.IsPaused), "Pause");
-        DayLoopUI.Layout(_pauseButton, preferredWidth: 120, preferredHeight: 60);
+        var rating = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Rating");
+        _ratingBlock = rating.rectTransform;
+        DayLoopUI.Layout(rating, preferredHeight: 118);
+        DayLoopUI.Vertical(rating, 16, 2);
+        _ratingText = DayLoopUI.Text(rating.transform, "", 36, DayLoopUI.Kit.GoldInk, style: FontStyles.Bold);
+        DayLoopUI.Layout(_ratingText, preferredHeight: 44);
+        _ratingSub = DayLoopUI.Text(rating.transform, "", 20, DayLoopUI.Kit.InkSoft);
+        DayLoopUI.Layout(_ratingSub, preferredHeight: 38);
+
+        var stock = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "RemainingStock");
+        DayLoopUI.Layout(stock, preferredHeight: 220);
+        DayLoopUI.Vertical(stock, 20, 10);
+        DayLoopUI.Layout(DayLoopUI.Text(stock.transform, "남은 재고", 23, DayLoopUI.Kit.InkSoft, style: FontStyles.Bold), preferredHeight: 28);
+        _stockText = DayLoopUI.Text(stock.transform, "", 23, DayLoopUI.Kit.Ink);
+        _stockText.lineSpacing = 12;
+        DayLoopUI.Layout(_stockText, flexibleHeight: 1);
+        DayLoopUI.Spacer(rail);
+        RectTransform speeds = DayLoopUI.Rect("SpeedSelection", rail);
+        DayLoopUI.Horizontal(speeds, 0, 6).childForceExpandWidth = true;
+        DayLoopUI.Layout(speeds, preferredHeight: 64);
+        for (int i = 0; i < 3; i++)
+        {
+            int index = i;
+            _speedButtons[i] = DayLoopUI.KitButton(speeds, "x" + (i + 1), DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 28,
+                () => RestaurantSpeedController.SetSpeedIndex(index), "Speed" + (i + 1));
+            DayLoopUI.Layout(_speedButtons[i], flexibleWidth: 1, preferredHeight: 60);
+        }
+        _pauseButton = DayLoopUI.RailButton(rail, "II  일시정지", () => _day.SetPaused(!_day.IsPaused));
 
         // 일시정지 안내 (클릭은 막지 않는다)
         Image pausePanel = DayLoopUI.Panel(_canvas.transform, new Color(0.08f, 0.12f, 0.14f, 0.78f), "PauseOverlay");
         DayLoopUI.Place(pausePanel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520, 120));
         pausePanel.raycastTarget = false;
-        TMP_Text pauseText = DayLoopUI.Text(pausePanel.transform, "일시정지 중\n<size=70%>위쪽 [▶ 계속]을 누르면 이어서 영업해요</size>", 38, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
+        TMP_Text pauseText = DayLoopUI.Text(pausePanel.transform, "일시정지 중\n<size=70%>왼쪽 [계속하기]을 누르면 이어서 영업해요</size>", 38, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Stretch(pauseText.rectTransform);
         _pauseOverlay = pausePanel.gameObject.AddComponent<CanvasGroup>();
         _pauseOverlay.blocksRaycasts = false;
@@ -353,7 +367,7 @@ public class RestaurantHud : MonoBehaviour
         // 알림
         Image toast = DayLoopUI.Panel(_canvas.transform, new Color(0.18f, 0.12f, 0.08f, 0.92f), "Toast");
         _toast = toast.rectTransform;
-        DayLoopUI.Place(_toast, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -122), new Vector2(760, 70));
+        DayLoopUI.Place(_toast, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(210, -32), new Vector2(760, 70));
         toast.raycastTarget = false;
         _toastText = DayLoopUI.Text(toast.transform, "", 28, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Stretch(_toastText.rectTransform, 20, 0, 20, 0);

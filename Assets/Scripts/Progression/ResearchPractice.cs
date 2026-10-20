@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public class ResearchPractice : MonoBehaviour
 {
     private RectTransform surface;
+    private Transform stepRail, scorePanel;
     private TMP_Text instruction, feedback;
     private RecipeData recipe;
     private Action<float> finished;
@@ -26,26 +27,28 @@ public class ResearchPractice : MonoBehaviour
     private TMP_Text heatLabel;
     private readonly System.Collections.Generic.List<float> scores = new System.Collections.Generic.List<float>();
 
-    public void Begin(RectTransform parent, RecipeData data, Action<float> onFinished)
+    public void Begin(RectTransform parent, RecipeData data, Action<float> onFinished, Transform phaseList = null, Transform scoreCard = null)
     {
+        stepRail = phaseList; scorePanel = scoreCard;
         recipe = data; finished = onFinished;
         steps = RecipeResearchPlan.Find(data.RecipeId)?.steps;
         if (steps == null || steps.Length == 0) { onFinished?.Invoke(0); Destroy(this); return; }
         surface = DayLoopUI.Chunky(DayLoopUI.Panel(parent, DayLoopUI.Kit.Sail), 3f, 0f).rectTransform;
-        DayLoopUI.Layout(surface, preferredHeight: 640);
+        DayLoopUI.Layout(surface, preferredHeight: 480);
         ShowPhase();
     }
 
     private TMP_Text Label(string text, float y, int size = 25)
     {
         var label = DayLoopUI.Text(surface, text, size, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Place(label.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, y), new Vector2(1160, 56));
+        DayLoopUI.Place(label.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, y), new Vector2(774, 60));
         return label;
     }
     private Button Button(string text, Vector2 position, Action action)
     {
         var button = DayLoopUI.KitButton(surface, text, DayLoopUI.Kit.Sea, Color.white, 26, () => { if (!transitioning) action(); });
-        DayLoopUI.Place((RectTransform)button.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), position, new Vector2(230, 80));
+        position.x *= .72f;
+        DayLoopUI.Place((RectTransform)button.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), position, new Vector2(173, 70));
         return button;
     }
     private void ShowPhase()
@@ -54,11 +57,11 @@ public class ResearchPractice : MonoBehaviour
         hits = mistakes = expected = 0; transitioning = false; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
-        Label($"{recipe.RecipeName} · {phase + 1}/{steps.Length}", -120, 32);
-        Label(steps[phase].text, -166, 24);
-        instruction = Label("", -210, 22);
+        Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
+        Label(steps[phase].text, -80, 24);
+        instruction = Label("", -125, 21);
         instruction.color = DayLoopUI.Kit.WoodLight;
-        feedback = Label("", -566, 25);
+        feedback = Label("", -420, 22);
         feedback.rectTransform.sizeDelta = new Vector2(520, 56);
         feedback.color = DayLoopUI.Kit.SeaDeep;
         switch (Mode)
@@ -134,8 +137,8 @@ public class ResearchPractice : MonoBehaviour
                 }
                 else
                 {
-                    heatLabel = Label("", -470, 22);
-                    heatLabel.rectTransform.sizeDelta = new Vector2(1160, 40);
+                    heatLabel = Label("", -375, 20);
+                    heatLabel.rectTransform.sizeDelta = new Vector2(774, 40);
                     Button("불 낮추기", new Vector2(-280, -90), () => heat = Mathf.Clamp01(heat - .15f));
                     Button("불 높이기", new Vector2(0, -90), () => heat = Mathf.Clamp01(heat + .15f));
                     Button("꺼내기", new Vector2(280, -90), () => FinishPhase(heatElapsed < 8 ? 0 : 5 * heatScore / Mathf.Max(1, heatElapsed)));
@@ -162,7 +165,7 @@ public class ResearchPractice : MonoBehaviour
     private void Gauge()
     {
         var track = DayLoopUI.Chunky(DayLoopUI.Panel(surface, new Color32(0xD6, 0xEC, 0xF0, 0xFF)), 3f, 0f).rectTransform;
-        DayLoopUI.Place(track, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(900, 64));
+        DayLoopUI.Place(track, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(774, 64));
         var hot = DayLoopUI.Panel(track, new Color32(0xF6, 0xC3, 0xB5, 0xFF), "Hot").rectTransform;
         hot.anchorMin = new Vector2(.6f, 0); hot.anchorMax = new Vector2(1, 1); hot.offsetMin = hot.offsetMax = Vector2.zero;
         var target = DayLoopUI.Panel(track, new Color32(0x8F, 0xD0, 0xA3, 0xFF), "Target", false).rectTransform;
@@ -195,6 +198,36 @@ public class ResearchPractice : MonoBehaviour
     // 단계 진행 표시: 끝난 단계는 점수, 지금 단계는 차양색, 남은 단계는 돛천색 (요리마다 단계 수가 다르다)
     private void Steps()
     {
+        if (stepRail != null)
+        {
+            foreach (Transform child in stepRail) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            for (int i = 0; i < steps.Length; i++)
+            {
+                bool done = i < scores.Count, current = i == phase;
+                var item = DayLoopUI.Card(stepRail, done ? DayLoopUI.Kit.Kelp : current ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand, "Step" + i, 4.5f, 6);
+                DayLoopUI.Layout(item, preferredHeight: current ? 84 : 63);
+                var label = DayLoopUI.Text(item.transform, $"{i + 1}  {StepLabel(steps[i].kind)}\n<size=70%>{(done ? scores[i].ToString("0.0") + "점" : current ? "지금 단계" : "대기 중")}</size>", 26,
+                    current || done ? Color.white : DayLoopUI.Kit.InkSoft, style: FontStyles.Bold);
+                DayLoopUI.Stretch(label.rectTransform, 16, 8, 16, 8);
+            }
+            if (scorePanel != null)
+            {
+                foreach (Transform child in scorePanel) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+                ScoreLabel("지금까지 평균", 30, 40);
+                ScoreLabel(scores.Count > 0 ? scores.Average().ToString("0.0") + " / 5" : "— / 5", 72, 90);
+                var gauge = DayLoopUI.Bar(scorePanel, scores.Count > 0 ? scores.Average() / 5 : 0, DayLoopUI.Kit.Kelp);
+                DayLoopUI.Layout(gauge.transform.parent, preferredHeight: 21);
+                ScoreLabel("평균 4점 이상이면 메뉴가 해금돼요.", 19.5f, 42);
+                ScoreLabel("예약한 재료", 24, 32);
+                var research = GameSession.Current.progression.research.Find(x => x.recipeId == recipe.RecipeId);
+                if (research != null)
+                    foreach (var reserved in research.paidIngredients)
+                        if (GameDatabase.Recipes.TryGetIngredientById(reserved.ingredientId, out var ingredient))
+                            ScoreLabel($"{ingredient.IngredientName} {"FEDCBA"[Mathf.Clamp(reserved.grade, 0, 5)]} ×{reserved.amount}", 21, 32);
+                ScoreLabel("연구를 취소하면 등급별로 환불돼요.", 18, 32);
+            }
+            return;
+        }
         var row = DayLoopUI.Rect("Steps", surface);
         DayLoopUI.Place(row, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -16), new Vector2(1180, 92));
         var layout = DayLoopUI.Horizontal(row, 0, 0, TextAnchor.UpperCenter);
@@ -226,6 +259,11 @@ public class ResearchPractice : MonoBehaviour
         fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         DayLoopUI.Place(summaryRect, new Vector2(0, 0), new Vector2(0, 0), new Vector2(20, 26), Vector2.zero);
+    }
+    private void ScoreLabel(string text, float size, int height)
+    {
+        var label = DayLoopUI.Text(scorePanel, text, size, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(label, preferredHeight: height);
     }
     public static float TimingScore(float position) => Mathf.Clamp(5 - Mathf.Max(0, Mathf.Abs(position - .5f) - .1f) * 12.5f, 0, 5);
     private void Update()

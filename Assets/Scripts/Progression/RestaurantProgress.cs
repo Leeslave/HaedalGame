@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>관리 화면의 거래는 사본에서 검증하고 한 번에 적용한다. 파일 쓰기는 취침에서만 한다.</summary>
-public static class RestaurantProgress
+public static partial class RestaurantProgress
 {
     public static int Gold(GameSaveData s) => s.wallets.FirstOrDefault(w => w.currencyId == GameSession.GoldCurrencyId)?.amount ?? 0;
     public static bool CanManage => GameSession.IsActive && GameFlow.Phase != GamePhase.Operation && GameFlow.Phase != GamePhase.ClosingReport;
@@ -169,15 +169,31 @@ public static class RestaurantProgress
     }
     private static void SyncIngredients(GameSaveData s) => s.ingredients = s.progression.ingredientGrades.GroupBy(x => x.ingredientId)
         .Select(g => new IngredientStackEntry { ingredientId = g.Key, amount = g.Sum(x => x.amount), source = "Management" }).ToList();
-    public static bool TryBuyIngredient(int id, int amount, out string error) => Change(s => {
-        if (amount <= 0 || !GameDatabase.Recipes.TryGetIngredientById(id, out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+    public static bool TryBuyIngredient(int id, int amount, out string error)
+        => TryBuyIngredients(new Dictionary<int, int> { { id, amount } }, out error);
+
+    /// <summary>장바구니 전체를 사본에서 검증한다. 한 재료라도 살 수 없으면 골드·재고를 바꾸지 않는다.</summary>
+    public static bool TryBuyIngredients(IReadOnlyDictionary<int, int> items, out string error) => Change(s => {
+        if (items == null || items.Count == 0) return "장바구니가 비어 있어요.";
         if (s.progression.regularStockDay != s.day) { s.progression.dailyStock.Clear(); s.progression.regularStockDay = s.day; }
-        var stock = s.progression.dailyStock.Find(x => x.itemId == id);
-        if (stock == null) { stock = new ShopStockEntry { itemId = id, currentStock = 50, maxStock = 50 }; s.progression.dailyStock.Add(stock); }
-        if (stock.currentStock < amount) return "오늘 재고가 부족해요.";
-        int cost = RegularUnitPrice(item) * amount;
-        if (!Spend(s, cost)) return "골드가 부족해요.";
-        stock.currentStock -= amount; EnsureGrades(s); AddIngredient(s, id, 0, amount); return null;
+        long total = 0;
+        foreach (var pair in items)
+        {
+            if (pair.Value <= 0 || !GameDatabase.Recipes.TryGetIngredientById(pair.Key, out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+            var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
+            if ((stock?.currentStock ?? 50) < pair.Value) return $"{item.IngredientName}의 오늘 재고가 부족해요.";
+            total += (long)RegularUnitPrice(item) * pair.Value;
+        }
+        if (total > int.MaxValue || !Spend(s, (int)total)) return "골드가 부족해요.";
+        EnsureGrades(s);
+        foreach (var pair in items)
+        {
+            var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
+            if (stock == null) { stock = new ShopStockEntry { itemId = pair.Key, currentStock = 50, maxStock = 50 }; s.progression.dailyStock.Add(stock); }
+            stock.currentStock -= pair.Value;
+            AddIngredient(s, pair.Key, 0, pair.Value);
+        }
+        return null;
     }, out error);
     public static int RegularUnitPrice(IngredientData item) => Mathf.Max(1, Mathf.RoundToInt(item.Price * 1.2f));
     public static void AcquireBlueprint(int id)
@@ -265,12 +281,14 @@ public static class RestaurantProgress
     public static bool TryAssign(string id, PartTimerRole role, out string error) => Change(s => {
         var e = s.employees.Find(x => x.instanceId == id);
         if (e == null) return "직원이 없어요.";
+        if (ReferenceExpedition.IsAway(s, id)) return "탐험 중인 직원은 돌아온 뒤 배치할 수 있어요.";
         var assigned = s.employees.Where(x => x.instanceId != id && x.role == role.ToString()).ToList();
         if (role != PartTimerRole.None && assigned.Count >= RestaurantRules.StaffLimit(s.restaurantLevel, role)) return "배치 가능한 인원이 가득 찼어요.";
         e.role = role.ToString(); e.slotIndex = role == PartTimerRole.None ? -1 : Enumerable.Range(0, 5).First(i => !assigned.Any(x => x.slotIndex == i)); return null;
     }, out error);
     public static bool TryDismiss(string id, out string error) => Change(s => {
         var e = s.employees.Find(x => x.instanceId == id); if (e == null) return "직원이 없어요.";
+        if (ReferenceExpedition.IsAway(s, id)) return "탐험 중인 직원은 돌아온 뒤 내보낼 수 있어요.";
         if (s.progression.unpaidEmployeeIds.Contains(id)) { s.unpaidDismissalCount++; s.scoutPenaltyPending = true; }
         if (s.progression.unpaidEmployeeIds.Contains(id) && s.dailyRatingHistory.Count > 0)
             foreach (var rating in s.dailyRatingHistory) rating.value = Mathf.Max(0, rating.value - .1f);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +26,7 @@ public class TitleMenuController : MonoBehaviour
     [SerializeField] private IntroController _intro;
 
     private bool _busy;
+    private ReferenceTitleView _designView;
 
     private void Awake()
     {
@@ -38,6 +39,7 @@ public class TitleMenuController : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_designView != null) Destroy(_designView.gameObject);
         if (_newGameButton != null) _newGameButton.onClick.RemoveListener(OnClickNewGame);
         if (_continueButton != null) _continueButton.onClick.RemoveListener(OnClickContinue);
         if (_quitButton != null) _quitButton.onClick.RemoveListener(OnClickQuit);
@@ -77,53 +79,21 @@ public class TitleMenuController : MonoBehaviour
             GameSession.End();
 
         GameFlow.SetPhase(GamePhase.Title);
-        EnsureSummaryLabel();
-        RefreshContinue();
-    }
-
-    // 씬에 요약 텍스트가 연결되지 않았으면 [이어하기] 버튼 바로 아래에 작은 요약 띠를 만든다. (UI 시안: 저장 요약은 이어하기에 붙인다)
-    // StartScene_TEST는 이어하기와 새로하기 사이에 이 띠가 들어갈 자리를 비워 두었다.
-    private void EnsureSummaryLabel()
-    {
-        if (_continueSummaryText != null || _continueButton == null || !(_continueButton.transform is RectTransform buttonRect))
-            return;
-
-        Image pill = DayLoopUI.Panel(buttonRect, new Color(DayLoopUI.Kit.Line.r, DayLoopUI.Kit.Line.g, DayLoopUI.Kit.Line.b, 0.78f), "[Title] SaveSummary");
-        pill.raycastTarget = false;
-        pill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-        DayLoopUI.Place(pill.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -6f), new Vector2(440f, 58f));
-        TextMeshProUGUI text = DayLoopUI.Text(pill.transform, "", 19, DayLoopUI.Kit.Sail, TextAlignmentOptions.Center, FontStyles.Bold);
-        text.lineSpacing = -6f;
-        DayLoopUI.Stretch(text.rectTransform, 12, 3, 12, 3);
-        _continueSummaryText = text;
-    }
-
-    private void RefreshContinue()
-    {
-        bool hasFile = SaveService.HasSaveFile();
-        bool hasValidSave = SaveService.TryGetSummary(out SaveSummary summary);
-
-        if (_continueButton != null)
-            _continueButton.interactable = hasFile;   // 손상 파일도 눌러서 오류 안내를 받을 수 있게 한다.
-
-        if (_continueSummaryText == null)
-            return;
-
-        // 요약 띠는 보여 줄 내용이 있을 때만 보인다.
-        if (_continueSummaryText.transform.parent != null && _continueSummaryText.transform.parent.name == "[Title] SaveSummary")
-            _continueSummaryText.transform.parent.gameObject.SetActive(hasFile);
-
-        if (hasValidSave)
+        // 기존 메뉴 Canvas는 표시와 입력만 끈다. 새 UI는 독립 Canvas에 만들어 부모 알파를 상속하지 않는다.
+        foreach (var button in new[] { _continueButton, _newGameButton, _settingsButton, _quitButton })
         {
-            TimeSpan playTime = TimeSpan.FromSeconds(summary.PlayTimeSeconds);
-            _continueSummaryText.text =
-                $"{summary.Day}일차 · Lv.{summary.RestaurantLevel} · {summary.Gold:N0}G\n{summary.SavedAtLocal:yyyy.MM.dd HH:mm} 저장 · 플레이 {(int)playTime.TotalHours}시간 {playTime.Minutes}분";
+            if (button == null) continue;
+            var legacyCanvas = button.GetComponentInParent<Canvas>();
+            if (legacyCanvas == null) continue;
+            var group = legacyCanvas.GetComponent<CanvasGroup>();
+            if (group == null) group = legacyCanvas.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0; group.interactable = false; group.blocksRaycasts = false;
         }
-        else
-        {
-            _continueSummaryText.text = hasFile ? "세이브 파일을 읽을 수 없습니다." : "";
-        }
+        _designView = ReferenceTitleView.Create(gameObject.scene, OnClickContinue, OnClickNewGame, OnClickSettings, OnClickQuit);
+        _designView.RefreshSave();
     }
+
+    private void RefreshContinue() => _designView?.RefreshSave();
 
     // ───── 버튼 ─────
 
@@ -193,6 +163,7 @@ public class TitleMenuController : MonoBehaviour
             return;
 
         _busy = true;
+        _designView?.SetVisible(false);
         GameFlow.BeginNewGame();
 
         if (_intro != null)

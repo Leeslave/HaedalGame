@@ -9,13 +9,13 @@ public class ManagementDialog : MonoBehaviour
     {
         var shade = DayLoopUI.Panel(parent, DayLoopUI.Dim).rectTransform;
         DayLoopUI.Stretch(shade);
-        var panel = DayLoopUI.Panel(shade, DayLoopUI.Cream).rectTransform;
+        var panel = DayLoopUI.Card(shade, DayLoopUI.Kit.Sail).rectTransform;
         DayLoopUI.Place(panel, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(900, 350));
-        var text = DayLoopUI.Text(panel, message, 28, DayLoopUI.Ink, TextAlignmentOptions.Center);
+        var text = DayLoopUI.Text(panel, message, 28, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center);
         DayLoopUI.Place(text.rectTransform, Vector2.one * .5f, Vector2.one * .5f, new Vector2(0, 50), new Vector2(820, 180));
-        var cancel = DayLoopUI.Button(panel, "계속 연구", DayLoopUI.Sea, Color.white, 26, () => Destroy(shade.gameObject));
+        var cancel = DayLoopUI.KitButton(panel, "취소", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 26, () => Destroy(shade.gameObject));
         DayLoopUI.Place((RectTransform)cancel.transform, Vector2.one * .5f, Vector2.one * .5f, new Vector2(-200, -110), new Vector2(300, 60));
-        var ok = DayLoopUI.Button(panel, "도안 파손·취소", DayLoopUI.Warn, Color.white, 26, () => { Destroy(shade.gameObject); confirm(); });
+        var ok = DayLoopUI.KitButton(panel, "확인", DayLoopUI.Kit.Awning, Color.white, 26, () => { Destroy(shade.gameObject); confirm(); });
         DayLoopUI.Place((RectTransform)ok.transform, Vector2.one * .5f, Vector2.one * .5f, new Vector2(200, -110), new Vector2(300, 60));
     }
     public static void RefundEffect(Transform parent)

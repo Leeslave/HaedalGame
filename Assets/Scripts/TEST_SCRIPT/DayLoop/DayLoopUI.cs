@@ -11,23 +11,23 @@ using UnityEngine.UI;
 public static class DayLoopUI
 {
     // ───── 색상 (크림·나무 계열) ─────
-    public static readonly Color Cream = new Color32(0xFB, 0xF4, 0xE6, 0xFF);
-    public static readonly Color CreamDeep = new Color32(0xF0, 0xE1, 0xC4, 0xFF);
-    public static readonly Color Wood = new Color32(0x9A, 0x66, 0x42, 0xFF);
-    public static readonly Color WoodDark = new Color32(0x5E, 0x3C, 0x27, 0xFF);
-    public static readonly Color Ink = new Color32(0x3A, 0x29, 0x1D, 0xFF);
-    public static readonly Color InkSoft = new Color32(0x7D, 0x66, 0x54, 0xFF);
-    public static readonly Color Coral = new Color32(0xD9, 0x5F, 0x45, 0xFF);
-    public static readonly Color Sea = new Color32(0x2F, 0x86, 0x8C, 0xFF);
-    public static readonly Color Good = new Color32(0x3B, 0x8A, 0x5A, 0xFF);
-    public static readonly Color Warn = new Color32(0xC2, 0x45, 0x36, 0xFF);
-    public static readonly Color GoldText = new Color32(0xB9, 0x7C, 0x10, 0xFF);
+    public static readonly Color Cream = Kit.Sail;
+    public static readonly Color CreamDeep = Kit.Sand;
+    public static readonly Color Wood = Kit.WoodLight;
+    public static readonly Color WoodDark = Kit.Line;
+    public static readonly Color Ink = Kit.Ink;
+    public static readonly Color InkSoft = Kit.InkSoft;
+    public static readonly Color Coral = Kit.Awning;
+    public static readonly Color Sea = Kit.Sea;
+    public static readonly Color Good = Kit.Kelp;
+    public static readonly Color Warn = Kit.WarnInk;
+    public static readonly Color GoldText = Kit.GoldInk;
     public static readonly Color Dim = new Color(0.05f, 0.08f, 0.10f, 0.72f);
     public static readonly Color Curtain = new Color32(0x16, 0x22, 0x29, 0xFF);
 
     /// <summary>
     /// UI 시안(해달식당 UI 키트) 색상. 진갈색 외곽선 + 아래쪽 단단한 그림자로 게임 아트의 굵은 선과 맞춘다.
-    /// 영업 HUD는 위의 기존 색을 그대로 쓰고, 다시 그린 화면만 이 색을 쓴다.
+    /// 모든 하루 루프 화면에서 공유한다.
     /// 차양색(Awning)은 화면마다 가장 중요한 행동 하나에만 쓴다.
     /// </summary>
     public static class Kit
@@ -57,54 +57,44 @@ public static class DayLoopUI
 
     public const float RefWidth = 1920f;
     public const float RefHeight = 1080f;
+    public const float RailWidth = 420f;
+
+    /// <summary>시안의 화면 왼쪽 메뉴 띠. 월드 화면을 가리지 않는 영역과 같은 폭을 쓴다.</summary>
+    public static RectTransform ScreenRail(Transform parent, string name = "MenuRail")
+    {
+        var rail = Panel(parent, new Color(74f / 255f, 46f / 255f, 27f / 255f, .55f), name, false);
+        rail.rectTransform.anchorMin = Vector2.zero;
+        rail.rectTransform.anchorMax = new Vector2(0, 1);
+        rail.rectTransform.pivot = new Vector2(0, .5f);
+        rail.rectTransform.offsetMin = Vector2.zero;
+        rail.rectTransform.offsetMax = new Vector2(RailWidth, 0);
+        var body = Rect("RailBody", rail.transform);
+        Stretch(body, 33, 33, 33, 39);
+        Vertical(body, 0, 12);
+        return body;
+    }
+
+    public static Button RailButton(Transform parent, string label, UnityAction action, bool primary = false, float height = 68)
+    {
+        var button = KitButton(parent, label, primary ? Kit.Awning : Kit.WoodLight, Color.white, 28, action, label);
+        Layout(button, preferredHeight: height);
+        button.GetComponentInChildren<TMP_Text>().alignment = TextAlignmentOptions.MidlineLeft;
+        Stretch(button.GetComponentInChildren<TMP_Text>().rectTransform, 20, 8, 20, 8);
+        DesignArt.ButtonIcon(button, label);
+        return button;
+    }
 
     // ───── 폰트 ─────
 
-    private static TMP_FontAsset _font;
-
-    /// <summary>
-    /// 씬에 이미 쓰이고 있는 한글 TMP 폰트를 찾아 공유한다. (Pretendard 우선)
-    /// 찾지 못하면 TMP 기본 폰트를 쓰며, 이때 한글이 깨질 수 있으므로 경고를 남긴다.
-    /// </summary>
-    public static TMP_FontAsset Font
-    {
-        get
-        {
-            if (_font != null)
-                return _font;
-
-            TMP_FontAsset fallback = null;
-            foreach (TMP_Text text in Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                TMP_FontAsset candidate = text.font;
-                if (candidate == null || !candidate.HasCharacter('가'))
-                    continue;
-
-                if (candidate.name.Contains("Pretendard"))
-                {
-                    _font = candidate;
-                    return _font;
-                }
-
-                if (fallback == null)
-                    fallback = candidate;
-            }
-
-            if (fallback != null)
-            {
-                _font = fallback;
-                return _font;
-            }
-
-            Debug.LogWarning("[DayLoop] 씬에서 한글 TMP 폰트를 찾지 못해 기본 폰트를 사용합니다.");
-            return TMP_Settings.defaultFontAsset;
-        }
-    }
+    public static TMP_FontAsset Font => DesignFonts.Body;
 
     // ───── 스프라이트 ─────
 
     private static Sprite _rounded;
+    private static Sprite _circle;
     private static Sprite _white;
+
+    public static Sprite Circle => _circle != null ? _circle : _circle = CreateRoundedSprite(64, 32);
 
     /// <summary>9-slice 둥근 사각형. Image.type = Sliced, SpriteRenderer.drawMode = Sliced로 크기를 바꿔 쓴다.</summary>
     public static Sprite Rounded
@@ -195,13 +185,14 @@ public static class DayLoopUI
             go.layer = uiLayer;
 
         Canvas canvas = go.GetComponent<Canvas>();
+        go.AddComponent<DesignCanvasMarker>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = sortingOrder;
 
         CanvasScaler scaler = go.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(RefWidth, RefHeight);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         scaler.matchWidthOrHeight = 0.5f;
         return canvas;
     }
@@ -224,7 +215,7 @@ public static class DayLoopUI
         {
             image.sprite = Rounded;
             image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 1f;
+            image.pixelsPerUnitMultiplier = 100f / 48f;
         }
         return image;
     }
@@ -234,12 +225,13 @@ public static class DayLoopUI
     {
         RectTransform rt = Rect(name, parent);
         TextMeshProUGUI text = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        text.font = Font;
+        text.font = size >= 28 || name == "Label" ? DesignFonts.Heading : DesignFonts.Body;
+        text.fontSharedMaterial = text.font.material;
         text.text = value;
         text.fontSize = size;
         text.color = color;
         text.alignment = align;
-        text.fontStyle = style;
+        text.fontStyle = FontStyles.Normal;
         text.raycastTarget = false;
         text.textWrappingMode = TextWrappingModes.Normal;
         text.overflowMode = TextOverflowModes.Ellipsis;
@@ -374,6 +366,7 @@ public static class DayLoopUI
         HorizontalLayoutGroup layout = Horizontal(chip, 0, 0, TextAnchor.MiddleCenter);
         layout.padding = new RectOffset(16, 16, 4, 4);
         TextMeshProUGUI text = Text(chip.transform, label, fontSize, foreground, TextAlignmentOptions.Center, FontStyles.Bold);
+        Layout(text, preferredWidth: text.GetPreferredValues(label).x, preferredHeight: fontSize * 1.25f);
         text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Overflow;
         return text;
@@ -415,7 +408,7 @@ public static class DayLoopUI
     /// <summary>음식 아이콘. 아이콘이 없으면 모래색 접시에 이름 첫 글자를 보여 준다.</summary>
     public static Image FoodIcon(Transform parent, RecipeData recipe, float size, string name = "FoodIcon")
     {
-        Sprite icon = recipe != null ? recipe.Icon : null;
+        Sprite icon = DesignArt.Food(recipe);
         Image image;
         if (icon != null)
         {
@@ -427,6 +420,7 @@ public static class DayLoopUI
         else
         {
             image = Chunky(Panel(parent, Kit.Sand, name), 2f, 0f);
+            image.sprite = Circle; image.type = Image.Type.Simple;
             string initial = recipe != null && !string.IsNullOrEmpty(recipe.RecipeName) ? recipe.RecipeName.Substring(0, 1) : "?";
             TextMeshProUGUI text = Text(image.transform, initial, size * 0.42f, Kit.Wood, TextAlignmentOptions.Center, FontStyles.Bold, "Initial");
             Stretch(text.rectTransform);

@@ -55,6 +55,8 @@ public class TablePlacementManager : MonoBehaviour
     private void StartPlacing(TableData data)
     {
         if (!RestaurantProgress.CanManage) return;
+        if (GameSession.IsActive && RestaurantProgress.FurnitureCount(GameSession.Current, data.chairTiles.Length) <= 0)
+        { DayCycleController.Instance?.Toast("창고에 테이블이 없어요. 관리 > 가구에서 구매해 주세요."); return; }
         CancelGhost();
         SpawnGhost(data);
         state = PlacementState.PlacingGhost;
@@ -86,6 +88,12 @@ public class TablePlacementManager : MonoBehaviour
             { DayCycleController.Instance?.Toast("현재 식당의 좌석 한도를 초과했어요."); return; }
         }
         TableSaveLoadManager.Instance.RememberEdit();
+        if (GameSession.IsActive && movingTable == null)
+        {
+            var stock = GameSession.Current.progression.furniture.Find(x => x.seats == activeGhost.TableData.chairTiles.Length);
+            if (stock == null || stock.amount <= 0) return;
+            stock.amount--;
+        }
 
         Vector2Int anchor  = activeGhost.CurrentCellPos;
         TableData  data    = activeGhost.TableData;

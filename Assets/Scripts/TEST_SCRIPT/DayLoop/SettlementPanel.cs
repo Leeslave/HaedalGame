@@ -57,15 +57,15 @@ public class SettlementPanel : MonoBehaviour
         {
             case SaveState.Saving:
                 _status.text = "결산을 확정하는 중…";
-                _status.color = DayLoopUI.Kit.InkSoft;
+                _status.color = DayLoopUI.Kit.Sail;
                 break;
             case SaveState.Saved:
                 _status.text = "오늘 결산을 확정했어요. 집에서 잠들면 저장돼요.";
-                _status.color = DayLoopUI.Kit.GoodInk;
+                _status.color = DayLoopUI.Kit.Sail;
                 break;
             default:
                 _status.text = "저장하지 못했어요. 날짜는 아직 넘어가지 않았어요." + (string.IsNullOrEmpty(error) ? "" : "\n<size=80%>" + error + "</size>");
-                _status.color = DayLoopUI.Kit.WarnInk;
+                _status.color = DayLoopUI.Kit.Coin;
                 break;
         }
 
@@ -171,33 +171,32 @@ public class SettlementPanel : MonoBehaviour
         DayLoopUI.Stretch(dim.rectTransform);
         dim.raycastTarget = true;
 
-        Image card = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "Card", 4f, 8f);
-        DayLoopUI.Place(card.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -22), new Vector2(1240, 980));
+        var rail = DayLoopUI.ScreenRail(_canvas.transform, "SettlementRail");
+        var summary = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "ProfitSummary");
+        DayLoopUI.Layout(summary, preferredHeight: 270); DayLoopUI.Vertical(summary, 22, 12);
+        _title = DayLoopUI.Text(summary.transform, "", 38, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_title, preferredHeight: 52);
+        _subtitle = DayLoopUI.Text(summary.transform, "", 22, DayLoopUI.Kit.InkSoft);
+        DayLoopUI.Layout(_subtitle, preferredHeight: 30);
+        DayLoopUI.Layout(DayLoopUI.Text(summary.transform, "오늘 순이익", 25, DayLoopUI.Kit.InkSoft, style: FontStyles.Bold), preferredHeight: 36);
+        _profit = DayLoopUI.Text(summary.transform, "", 52, DayLoopUI.Kit.GoodInk, style: FontStyles.Bold);
+        DayLoopUI.Layout(_profit, preferredHeight: 70);
+        _profit.enableAutoSizing = true; _profit.fontSizeMin = 30; _profit.fontSizeMax = 52;
+        _headline = DayLoopUI.Text(rail, "", 26, Color.white, style: FontStyles.Bold);
+        DayLoopUI.Layout(_headline, preferredHeight: 128);
+        DayLoopUI.Spacer(rail);
+        _status = DayLoopUI.Text(rail, "", 24, DayLoopUI.Kit.Sail, style: FontStyles.Bold);
+        DayLoopUI.Layout(_status, preferredHeight: 144);
+        _retryButton = DayLoopUI.RailButton(rail, "저장 다시 시도", HandleRetry, true, 84);
+        _retryButton.gameObject.SetActive(false);
+        _nextButton = DayLoopUI.RailButton(rail, "섬으로 돌아가기", HandleNext, true, 100);
 
-        // 제목 리본 (N일차 결산)
-        _title = DayLoopUI.Ribbon(card.transform, "", DayLoopUI.Kit.Awning, 440f, 44f);
-
+        Image card = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "Card", 4, 8);
+        card.rectTransform.anchorMin = Vector2.zero; card.rectTransform.anchorMax = Vector2.one;
+        card.rectTransform.offsetMin = new Vector2(454, 36); card.rectTransform.offsetMax = new Vector2(-36, -36);
         RectTransform body = DayLoopUI.Rect("Body", card.transform);
-        DayLoopUI.Stretch(body, 48, 64, 48, 30);
-        DayLoopUI.Vertical(body, 0, 14);
-
-        // 순이익 (가장 크게)
-        RectTransform hero = DayLoopUI.Rect("Hero", body);
-        DayLoopUI.Layout(hero, preferredHeight: 128);
-        DayLoopUI.Vertical(hero, 0, 0, TextAnchor.MiddleCenter);
-        _subtitle = DayLoopUI.Text(hero, "", 22, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Layout(_subtitle, preferredHeight: 26);
-        _headline = DayLoopUI.Text(hero, "", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Layout(_headline, preferredHeight: 32);
-        RectTransform profitRow = DayLoopUI.Rect("ProfitRow", hero);
-        DayLoopUI.Horizontal(profitRow, 0, 22, TextAnchor.MiddleCenter);
-        DayLoopUI.Layout(profitRow, preferredHeight: 70);
-        TMP_Text profitLabel = DayLoopUI.Text(profitRow, "오늘 순이익", 28, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineRight, FontStyles.Bold);
-        DayLoopUI.Layout(profitLabel, preferredWidth: 200, preferredHeight: 70);
-        _profit = DayLoopUI.Text(profitRow, "", 76, DayLoopUI.Kit.GoodInk, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        _profit.textWrappingMode = TextWrappingModes.NoWrap;
-        _profit.overflowMode = TextOverflowModes.Overflow;
-        DayLoopUI.Layout(_profit, preferredWidth: 420, preferredHeight: 70);
+        DayLoopUI.Stretch(body, 32, 32, 32, 32);
+        DayLoopUI.Vertical(body, 0, 24);
 
         // 대접 손님 · 평점 · 골드
         RectTransform stats = DayLoopUI.Rect("Stats", body);
@@ -268,18 +267,6 @@ public class SettlementPanel : MonoBehaviour
         DayLoopUI.Layout(_metrics, preferredHeight: 40);
         _suggestion = DayLoopUI.Text(insightBody, "", 23, DayLoopUI.Kit.Ink, TextAlignmentOptions.TopLeft, FontStyles.Bold);
         DayLoopUI.Layout(_suggestion, preferredHeight: 40);
-
-        // 하단 고정: 저장 상태 + 다음 행동
-        RectTransform footer = DayLoopUI.Rect("Footer", body);
-        DayLoopUI.Horizontal(footer, 0, 18);
-        DayLoopUI.Layout(footer, preferredHeight: 84);
-        _status = DayLoopUI.Text(footer, "", 22, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_status, flexibleWidth: 1);
-        _retryButton = DayLoopUI.KitButton(footer, "저장 다시 시도", DayLoopUI.Kit.Awning, Color.white, 28, HandleRetry, "Retry");
-        DayLoopUI.Layout(_retryButton, preferredWidth: 260, preferredHeight: 74);
-        _nextButton = DayLoopUI.KitButton(footer, "다음 날 준비하기", DayLoopUI.Kit.Awning, Color.white, 30, HandleNext, "Next");
-        DayLoopUI.Layout(_nextButton, preferredWidth: 330, preferredHeight: 74);
-        _retryButton.gameObject.SetActive(false);
 
         Hide();
     }

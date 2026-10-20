@@ -10,7 +10,7 @@ public static class StaffRuntimeBinding
     {
         var agents = parent.GetComponentsInChildren<T>(true).ToList();
         if (!GameSession.IsActive || agents.Count == 0) return agents;
-        var staff = GameSession.Current.employees.Where(e => e.role == role.ToString())
+        var staff = GameSession.Current.employees.Where(e => e.role == role.ToString() && !ReferenceExpedition.IsAway(GameSession.Current, e.instanceId))
             .OrderBy(e => e.slotIndex).Take(RestaurantRules.StaffLimit(GameSession.Current.restaurantLevel, role)).ToList();
         while (agents.Count < staff.Count) agents.Add(Object.Instantiate(agents[0], parent.transform));
         for (int i = 0; i < agents.Count; i++)

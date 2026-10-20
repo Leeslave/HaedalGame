@@ -66,7 +66,7 @@ public class DayCycleController : MonoBehaviour
         }
     }
 
-    public int CurrentGold => CurrencyManager.Instance != null ? CurrencyManager.Instance.GetCurrencyById(GameSession.GoldCurrencyId) : -1;
+    public int CurrentGold => CurrencyManager.Instance != null ? CurrencyManager.Instance.GetCurrencyById(GameSession.GoldCurrencyId) : GameSession.IsActive ? RestaurantProgress.Gold(GameSession.Current) : -1;
 
     private void Awake()
     {
@@ -180,8 +180,8 @@ public class DayCycleController : MonoBehaviour
     {
         if (GameSession.IsActive)
         {
-            servers = GameSession.Current.employees.FindAll(e => e.role == "Serving").Count;
-            chefs = GameSession.Current.employees.FindAll(e => e.role == "Kitchen").Count;
+            servers = GameSession.Current.employees.FindAll(e => e.role == "Serving" && !ReferenceExpedition.IsAway(GameSession.Current, e.instanceId)).Count;
+            chefs = GameSession.Current.employees.FindAll(e => e.role == "Kitchen" && !ReferenceExpedition.IsAway(GameSession.Current, e.instanceId)).Count;
             return;
         }
         servers = FindObjectsByType<ServerAgent>(FindObjectsSortMode.None).Length;

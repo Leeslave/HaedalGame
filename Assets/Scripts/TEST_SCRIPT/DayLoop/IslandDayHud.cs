@@ -18,6 +18,7 @@ public class IslandDayHud : MonoBehaviour
     private static IslandDayHud _instance;
 
     private Canvas _canvas;
+    private Button _prepareAction;
     private TMP_Text _day, _stats, _mission;
     private Image _missionBar;
     private readonly Image[] _stepDots = new Image[3];
@@ -42,7 +43,11 @@ public class IslandDayHud : MonoBehaviour
         _canvas = DayLoopUI.CreateCanvas("[DayLoop] IslandHUD", 30, gameObject.scene);
         _canvas.transform.SetParent(transform, false);
 
+        var sea = DayLoopUI.Panel(_canvas.transform, new Color32(0x2C, 0x8F, 0xB0, 255), "Sea", false); DayLoopUI.Stretch(sea.rectTransform);
+        var background = ReferenceTitleView.Picture(_canvas.transform, "IslandBackground");
+        ReferenceTitleView.Place(background.rectTransform, 150, 0, 1920, 1080);
         BuildPlaque();
+        BuildMapButtons();
         AttachBadge("Restaurant");
         AttachBadge("Lab");
         AttachBadge("House");
@@ -74,78 +79,84 @@ public class IslandDayHud : MonoBehaviour
 
     private void BuildPlaque()
     {
-        Image plaque = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "DayPlaque", 3f, 6f);
-        plaque.raycastTarget = false;
-        DayLoopUI.Place(plaque.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28, -24), Vector2.zero);
-        HorizontalLayoutGroup row = DayLoopUI.Horizontal(plaque, 0, 0);
-        row.childForceExpandHeight = true;
-        ContentSizeFitter fit = plaque.gameObject.AddComponent<ContentSizeFitter>();
-        fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-        fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        Image dayBlock = DayLoopUI.Panel(plaque.transform, DayLoopUI.Kit.Wood, "Day");
-        dayBlock.raycastTarget = false;
-        DayLoopUI.Layout(dayBlock, preferredWidth: 116, preferredHeight: 134);
-        VerticalLayoutGroup dayLayout = DayLoopUI.Vertical(dayBlock, 0, 0, TextAnchor.MiddleCenter);
-        dayLayout.padding = new RectOffset(8, 8, 14, 14);
-        _day = DayLoopUI.Text(dayBlock.transform, "", 54, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Layout(_day, preferredHeight: 62);
-        TMP_Text dayUnit = DayLoopUI.Text(dayBlock.transform, "일차", 22, new Color32(0xF6, 0xDE, 0xC4, 0xFF), TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Layout(dayUnit, preferredHeight: 28);
-
-        RectTransform right = DayLoopUI.Rect("Info", plaque.transform);
-        VerticalLayoutGroup rightLayout = DayLoopUI.Vertical(right, 0, 10, TextAnchor.MiddleLeft);
-        rightLayout.padding = new RectOffset(22, 26, 14, 14);
-        rightLayout.childControlWidth = true;
-        rightLayout.childForceExpandWidth = false;
-
-        RectTransform steps = DayLoopUI.Rect("Steps", right);
-        DayLoopUI.Horizontal(steps, 0, 0, TextAnchor.UpperLeft);
+        var rail = DayLoopUI.ScreenRail(_canvas.transform, "IslandRail");
+        var status = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "DayStatus");
+        DayLoopUI.Layout(status, preferredHeight: 150);
+        DayLoopUI.Vertical(status, 20, 8);
+        _day = DayLoopUI.Text(status.transform, "", 38, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_day, preferredHeight: 48);
+        var steps = DayLoopUI.Rect("Steps", status.transform);
+        DayLoopUI.Layout(steps, preferredHeight: 26);
+        DayLoopUI.Horizontal(steps, 0, 10);
         string[] names = { "아침", "영업", "밤" };
         for (int i = 0; i < names.Length; i++)
         {
-            if (i > 0)
-            {
-                Image connector = DayLoopUI.Panel(steps, DayLoopUI.Kit.Divider, "Connector", false);
-                connector.raycastTarget = false;
-                DayLoopUI.Layout(connector, preferredWidth: 48, preferredHeight: 6);
-            }
-            RectTransform step = DayLoopUI.Rect(names[i], steps);
-            DayLoopUI.Vertical(step, 0, 2, TextAnchor.UpperCenter).childControlWidth = false;
-            DayLoopUI.Layout(step, preferredWidth: 58, preferredHeight: 62);
-            Image dot = DayLoopUI.Chunky(DayLoopUI.Panel(step, DayLoopUI.Kit.Sail, "Dot"), 3f, 0f);
-            dot.raycastTarget = false;
-            dot.rectTransform.sizeDelta = new Vector2(32, 32);
-            DayLoopUI.Layout(dot, preferredHeight: 32);
-            TMP_Text label = DayLoopUI.Text(step, names[i], 19, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
-            label.rectTransform.sizeDelta = new Vector2(58, 24);
+            var dot = DayLoopUI.Panel(steps, DayLoopUI.Kit.Sand, names[i]);
+            DayLoopUI.Layout(dot, preferredWidth: 22, preferredHeight: 22);
             _stepDots[i] = dot;
-            _stepLabels[i] = label;
+            _stepLabels[i] = DayLoopUI.Text(steps, names[i], 20, DayLoopUI.Kit.Ink);
+            DayLoopUI.Layout(_stepLabels[i], preferredWidth: 54, preferredHeight: 24);
         }
-
-        _stats = DayLoopUI.Text(right, "", 27, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        _stats.textWrappingMode = TextWrappingModes.NoWrap;
-        _stats.overflowMode = TextOverflowModes.Overflow;
-        DayLoopUI.Layout(_stats, preferredHeight: 34);
-
-        // 미션 진행 (명판 아래)
-        Image mission = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "Mission", 3f, 4f);
-        mission.raycastTarget = false;
-        DayLoopUI.Place(mission.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28, -186), new Vector2(400, 84));
-        VerticalLayoutGroup missionLayout = DayLoopUI.Vertical(mission, 0, 8);
-        missionLayout.padding = new RectOffset(20, 20, 12, 14);
-        _mission = DayLoopUI.Text(mission.transform, "", 21, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_mission, preferredHeight: 26);
-        _missionBar = DayLoopUI.Bar(mission.transform, 0f, DayLoopUI.Kit.Sea);
+        _stats = DayLoopUI.Text(status.transform, "", 23, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_stats, preferredHeight: 32);
+        var mission = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Mission");
+        DayLoopUI.Layout(mission, preferredHeight: 130.5f);
+        DayLoopUI.Vertical(mission, 16, 10);
+        _mission = DayLoopUI.Text(mission.transform, "", 21, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_mission, preferredHeight: 66);
+        _missionBar = DayLoopUI.Bar(mission.transform, 0, DayLoopUI.Kit.Sea);
         DayLoopUI.Layout(_missionBar.transform.parent, preferredHeight: 14);
+        _prepareAction = DayLoopUI.RailButton(rail, "영업 준비", () => {
+            if (!GameFlow.TryEnterRestaurant()) _mission.text = "오늘은 영업을 시작할 수 없어요.\n집에서 다음 날을 준비해요.";
+        }, true, 99);
+        foreach (string section in new[] { "상점", "연구", "대장간", "주민", "집" })
+        {
+            string target = section;
+            DayLoopUI.RailButton(rail, section == "주민" ? "선착장 · 탐험" : section == "연구" ? "연구소" : section,
+                () => { if (target == "집") ReferenceHouseView.Open(gameObject.scene); else RestaurantManagementUI.OpenSection(target); }, height: 63);
+        }
+        DayLoopUI.Spacer(rail);
+        var footer = DayLoopUI.Rect("Footer", rail); DayLoopUI.Layout(footer, preferredHeight: 63); DayLoopUI.Horizontal(footer, 0, 12).childForceExpandWidth = true;
+        var manage = DayLoopUI.RailButton(footer, "관리", () => RestaurantManagementUI.OpenSection("메뉴"), height: 63); DayLoopUI.Layout(manage, flexibleWidth: 1, preferredHeight: 63);
+        var settings = DayLoopUI.RailButton(footer, "설정", () => SettingsWindow.Open(gameObject.scene), height: 63); DayLoopUI.Layout(settings, flexibleWidth: 1, preferredHeight: 63);
+    }
+
+    private void BuildMapButtons()
+    {
+        string[] labels = { "식당", "집", "상점", "대장간", "연구소", "선착장 · 탐험" };
+        string[] sections = { "", "집", "상점", "대장간", "연구", "주민" };
+        Vector2[] positions = { new Vector2(350, 470), new Vector2(692, 318), new Vector2(652, 178), new Vector2(1005, 96), new Vector2(1140, 104), new Vector2(1190, 336) };
+        string[] icons = { "Shop", "House", "Bag", "Hammer", "Research", "Explore" };
+        for (int i = 0; i < labels.Length; i++)
+        {
+            int index = i;
+            var button = DayLoopUI.Button(_canvas.transform, "", Color.clear, Color.white, 25.5f, () => {
+                if (index == 0) { if (!GameFlow.TryEnterRestaurant()) _mission.text = "오늘 영업을 마쳤거나 공사 중이에요."; }
+                else if (index == 1) ReferenceHouseView.Open(gameObject.scene);
+                else RestaurantManagementUI.OpenSection(sections[index]);
+            }, "Map " + labels[i]);
+            button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+            DayLoopUI.Place((RectTransform)button.transform, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(positions[i].x * 1.5f, -positions[i].y * 1.5f), new Vector2(90, 136.5f));
+            var circle = DayLoopUI.Card(button.transform, i == 0 ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sail, "Marker", 4.5f, 6);
+            circle.sprite = DayLoopUI.Circle; circle.type = Image.Type.Simple; circle.raycastTarget = false;
+            ReferenceTitleView.Place(circle.rectTransform, 0, 0, 90, 90);
+            var icon = ReferenceTitleView.Picture(circle.transform, "Icon" + icons[i]); icon.color = i == 0 ? Color.white : DayLoopUI.Kit.Line;
+            ReferenceTitleView.Place(icon.rectTransform, 24, 24, 42, 42);
+            var caption = DayLoopUI.Text(button.transform, labels[i], 25.5f, Color.white, TextAlignmentOptions.Center);
+            DesignFonts.Apply(caption, true);
+            float width = caption.GetPreferredValues(labels[i]).x + 36;
+            var plaque = DayLoopUI.Panel(button.transform, new Color(58f / 255, 39f / 255, 24f / 255, .82f), "Caption"); plaque.raycastTarget = false;
+            ReferenceTitleView.Place(plaque.rectTransform, (90 - width) / 2, 96, width, 40.5f);
+            caption.transform.SetParent(plaque.transform, false); DayLoopUI.Stretch(caption.rectTransform);
+        }
     }
 
     private void Refresh()
     {
         if (_day == null) return;
         int day = GameSession.IsActive ? GameSession.Current.day : (InGameTimeManager.Instance != null ? InGameTimeManager.Instance.CurrentDay : 1);
-        int gold = CurrencyManager.Instance != null ? CurrencyManager.Instance.GetCurrencyById(GameSession.GoldCurrencyId) : -1;
-        _day.text = day.ToString();
+        int gold = CurrencyManager.Instance != null ? CurrencyManager.Instance.GetCurrencyById(GameSession.GoldCurrencyId) : GameSession.IsActive ? RestaurantProgress.Gold(GameSession.Current) : -1;
+        _day.text = day + "일차";
 
         // 하루 흐름: 영업을 마쳤으면 밤(자유시간), 아니면 아침
         int current = GameSession.OperationCompletedToday ? 2 : 0;
@@ -161,20 +172,22 @@ public class IslandDayHud : MonoBehaviour
         if (GameSession.IsActive)
         {
             DaySettlementRecord last = GameSession.Current.lastSettlement;
-            if (last != null && last.day > 0) stats += $"   <color={soft}>평점</color> {DayLoopUI.Rating(last.totalRating)}";
+            if (last != null && last.day > 0) stats += $"   {DayLoopUI.Rating(RestaurantRules.RestaurantRating(GameSession.Current))}";
             stats += $"   <color={soft}>Lv.{GameSession.Current.restaurantLevel}</color>";
             if (GameSession.Current.progression.pendingRestaurantLevel > 0)
                 stats += $" <color={DayLoopUI.Hex(DayLoopUI.Kit.SeaDeep)}>→ {GameSession.Current.progression.pendingRestaurantLevel} 공사 중</color>";
 
             RestaurantManagementUI.Mission(GameSession.Current, out string missionName, out int target);
             int progress = GameSession.Current.progression.missionProgress;
-            _mission.text = $"미션 · {missionName} <color={soft}>{progress:N0} / {target:N0}</color>";
+            _mission.text = $"오늘의 할 일\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>";
             DayLoopUI.SetBar(_missionBar, target > 0 ? (float)progress / target : 0f);
             _missionBar.color = progress >= target ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea;
         }
         _mission.transform.parent.gameObject.SetActive(GameSession.IsActive);
         _stats.text = stats;
 
+        if (GameSession.IsActive && _prepareAction != null)
+            DayLoopUI.SetButtonLabel(_prepareAction, $"영업 준비\n<size=65%>메뉴 {GameSession.Current.menuSlots.Count(x => x >= 0)}개 · 직원 {GameSession.Current.employees.Count}명 · {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석</size>");
         RefreshBadges();
     }
 

@@ -5,6 +5,8 @@ public class PreOperationUIManager : MonoBehaviour
     public static PreOperationUIManager Instance;
     [SerializeField] private GameObject uiRoot;
 
+    public GameObject UIRoot => uiRoot;
+
     // 영업 시작 전 추가 검사. 영업할 수 없는 이유를 돌려주면 시작하지 않는다. (null이면 통과)
     public static System.Func<string> StartBlocker;
     // StartBlocker가 막았을 때 이유를 받아 안내한다.
