@@ -65,6 +65,8 @@ public static class GameSession
     {
         Current = data ?? throw new ArgumentNullException(nameof(data));
         if (Current.progression == null) Current.progression = new ProgressionState();
+        Current.progression.timedResearch = false;
+        foreach (var research in Current.progression.research) research.remainingDays = 0;
         IsDevSession = isDevSession;
         OperationCompletedToday = Current.progression.freeTime;
         UnsavedPlayTime = 0;

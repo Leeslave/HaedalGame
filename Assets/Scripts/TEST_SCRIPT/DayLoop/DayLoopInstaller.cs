@@ -41,7 +41,10 @@ public static class DayLoopInstaller
             return;
 
         if (scene.name == GameScenes.Island || scene.name == GameScenes.Restaurant)
+        {
             Create<RestaurantManagementUI>("Restaurant management", scene);
+            Create<RatingWarningUI>("Rating warning", scene);
+        }
 
         if (scene.name == GameScenes.Restaurant)
         {

@@ -381,7 +381,7 @@ public class CustomerAgent : MonoBehaviour
         float taste = gm.ratingSystem.PersonalRating(recipeGrade, expectation);
 
         float favoriteBonus = 0f;
-        if (coc.FavoriteRecipeId >= 0 && coc.FavoriteRecipeId == order.RecipeId) { favoriteBonus = 0.5f; }
+        if (coc.IsFavorite(order)) { favoriteBonus = 0.5f; }
 
         return Mathf.Min(coc.FavoriteOnMenu ? 5.0f : 4.5f, taste + favoriteBonus);
     }

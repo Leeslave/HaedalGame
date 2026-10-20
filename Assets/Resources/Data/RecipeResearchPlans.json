@@ -1,0 +1,606 @@
+{
+  "plans": [
+    {
+      "recipeId": 5,
+      "requirements": [
+        {
+          "ingredientId": 6,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Add",
+          "text": "냄비에 문어를 넣고 물과 소금을 넣기"
+        },
+        {
+          "kind": "Boil",
+          "text": "냄비에 문어를 찌기"
+        }
+      ]
+    },
+    {
+      "recipeId": 6,
+      "requirements": [
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 11,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Mix",
+          "text": "새우에 튀김가루를 묻히기"
+        },
+        {
+          "kind": "Fry",
+          "text": "튀김기에서 튀기기"
+        }
+      ]
+    },
+    {
+      "recipeId": 7,
+      "requirements": [
+        {
+          "ingredientId": 7,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Mix",
+          "text": "고등어에 소금으로 염지하기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에서 굽기"
+        }
+      ]
+    },
+    {
+      "recipeId": 8,
+      "requirements": [
+        {
+          "ingredientId": 3,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 오징어 내장과 껍질 손질하기"
+        },
+        {
+          "kind": "Boil",
+          "text": "냄비에 물과 소금을 넣고 끓이기"
+        },
+        {
+          "kind": "Boil",
+          "text": "오징어를 넣어 데치기"
+        },
+        {
+          "kind": "Cut",
+          "text": "도마에서 먹기 좋은 크기로 썰기"
+        }
+      ]
+    },
+    {
+      "recipeId": 9,
+      "requirements": [
+        {
+          "ingredientId": 9,
+          "amount": 3
+        },
+        {
+          "ingredientId": 21,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Wash",
+          "text": "바지락을 물에 넣어 씻기"
+        },
+        {
+          "kind": "Add",
+          "text": "냄비에 바지락과 미림, 마늘을 넣기"
+        },
+        {
+          "kind": "Boil",
+          "text": "뚜껑을 닫고 조개가 열릴 때까지 찌기"
+        }
+      ]
+    },
+    {
+      "recipeId": 10,
+      "requirements": [
+        {
+          "ingredientId": 8,
+          "amount": 1
+        },
+        {
+          "ingredientId": 20,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Mix",
+          "text": "간장, 미림, 설탕을 섞어 양념 만들기"
+        },
+        {
+          "kind": "Mix",
+          "text": "연어에 양념을 바르기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에서 앞뒤로 굽기"
+        }
+      ]
+    },
+    {
+      "recipeId": 11,
+      "requirements": [
+        {
+          "ingredientId": 2,
+          "amount": 1
+        },
+        {
+          "ingredientId": 20,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Mix",
+          "text": "간장과 설탕을 섞어 양념 만들기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에 식용유를 두르고 가리비 굽기"
+        },
+        {
+          "kind": "Simmer",
+          "text": "양념을 넣고 졸이기"
+        }
+      ]
+    },
+    {
+      "recipeId": 12,
+      "requirements": [
+        {
+          "ingredientId": 10,
+          "amount": 1
+        },
+        {
+          "ingredientId": 26,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 흰살생선을 손질하기"
+        },
+        {
+          "kind": "Mix",
+          "text": "생선에 소금으로 밑간하기"
+        },
+        {
+          "kind": "Mix",
+          "text": "밀가루, 계란, 튀김가루 순서로 튀김옷 입히기"
+        },
+        {
+          "kind": "Fry",
+          "text": "튀김기에서 노릇하게 튀기기"
+        }
+      ]
+    },
+    {
+      "recipeId": 13,
+      "requirements": [
+        {
+          "ingredientId": 1,
+          "amount": 2
+        },
+        {
+          "ingredientId": 15,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 새우를 잘게 다지기"
+        },
+        {
+          "kind": "Mix",
+          "text": "새우, 전분, 소금, 후추를 섞기"
+        },
+        {
+          "kind": "Shape",
+          "text": "반죽을 둥글게 빚어 완자 만들기"
+        },
+        {
+          "kind": "Boil",
+          "text": "냄비에 물과 간장을 넣어 육수 끓이기"
+        },
+        {
+          "kind": "Add",
+          "text": "완자를 넣고 익히기"
+        }
+      ]
+    },
+    {
+      "recipeId": 14,
+      "requirements": [
+        {
+          "ingredientId": 7,
+          "amount": 1
+        },
+        {
+          "ingredientId": 24,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 고등어를 손질하고 토막 내기"
+        },
+        {
+          "kind": "Mix",
+          "text": "된장, 미림, 설탕을 섞어 조림 양념 만들기"
+        },
+        {
+          "kind": "Add",
+          "text": "냄비에 고등어, 양념, 생강을 넣기"
+        },
+        {
+          "kind": "Simmer",
+          "text": "국물이 자작해질 때까지 졸이기"
+        }
+      ]
+    },
+    {
+      "recipeId": 15,
+      "requirements": [
+        {
+          "ingredientId": 6,
+          "amount": 1
+        },
+        {
+          "ingredientId": 18,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Boil",
+          "text": "냄비에서 문어를 데치기"
+        },
+        {
+          "kind": "Cut",
+          "text": "도마에서 문어를 얇게 썰기"
+        },
+        {
+          "kind": "Mix",
+          "text": "식초, 설탕, 소금, 겨자를 섞어 초무침 소스 만들기"
+        },
+        {
+          "kind": "Mix",
+          "text": "문어와 소스를 버무리기"
+        }
+      ]
+    },
+    {
+      "recipeId": 16,
+      "requirements": [
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 2,
+          "amount": 1
+        },
+        {
+          "ingredientId": 3,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 새우, 가리비, 오징어를 손질하기"
+        },
+        {
+          "kind": "Add",
+          "text": "후라이팬에서 해산물을 가볍게 볶기"
+        },
+        {
+          "kind": "Stir",
+          "text": "냄비에 식용유와 밀가루를 넣고 볶아 루 만들기"
+        },
+        {
+          "kind": "Stir",
+          "text": "물을 조금씩 넣으며 덩어리지지 않게 젓기"
+        },
+        {
+          "kind": "Add",
+          "text": "볶은 해산물을 넣고 소금과 후추로 간하기"
+        },
+        {
+          "kind": "Boil",
+          "text": "걸쭉해질 때까지 끓이기"
+        }
+      ]
+    },
+    {
+      "recipeId": 17,
+      "requirements": [
+        {
+          "ingredientId": 8,
+          "amount": 1
+        },
+        {
+          "ingredientId": 22,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Mix",
+          "text": "연어에 소금과 후추로 밑간하기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에서 연어 껍질 면부터 굽기"
+        },
+        {
+          "kind": "Grill",
+          "text": "연어를 뒤집어 속까지 익히기"
+        },
+        {
+          "kind": "Stir",
+          "text": "냄비에 레몬과 꿀을 넣고 소스 졸이기"
+        },
+        {
+          "kind": "Add",
+          "text": "구운 연어에 레몬소스 뿌리기"
+        }
+      ]
+    },
+    {
+      "recipeId": 18,
+      "requirements": [
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 3,
+          "amount": 1
+        },
+        {
+          "ingredientId": 4,
+          "amount": 2
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 새우, 오징어, 조개를 손질하기"
+        },
+        {
+          "kind": "Mix",
+          "text": "해산물의 물기를 제거하고 소금으로 밑간하기"
+        },
+        {
+          "kind": "Mix",
+          "text": "밀가루, 계란, 튀김가루 순서로 튀김옷 입히기"
+        },
+        {
+          "kind": "Fry",
+          "text": "종류별로 튀김기에 넣어 익힘 시간 맞추기"
+        },
+        {
+          "kind": "Plate",
+          "text": "기름을 빼고 한 접시에 담기"
+        }
+      ]
+    },
+    {
+      "recipeId": 19,
+      "requirements": [
+        {
+          "ingredientId": 5,
+          "amount": 1
+        },
+        {
+          "ingredientId": 20,
+          "amount": 1
+        },
+        {
+          "ingredientId": 25,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 광어의 비늘과 내장을 손질하기"
+        },
+        {
+          "kind": "Cut",
+          "text": "광어 몸통에 칼집 넣기"
+        },
+        {
+          "kind": "Mix",
+          "text": "간장, 미림, 설탕, 마늘을 섞어 찜 양념 만들기"
+        },
+        {
+          "kind": "Boil",
+          "text": "냄비에 광어와 생강을 넣고 찌기"
+        },
+        {
+          "kind": "Add",
+          "text": "중간에 양념을 끼얹으며 익히기"
+        }
+      ]
+    },
+    {
+      "recipeId": 20,
+      "requirements": [
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 6,
+          "amount": 1
+        },
+        {
+          "ingredientId": 4,
+          "amount": 3
+        },
+        {
+          "ingredientId": 2,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "모든 해산물을 종류별로 손질하기"
+        },
+        {
+          "kind": "Boil",
+          "text": "냄비에 된장, 간장, 마늘, 생강을 넣어 육수 끓이기"
+        },
+        {
+          "kind": "Add",
+          "text": "조개와 가리비를 먼저 넣어 익히기"
+        },
+        {
+          "kind": "Add",
+          "text": "문어와 새우를 순서대로 넣기"
+        },
+        {
+          "kind": "Boil",
+          "text": "넘치지 않도록 화력을 조절하며 끓이기"
+        },
+        {
+          "kind": "Boil",
+          "text": "모든 해산물의 익힘 상태 확인하기"
+        }
+      ]
+    },
+    {
+      "recipeId": 21,
+      "requirements": [
+        {
+          "ingredientId": 8,
+          "amount": 1
+        },
+        {
+          "ingredientId": 2,
+          "amount": 1
+        },
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 24,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "연어, 가리비, 새우를 각각 손질하기"
+        },
+        {
+          "kind": "Mix",
+          "text": "된장, 미림, 꿀, 생강을 섞어 된장소스 만들기"
+        },
+        {
+          "kind": "Mix",
+          "text": "해산물마다 된장소스를 얇게 바르기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에서 연어를 먼저 굽기"
+        },
+        {
+          "kind": "Add",
+          "text": "가리비와 새우를 추가하고 익힘 시간을 맞추기"
+        },
+        {
+          "kind": "Simmer",
+          "text": "남은 소스를 넣어 타지 않도록 졸이기"
+        },
+        {
+          "kind": "Plate",
+          "text": "세 종류의 해산물을 한 접시에 담기"
+        }
+      ]
+    },
+    {
+      "recipeId": 22,
+      "requirements": [
+        {
+          "ingredientId": 5,
+          "amount": 1
+        },
+        {
+          "ingredientId": 1,
+          "amount": 1
+        },
+        {
+          "ingredientId": 6,
+          "amount": 1
+        },
+        {
+          "ingredientId": 2,
+          "amount": 1
+        }
+      ],
+      "steps": [
+        {
+          "kind": "Cut",
+          "text": "도마에서 광어를 회로 손질하기"
+        },
+        {
+          "kind": "Cut",
+          "text": "냄비에서 문어를 데친 뒤 썰기"
+        },
+        {
+          "kind": "Mix",
+          "text": "새우와 가리비에 소금으로 밑간하기"
+        },
+        {
+          "kind": "Grill",
+          "text": "후라이팬에서 새우와 가리비를 굽기"
+        },
+        {
+          "kind": "Mix",
+          "text": "레몬, 와사비, 간장으로 곁들임 소스 만들기"
+        },
+        {
+          "kind": "Plate",
+          "text": "회, 숙회, 구이를 정해진 위치에 담기"
+        },
+        {
+          "kind": "Plate",
+          "text": "소스를 곁들여 마무리하기"
+        }
+      ]
+    }
+  ]
+}

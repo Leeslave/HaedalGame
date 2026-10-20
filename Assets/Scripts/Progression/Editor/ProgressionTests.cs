@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,7 +10,7 @@ public class ProgressionTests
     [SetUp] public void Setup()
     {
         GameSession.End(); GameFlow.SetPhase(GamePhase.Preparation);
-        var data = NewGameConfig.Load().CreateSaveData(); data.introCompleted = true;
+        var data = NewGameConfig.Load().CreateSaveData(); data.introCompleted = true; data.progression.freeTime = true;
         GameSession.Begin(data, true);
         inventoryObject = new GameObject("Test inventory");
         inventory = inventoryObject.AddComponent<IngredientInventoryService>();
@@ -58,6 +58,7 @@ public class ProgressionTests
         inventory.AddGrade(required.IngredientId, 2, required.Amount);
         Assert.IsTrue(RestaurantProgress.TryStartResearch(recipe.RecipeId, out string error), error);
         Assert.IsTrue(RestaurantProgress.TryCancelResearch(recipe.RecipeId, out error), error);
+        Assert.IsFalse(GameSession.Current.progression.blueprints.Contains(recipe.RecipeId));
         Assert.AreEqual(2, inventory.HighestGrade(required.IngredientId));
         Assert.AreEqual(required.Amount, inventory.GetCount(required.IngredientId));
     }
@@ -112,5 +113,63 @@ public class ProgressionTests
     public void ResearchTiming_UsesVisibleTargetRange(float position, float expected)
     {
         Assert.AreEqual(expected, ResearchPractice.TimingScore(position), .001f);
+    }
+
+    [Test] public void ResearchCannotStartBeforeFreeTime()
+    {
+        GameSession.Current.progression.freeTime = false;
+        GameSession.Current.progression.blueprints.Add(5);
+        GameSession.Current.progression.tools.Add(204);
+        string before = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        Assert.IsFalse(RestaurantProgress.TryStartResearch(5, out _));
+        Assert.AreEqual(before, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+    }
+    [Test] public void ResearchReservesItsOwnCostAndRefundsMultipleGrades()
+    {
+        // 새우 완자탕: 조리에는 간장이 들지만 연구 재료는 새우 2 + 무제한 전분.
+        GameSession.Current.progression.blueprints.Add(13);
+        GameSession.Current.progression.tools.Add(204);
+        inventory.SetCount(1,0); inventory.AddGrade(1,3,1); inventory.AddGrade(1,1,1);
+        inventory.SetCount(20,0);
+        Assert.IsTrue(RestaurantProgress.TryStartResearch(13,out string error),error);
+        Assert.AreEqual(0, inventory.GetCount(1));
+        Assert.IsTrue(RestaurantProgress.TryCancelResearch(13,out error),error);
+        Assert.AreEqual(2,inventory.GetCount(1));
+        Assert.IsFalse(GameSession.Current.progression.blueprints.Contains(13));
+        var stacks=GameSession.CaptureSnapshot().progression.ingredientGrades.Where(x=>x.ingredientId==1).ToList();
+        Assert.AreEqual(1,stacks.Single(x=>x.grade==3).amount);
+        Assert.AreEqual(1,stacks.Single(x=>x.grade==1).amount);
+    }
+    [Test] public void ScoutUsesPaidTierAndChargesOnce()
+    {
+        var s=GameSession.Current; s.restaurantLevel=10; s.wallets[0].amount=10000;
+        Assert.IsTrue(RestaurantProgress.TryScout(3,out string error),error);
+        Assert.AreEqual(4,GameSession.Current.progression.candidates.Count);
+        Assert.AreEqual(5000,RestaurantProgress.Gold(GameSession.Current));
+        foreach(var employee in GameSession.Current.progression.candidates)
+            Assert.AreEqual(StaffRecruitmentRules.Total(RatingSystem.GradeToInt(employee.grade)),employee.cooking+employee.serving+employee.handy+employee.hp);
+    }
+    [Test] public void PayrollBlocksManagementUntilSelectionAndPayment()
+    {
+        var s=GameSession.Current; s.day=7; s.wallets[0].amount=400;
+        Assert.IsFalse(RestaurantProgress.TrySleep(out _));
+        Assert.AreEqual(2,GameSession.Current.progression.unpaidEmployeeIds.Count);
+        Assert.IsFalse(RestaurantProgress.TryScout(0,out _));
+        string id=GameSession.Current.employees[0].instanceId;
+        Assert.IsTrue(RestaurantProgress.TryDismiss(id,out string error),error);
+        Assert.AreEqual(1,GameSession.Current.unpaidDismissalCount);
+        Assert.AreEqual(3.9f,GameSession.Current.dailyRatingHistory[0].value,.001f);
+        Assert.IsTrue(RestaurantProgress.TryPayWages(out error),error);
+        Assert.AreEqual(50,RestaurantProgress.Gold(GameSession.Current));
+        Assert.IsFalse(RestaurantProgress.TryPayWages(out _));
+        Assert.IsEmpty(GameSession.Current.progression.unpaidEmployeeIds);
+    }
+    [Test] public void ResidentVisitDoesNotGrantIngredients()
+    {
+        GameSession.Current.day=2;
+        string before=JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        var stock=GameSession.CaptureSnapshot().ingredients.Select(i=>(i.ingredientId,i.amount)).ToArray();
+        Assert.IsTrue(RestaurantProgress.TryExplore(out string error),error);
+        CollectionAssert.AreEquivalent(stock,GameSession.CaptureSnapshot().ingredients.Select(i=>(i.ingredientId,i.amount)).ToArray());
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -15,7 +15,7 @@ public class RestaurantManagementUI : MonoBehaviour
     private int page;
     private Button opener;
     private ResearchPractice practice;
-    private static readonly string[] Tabs = { "메뉴", "재료", "상점", "엘프", "연구", "직원", "식당", "가구", "탐험", "집", "설정" };
+    private static readonly string[] Tabs = { "메뉴", "재료", "상점", "엘프", "연구", "직원", "식당", "가구", "주민", "집", "설정" };
 
     private void Start()
     {
@@ -38,7 +38,7 @@ public class RestaurantManagementUI : MonoBehaviour
         DayLoopUI.Place(window, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(1500, 900));
         title = DayLoopUI.Text(window, "해달식당", 32, DayLoopUI.Ink);
         DayLoopUI.Place(title.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -20), new Vector2(1240, 60));
-        var close = DayLoopUI.Button(window, "닫기", DayLoopUI.Wood, Color.white, 24, () => { window.gameObject.SetActive(false); StopPractice(); });
+        var close = DayLoopUI.Button(window, "닫기", DayLoopUI.Wood, Color.white, 24, () => { if (PayrollPending) return; window.gameObject.SetActive(false); StopPractice(); });
         DayLoopUI.Place((RectTransform)close.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-20, -20), new Vector2(130, 55));
         for (int i = 0; i < Tabs.Length; i++)
         {
@@ -62,9 +62,11 @@ public class RestaurantManagementUI : MonoBehaviour
         }
     }
     private void OnDestroy() { if (canvas != null) Destroy(canvas.gameObject); }
+    private bool PayrollPending => GameSession.IsActive && GameSession.Current.progression.unpaidEmployeeIds.Count > 0;
     private void Update()
     {
         if (opener == null) return;
+        if (PayrollPending && (tab != "임금 정산" || !window.gameObject.activeSelf)) Open("임금 정산");
         opener.interactable = RestaurantProgress.CanManage || GameFlow.Phase == GamePhase.Operation;
         if (!RestaurantProgress.CanManage && GameFlow.Phase != GamePhase.Operation && window.gameObject.activeSelf) { window.gameObject.SetActive(false); StopPractice(); }
     }
@@ -72,6 +74,7 @@ public class RestaurantManagementUI : MonoBehaviour
     public void Open(string section)
     {
         if (window == null || (!RestaurantProgress.CanManage && !(GameFlow.Phase == GamePhase.Operation && section == "메뉴"))) return;
+        if (PayrollPending) section = "임금 정산";
         tab = section; page = 0; StopPractice(); message.text = "";
         window.gameObject.SetActive(true); Refresh();
     }
@@ -85,20 +88,30 @@ public class RestaurantManagementUI : MonoBehaviour
     private void Note(string value)
     {
         var text = DayLoopUI.Text(content, value, 24, DayLoopUI.InkSoft);
-        DayLoopUI.Layout(text, preferredHeight: 55);
+        DayLoopUI.Layout(text, preferredHeight: value.Contains("\n") ? 80 : 55);
     }
-    private void Row(string label, params (string label, Action action)[] actions)
+    private RectTransform Row(string label, params (string label, Action action)[] actions)
     {
         var row = DayLoopUI.Panel(content, DayLoopUI.CreamDeep);
-        DayLoopUI.Layout(row, preferredHeight: 67);
+        DayLoopUI.Layout(row, preferredHeight: label.Contains("\n") ? 84 : 67);
         DayLoopUI.Horizontal(row, 8, 8);
         var text = DayLoopUI.Text(row.transform, label, 23, DayLoopUI.Ink);
-        DayLoopUI.Layout(text, flexibleWidth: 1, preferredHeight: 50);
+        DayLoopUI.Layout(text, flexibleWidth: 1, preferredHeight: label.Contains("\n") ? 70 : 50);
+        text.enableAutoSizing = true; text.fontSizeMin = 17; text.fontSizeMax = 23;
         foreach (var action in actions)
         {
             var b = DayLoopUI.Button(row.transform, action.label, DayLoopUI.Sea, Color.white, 21, () => action.action());
             DayLoopUI.Layout(b, preferredWidth: 135, preferredHeight: 48);
         }
+        return row.rectTransform;
+    }
+    private void IconRow(Sprite icon, string label, params (string label, Action action)[] actions)
+    {
+        var row = Row(label, actions);
+        if (icon == null) return;
+        var image = DayLoopUI.Panel(row, Color.white);
+        image.sprite = icon; image.type = Image.Type.Simple; image.preserveAspect = true;
+        image.transform.SetAsFirstSibling(); DayLoopUI.Layout(image, preferredWidth: 56, preferredHeight: 56);
     }
     private delegate bool Command(out string error);
     private void Run(Command action)
@@ -106,9 +119,9 @@ public class RestaurantManagementUI : MonoBehaviour
         bool ok = action(out string error);
         Refresh(); message.text = ok ? "반영했어요." : error;
     }
-    private void Pages(int total)
+    private void Pages(int total, int pageSize = 6)
     {
-        int last = Mathf.Max(0, (total - 1) / 6);
+        int last = Mathf.Max(0, (total - 1) / pageSize);
         Row($"{page + 1} / {last + 1} 페이지", ("이전", () => { page = Mathf.Max(0, page - 1); Refresh(); }), ("다음", () => { page = Mathf.Min(last, page + 1); Refresh(); }));
     }
     private void Refresh()
@@ -126,7 +139,7 @@ public class RestaurantManagementUI : MonoBehaviour
                 {
                     int id = r.RecipeId;
                     bool selected = s.menuSlots.Contains(id);
-                    Row($"{(selected ? "✓ " : "")}{r.RecipeName} · {r.Price:N0}G · {inventory.CraftableCount(r)}인분",
+                    IconRow(r.Icon, $"{(selected ? "✓ " : "")}{r.RecipeName} · {r.Price:N0}G · {inventory.CraftableCount(r)}인분",
                         (selected ? "제외" : "등록", () => {
                             int slot = selected ? GameSession.Current.menuSlots.IndexOf(id) : GameSession.Current.menuSlots.IndexOf(-1);
                             Run((out string e) => RestaurantProgress.TrySetMenu(slot, selected ? -1 : id, out e));
@@ -137,26 +150,27 @@ public class RestaurantManagementUI : MonoBehaviour
                 Note("최고 등급 재료로 조리해요. 같은 등급 10개를 모으면 다음 등급 1개로 합칠 수 있어요.");
                 var ingredients = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning).ToList();
                 foreach (var i in ingredients.Skip(page * 6).Take(6))
-                    Row($"{i.IngredientName} · {inventory.GetCount(i.IngredientId)}개 · 최고 {"FEDCBA"[inventory.HighestGrade(i.IngredientId)]}",
+                    IconRow(i.Icon, $"{i.IngredientName} · {inventory.GetCount(i.IngredientId)}개 · 최고 {"FEDCBA"[inventory.HighestGrade(i.IngredientId)]}",
                         ("합성", () => { bool ok = inventory.PromoteAll(i.IngredientId); Refresh(); message.text = ok ? "합성했어요." : "같은 등급 재료 10개가 필요해요."; }));
                 Pages(ingredients.Count); break;
             case "상점":
                 Note("재료는 하루 50개까지 구매할 수 있어요. 기본 양념은 무제한이에요.");
                 var stock = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning).ToList();
                 foreach (var i in stock.Skip(page * 6).Take(6))
-                    Row($"{i.IngredientName} · 10개 {RestaurantProgress.RegularUnitPrice(i) * 10:N0}G", ("10개 구매", () => Run((out string e) => RestaurantProgress.TryBuyIngredient(i.IngredientId, 10, out e))));
+                    IconRow(i.Icon, $"{i.IngredientName} · 10개 {RestaurantProgress.RegularUnitPrice(i) * 10:N0}G", ("10개 구매", () => Run((out string e) => RestaurantProgress.TryBuyIngredient(i.IngredientId, 10, out e))));
                 Pages(stock.Count); break;
             case "연구":
+                if (!RestaurantProgress.CanResearch) { Note("연구실은 영업을 마친 자유시간에 열립니다."); break; }
                 Note($"연구 {s.progression.research.Count} / {RestaurantRules.ResearchSlots(s.restaurantLevel)} · 설계도 구매 → 연구 재료 투입 → 실습 4점 이상");
                 var research = GameDatabase.Recipes.Recipes.Where(r => !s.unlockedRecipeIds.Contains(r.RecipeId)).ToList();
                 foreach (var r in research.Skip(page * 6).Take(6))
                 {
                     var pending = s.progression.research.Find(x => x.recipeId == r.RecipeId);
                     if (pending != null)
-                        Row($"{r.RecipeName} · 남은 {pending.remainingDays}일", ("실습", () => BeginChallenge(r.RecipeId)), ("취소·환불", () => Run((out string e) => RestaurantProgress.TryCancelResearch(r.RecipeId, out e))));
+                        IconRow(r.Icon, $"{r.RecipeName} · 실습 준비 완료", ("실습", () => BeginChallenge(r.RecipeId)), ("취소·환불", () => ConfirmCancelResearch(r.RecipeId)));
                     else if (s.progression.blueprints.Contains(r.RecipeId))
-                        Row(r.RecipeName + " · 설계도 보유", ("연구 시작", () => Run((out string e) => RestaurantProgress.TryStartResearch(r.RecipeId, out e))));
-                    else Row($"{r.RecipeName} · 설계도 {Mathf.RoundToInt(r.Price * 1.2f):N0}G", ("구매", () => Run((out string e) => RestaurantProgress.TryBuyBlueprint(r.RecipeId, out e))));
+                        IconRow(r.Icon, r.RecipeName + " · " + RecipeResearchPlan.CostLabel(r), ("연구 시작", () => Run((out string e) => RestaurantProgress.TryStartResearch(r.RecipeId, out e))));
+                    else IconRow(r.Icon, $"{r.RecipeName} · 설계도 {Mathf.RoundToInt(r.Price * 1.2f):N0}G", ("구매", () => Run((out string e) => RestaurantProgress.TryBuyBlueprint(r.RecipeId, out e))));
                 }
                 Pages(research.Count); break;
             case "엘프":
@@ -171,17 +185,26 @@ public class RestaurantManagementUI : MonoBehaviour
                     Row($"{label} · {elf.GetElfUnitPrice(item)}G · 재고 {item.CurrentStock}", ("1개 구매", () => { bool ok = elf.PurchaseFromElf(item, 1); Refresh(); message.text = ok ? "구매했어요." : "재고 또는 골드가 부족해요."; }));
                 }
                 Pages(elfStock.Count); break;
+            case "임금 정산":
+                Note($"임금이 부족해요. 해고할 직원을 직접 선택한 뒤 남은 임금을 정산하세요.\n필요 {s.employees.Sum(e => e.wage):N0}G / 보유 {RestaurantProgress.Gold(s):N0}G · 미지급 해고 1명당 평점 -0.1");
+                foreach (var employee in s.employees.Skip(page * 5).Take(5))
+                {
+                    string id = employee.instanceId;
+                    Row($"{employee.name} [{employee.grade}] · 주급 {employee.wage:N0}G", ("해고", () => Run((out string e) => RestaurantProgress.TryDismiss(id, out e))));
+                }
+                Row("남은 직원 임금 정산", ("정산", () => { if (RestaurantProgress.TryPayWages(out string e)) Open("집"); else message.text = e; }));
+                Pages(s.employees.Count, 5); break;
             case "직원":
                 Row("스카우트 · 계약금은 직원 첫 주급과 같아요.", ("일반 100G", () => Run((out string e) => RestaurantProgress.TryScout(0, out e))), ("고급 500G", () => Run((out string e) => RestaurantProgress.TryScout(1, out e))), ("특급 2000G", () => Run((out string e) => RestaurantProgress.TryScout(2, out e))), ("최고 5000G", () => Run((out string e) => RestaurantProgress.TryScout(3, out e))));
                 var employees = s.employees.Concat(s.progression.candidates).ToList();
-                foreach (var employee in employees.Skip(page * 6).Take(6))
+                foreach (var employee in employees.Skip(page * 5).Take(5))
                 {
                     string id = employee.instanceId;
-                    string label = $"{employee.name} [{employee.grade}] · 임금 {employee.wage}G · {employee.role}";
+                    string label = $"{employee.name} [{employee.grade}] · 주급 {employee.wage}G · {employee.role}\n요리 {employee.cooking:0} / 서빙 {employee.serving:0} / 솜씨 {employee.handy:0} / 체력 {employee.hp:0}";
                     if (s.progression.candidates.Contains(employee)) Row(label, ("계약", () => Run((out string e) => RestaurantProgress.TryHire(id, out e))));
                     else Row(label, ("주방", () => Run((out string e) => RestaurantProgress.TryAssign(id, PartTimerRole.Kitchen, out e))), ("홀", () => Run((out string e) => RestaurantProgress.TryAssign(id, PartTimerRole.Serving, out e))), ("대기", () => Run((out string e) => RestaurantProgress.TryAssign(id, PartTimerRole.None, out e))), ("해고", () => Run((out string e) => RestaurantProgress.TryDismiss(id, out e))));
                 }
-                Pages(employees.Count); break;
+                Pages(employees.Count, 5); break;
             case "식당":
                 Note($"손님 {RestaurantRules.DailyVisitors(s.restaurantLevel)}명 · 좌석 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 주방 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Kitchen)} / 홀 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Serving)}명");
                 for (int id = 201; id <= 204; id++)
@@ -194,10 +217,10 @@ public class RestaurantManagementUI : MonoBehaviour
                 Row(s.restaurantLevel == 10 ? "최고 레벨" : $"다음 레벨 · {RestaurantRules.UpgradeCost(s.restaurantLevel + 1):N0}G · 평점 {RestaurantRules.UpgradeRating(s.restaurantLevel + 1):0.0} · 1일 공사", ("확장", () => Run(RestaurantProgress.TryUpgrade)));
                 RatingHistory(s);
                 break;
-            case "탐험":
+            case "주민":
                 string island = new[] { "요정의 숲", "돌고래 바다", "해달 왕국", "곡물 섬", "목장 섬", "다시 만난 이웃들" }[Mathf.Clamp(s.progression.islandChapter, 0, 5)];
                 Note($"{island} · 배 부품 {s.progression.boatParts.Count}/3 · 하루 1회");
-                Row("주민을 만나 재료를 얻고 음식 요청을 받아요. 세 번 도우면 다음 섬으로 나아가요.", ("주민 만나기", () => Run(RestaurantProgress.TryExplore)));
+                Row("섬에 찾아온 주민의 음식 요청을 들어주세요. 식재료는 상점에서 구매할 수 있어요.", ("주민 만나기", () => Run(RestaurantProgress.TryExplore)));
                 if (GameDatabase.TryGetRecipe(s.progression.questRecipeId, out var requested))
                     Row($"주민의 부탁: {requested.RecipeName} 1인분 · 보상: 새 설계도", ("만들어 전달", () => Run(RestaurantProgress.TryDeliverQuest)));
                 if (s.progression.boatParts.Count >= 3 && !s.progression.endingSeen)
@@ -226,10 +249,18 @@ public class RestaurantManagementUI : MonoBehaviour
                 break;
             case "설정":
                 Row("소리·화면 설정", ("열기", () => SettingsWindow.Open(gameObject.scene)));
-                Row(s.progression.timedResearch ? "연구: 시간 경과 + 실습" : "연구: 실습", ("연구 방식", () => { s.progression.timedResearch = !s.progression.timedResearch; Refresh(); }));
+
                 Row("타이틀로 돌아가면 오늘의 저장하지 않은 진행을 잃어요.", ("돌아가기", () => { Clear(); Note("마지막 취침 이후 진행을 버리고 타이틀로 돌아갈까요?"); Row("", ("돌아가기", GameFlow.ReturnToTitle), ("계속하기", Refresh)); }));
                 break;
         }
+    }
+    private void ConfirmCancelResearch(int id)
+    {
+        ManagementDialog.Show(canvas.transform, "정말 연구를 취소하시겠습니까?\n투입된 식재료는 모두 돌려받지만, 펼쳐둔 레시피 도안은 파손되어 사라집니다.", () => {
+            if (RestaurantProgress.TryCancelResearch(id, out string error))
+            { Refresh(); message.text = "도안이 파손되고 식재료가 가방으로 반환되었습니다."; ManagementDialog.RefundEffect(canvas.transform); }
+            else message.text = error;
+        });
     }
     private void PlaceTable(int seats)
     {
@@ -264,6 +295,7 @@ public class RestaurantManagementUI : MonoBehaviour
     }
     private void BeginChallenge(int id)
     {
+        if (!RestaurantProgress.CanResearch) { message.text = "실습은 자유시간에 할 수 있어요."; return; }
         var research = GameSession.Current.progression.research.Find(x => x.recipeId == id);
         if (research == null || research.remainingDays > 0) { message.text = "연구 시간이 남았어요."; return; }
         if (!GameDatabase.TryGetRecipe(id, out var recipe)) return;

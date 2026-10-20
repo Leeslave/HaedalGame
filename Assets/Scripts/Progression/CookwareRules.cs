@@ -15,7 +15,7 @@ public static class CookwareRules
     public static bool CanCook(GameSaveData data, RecipeData recipe)
     {
         if (!RestaurantProgress.HasTool(data, recipe)) return false;
-        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202 } : new[] { recipe.ClassId };
+        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202, 204 } : new[] { recipe.ClassId };
         int needed = recipe.Requirements.Count(r => !IngredientInventoryService.IsUnlimited(r.IngredientId));
         foreach (int id in ids)
         {
@@ -28,7 +28,7 @@ public static class CookwareRules
     public static void RecordUse(RecipeData recipe)
     {
         if (!GameSession.IsActive) return;
-        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202 } : new[] { recipe.ClassId };
+        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202, 204 } : new[] { recipe.ClassId };
         foreach (int id in ids)
         {
             if (CookwareLevelState.Instance != null) CookwareLevelState.Instance.AddUseCount(Definition(id));
