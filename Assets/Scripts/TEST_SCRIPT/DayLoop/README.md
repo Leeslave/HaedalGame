@@ -61,8 +61,10 @@
 | `FirstDayGuide` | 준비 카드(매일), 첫날 첫 손님 안내 |
 | `NpcStatusOverlay` | 손님·직원 상태 칩, 인내심 게이지, 식탁·운반 음식 아이콘, +nG 팝업 |
 | `RestaurantCameraFramer` | 식당 구역 카메라를 고정 오브젝트 범위에 맞춤 (HUD 영역 확보, 화면비 대응) |
-| `IslandDayHud` | 섬 상단 일차·골드, 결산 화면 복원 |
+| `IslandDayHud` | 섬 하루 명판(일차·아침/영업/밤·골드·평점·레벨·미션), 건물 배지, 식당 카드, 결산 화면 복원 |
 | `TitleTransitionGuard` | 인트로 중 타이틀 버튼 잠금 |
+| `PlacementToolbar` | 자리 배치 모드 안내 띠(좌석 수) + 아래 도구 막대 |
+| `DayLoopUI.Kit` | UI 시안 색상과 키트 도우미(`Card`·`KitButton`·`Chip`·`Bar`·`Ribbon`·`FoodIcon`). 영업 HUD는 기존 색을 그대로 쓴다 |
 | `Editor/DayLoopSaveTests` | 결산 확정 저장 EditMode 테스트 |
 
 ## 코드로 처리하지 않은 항목

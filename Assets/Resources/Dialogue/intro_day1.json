@@ -6,35 +6,38 @@
   "playOnce": false,
   "typeSpeed": 24,
   "allowFastForward": true,
-
   "characters": [
-    { "id": "haedal", "name": "해달", "color": "#7FD4E8", "side": "Left" }
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    }
   ],
-
   "nodes": [
     {
-      "side": "None",
-      "text": "<i>[임시 인트로] 실제 시작 연출이 준비되면 Timeline으로 교체됩니다.</i>",
-      "backgroundStyle": "SeasideNight",
-      "transition": "Instant",
-      "autoAdvance": 3
-    },
-    {
-      "side": "None",
-      "text": "거센 파도가 지나간 밤, 작은 해달 한 마리가 낯선 섬에 떠밀려 왔다.",
-      "backgroundStyle": "SeasideNight",
-      "transition": "Fade"
-    },
-    {
-      "side": "None",
-      "text": "해가 뜨자, 모래사장 끝에 문을 닫은 오래된 식당이 보였다.",
-      "backgroundStyle": "SeasideDusk",
+      "text": "파도 소리가 가까웠다. 눈을 뜨자 작은 해달이 걱정스러운 얼굴로 서 있었다.",
+      "backgroundStyle": "SeasideDay",
       "transition": "Fade"
     },
     {
       "speaker": "haedal",
-      "text": "……여기서 다시 시작해 볼까?",
-      "backgroundStyle": "SeasideDay",
+      "text": "이제 정신이 들어? 바다에서 건져 오느라 힘들었다고."
+    },
+    {
+      "speaker": "haedal",
+      "text": "이 섬을 떠나려면 배가 필요해. 나는 배를 만들 줄 알지만… 식당 운영은 영 소질이 없어서."
+    },
+    {
+      "text": "한때 셰프였던 나는, 오래 닫힌 식당의 주방을 바라보았다."
+    },
+    {
+      "speaker": "haedal",
+      "text": "식당 운영을 도와주면 나가는 배를 만들어 줄게. 어때?"
+    },
+    {
+      "text": "잠시 망설이다 고개를 끄덕였다. 그렇게 해달과 나의 첫 영업이 시작되었다.",
+      "backgroundStyle": "WarmInterior",
       "transition": "Fade"
     }
   ]

@@ -113,7 +113,11 @@ public class CustomerSpawner : MonoBehaviour
             {
                 float curPat = spawnQueue.Dequeue();
                 CustomerAgent customer = csm.SpawnCustomer(curPat, customerParent);
-                if (customer.coc != null && GameSession.IsActive) customer.coc.Species = UnityEngine.Random.Range(0, 1 + GameSession.Current.progression.islandChapter);
+                if (customer.coc != null && GameSession.IsActive)
+                {
+                    var species = CustomerPreferences.AvailableSpecies(GameSession.Current.progression.islandChapter);
+                    customer.coc.Species = species[UnityEngine.Random.Range(0, species.Length)];
+                }
                 activeCustomerCount++;
                 customer.OnExited += HandleCustomerExited;
                 CheckEntryClosed();

@@ -13,6 +13,8 @@ public class PlacementToolbar : MonoBehaviour
     private GameObject _legacy;
     private Canvas _canvas;
     private RectTransform _root;
+    private TMP_Text _seats;
+    private float _nextSeatRefresh;
 
     private void Start()
     {
@@ -36,9 +38,24 @@ public class PlacementToolbar : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (_root == null) return;
         bool show = _legacy != null && _legacy.activeInHierarchy;
         if (_root.gameObject.activeSelf != show)
             _root.gameObject.SetActive(show);
+        if (show && Time.unscaledTime >= _nextSeatRefresh)
+        {
+            _nextSeatRefresh = Time.unscaledTime + 0.25f;
+            RefreshSeats();
+        }
+    }
+
+    private void RefreshSeats()
+    {
+        SeatManager seats = RestaurantGameManager.instance != null ? RestaurantGameManager.instance.seatManager : null;
+        int count = seats != null ? seats.IndoorSeatCount : 0;
+        _seats.text = GameSession.IsActive
+            ? $"좌석 {count} / 최대 {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석"
+            : $"좌석 {count}석";
     }
 
     private void Build(TablePlacementManager placement)
@@ -49,35 +66,37 @@ public class PlacementToolbar : MonoBehaviour
         _root = DayLoopUI.Rect("Root", _canvas.transform);
         DayLoopUI.Stretch(_root);
 
-        Image hint = DayLoopUI.Panel(_root, new Color(0.18f, 0.12f, 0.08f, 0.85f), "Hint");
-        DayLoopUI.Place(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 160), new Vector2(1000, 54));
-        hint.raycastTarget = false;
-        TMP_Text hintText = DayLoopUI.Text(hint.transform, "자리를 고르고 원하는 칸으로 옮긴 뒤 [놓기]를 눌러요. 놓인 테이블을 누르면 이동·삭제할 수 있어요.",
-            22, Color.white, TextAlignmentOptions.Center);
-        DayLoopUI.Stretch(hintText.rectTransform, 16, 0, 16, 0);
-
-        Image bar = DayLoopUI.Panel(_root, DayLoopUI.Cream, "Toolbar");
-        DayLoopUI.Place(bar.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 24), new Vector2(1320, 122));
-        DayLoopUI.AddOutline(bar, DayLoopUI.Wood, 3f);
-        HorizontalLayoutGroup row = DayLoopUI.Horizontal(bar, 0, 14, TextAnchor.MiddleCenter);
-        row.padding = new RectOffset(22, 22, 14, 14);
-
-        AddButton(bar.transform, "1인석", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, placement.OnOneSeatButtonClicked);
-        AddButton(bar.transform, "2인석", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, placement.OnTwoSeatButtonClicked);
-        AddButton(bar.transform, "4인석", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, placement.OnFourSeatButtonClicked);
-        AddButton(bar.transform, "회전", DayLoopUI.Wood, Color.white, placement.OnRotateClicked);
-
-        RectTransform gap = DayLoopUI.Rect("Gap", bar.transform);
-        DayLoopUI.Layout(gap, preferredWidth: 30, preferredHeight: 10);
-
-        AddButton(bar.transform, "놓기", DayLoopUI.Good, Color.white, placement.OnConfirmClicked);
-        AddButton(bar.transform, "취소", DayLoopUI.Coral, Color.white, placement.OnCancelClicked);
-        AddButton(bar.transform, "배치 끝내기", DayLoopUI.Sea, Color.white, placement.ExitPlacementMode, 200);
+        var rail = DayLoopUI.ScreenRail(_root, "PlacementRail");
+        var heading = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "PlacementStatus");
+        DayLoopUI.Layout(heading, preferredHeight: 224);
+        DayLoopUI.Vertical(heading, 20, 12);
+        DayLoopUI.Layout(DayLoopUI.Text(heading.transform, "자리 배치", 38, DayLoopUI.Kit.Ink, style: FontStyles.Bold), preferredHeight: 50);
+        _seats = DayLoopUI.Text(heading.transform, "", 26, DayLoopUI.Kit.SeaDeep, style: FontStyles.Bold);
+        DayLoopUI.Layout(_seats, preferredHeight: 38);
+        DayLoopUI.Layout(DayLoopUI.Text(heading.transform, "테이블을 고르고 칸으로 옮긴 뒤 [놓기]. 놓인 테이블을 누르면 편집해요.", 22, DayLoopUI.Kit.InkSoft), preferredHeight: 84);
+        DayLoopUI.Layout(DayLoopUI.Text(rail, "테이블", 22, Color.white, style: FontStyles.Bold), preferredHeight: 28);
+        DayLoopUI.RailButton(rail, "1인석", placement.OnOneSeatButtonClicked, height: 58);
+        DayLoopUI.RailButton(rail, "2인석", placement.OnTwoSeatButtonClicked, height: 58);
+        DayLoopUI.RailButton(rail, "4인석", placement.OnFourSeatButtonClicked, height: 58);
+        DayLoopUI.RailButton(rail, "놓기", placement.OnConfirmClicked, true, 72);
+        DayLoopUI.RailButton(rail, "회전", placement.OnRotateClicked, height: 56);
+        DayLoopUI.RailButton(rail, "되돌리기", () => { placement.OnCancelClicked(); TableSaveLoadManager.Instance?.UndoEdit(); }, height: 56);
+        DayLoopUI.RailButton(rail, "취소", placement.OnCancelClicked, height: 56);
+        DayLoopUI.RailButton(rail, "전체 복원", () => { placement.OnCancelClicked(); TableSaveLoadManager.Instance?.ResetEdits(); }, height: 56);
+        DayLoopUI.Spacer(rail);
+        DayLoopUI.RailButton(rail, "배치 끝내기", placement.ExitPlacementMode, height: 66);
     }
 
     private static void AddButton(Transform parent, string label, Color background, Color foreground, UnityEngine.Events.UnityAction onClick, float width = 150)
     {
-        Button button = DayLoopUI.Button(parent, label, background, foreground, 28, onClick, label);
-        DayLoopUI.Layout(button, preferredWidth: width, preferredHeight: 90);
+        Button button = DayLoopUI.KitButton(parent, label, background, foreground, 28, onClick, label);
+        DayLoopUI.Layout(button, preferredWidth: width, preferredHeight: 86);
+    }
+
+    private static void AddDivider(Transform parent)
+    {
+        Image divider = DayLoopUI.Panel(parent, DayLoopUI.Kit.Divider, "Divider", false);
+        divider.raycastTarget = false;
+        DayLoopUI.Layout(divider, preferredWidth: 4, preferredHeight: 74);
     }
 }

@@ -24,7 +24,12 @@ public class FirstDayGuide : MonoBehaviour
 
     // 준비 카드
     private RectTransform _prepCard;
-    private TMP_Text _prepTitle, _prepBody, _prepStatus, _prepIntro;
+    private RectTransform _prepRail;
+    private TMP_Text _prepDay, _prepGold;
+    private TMP_Text _prepTitle, _prepBody, _prepStatus, _prepIntro, _prepMenuTitle;
+    private Image _prepStatusPanel;
+    private RectTransform _prepMenu;
+    private string _prepMenuSignature;
     private Button _prepToggle;
     private bool _prepCollapsed;
     private float _nextPrepRefresh;
@@ -77,6 +82,7 @@ public class FirstDayGuide : MonoBehaviour
     private void HandlePhaseChanged(DayLoopPhase phase)
     {
         _prepCard.gameObject.SetActive(phase == DayLoopPhase.Preparation);
+        _prepRail.gameObject.SetActive(phase == DayLoopPhase.Preparation);
         if (phase == DayLoopPhase.Preparation)
             RefreshPrep();
 
@@ -120,32 +126,21 @@ public class FirstDayGuide : MonoBehaviour
     private void RefreshPrep()
     {
         // 테이블 배치 모드(카메라가 식당 구역)에서는 화면을 가리지 않게 숨긴다.
-        bool placing = CameraController.Instance != null && CameraController.Instance.GetCurZone() == CameraZone.Restaurant;
+        bool placing = TablePlacementManager.Instance != null && TablePlacementManager.Instance.PlacementUI != null && TablePlacementManager.Instance.PlacementUI.activeInHierarchy;
+        _prepRail.gameObject.SetActive(!placing);
+        _prepDay.text = _day.Day + "일차  준비 중";
+        _prepGold.text = DayLoopUI.Gold(Mathf.Max(0, _day.CurrentGold));
         _prepCard.GetComponent<CanvasGroup>().alpha = placing ? 0f : 1f;
         _prepCard.GetComponent<CanvasGroup>().blocksRaycasts = !placing;
 
         _prepTitle.text = $"{_day.Day}일차 영업 준비";
 
+        MenuManager menu = MenuManager.Instance;
+        RefreshPrepMenu(menu);
+
         StringBuilder sb = new StringBuilder();
         int gold = _day.CurrentGold;
         sb.Append("<color=#7D6654>보유 골드</color>   <b>").Append(gold >= 0 ? DayLoopUI.Gold(gold) : "-").Append("</b>\n");
-
-        MenuManager menu = MenuManager.Instance;
-        sb.Append("<color=#7D6654>오늘의 메뉴</color>   ");
-        if (menu != null && menu.DailyFoods.Count > 0)
-        {
-            for (int i = 0; i < menu.DailyFoods.Count; i++)
-            {
-                RecipeData food = menu.DailyFoods[i];
-                if (i > 0) sb.Append(", ");
-                sb.Append("<b>").Append(food.RecipeName).Append("</b> ").Append(Mathf.RoundToInt(food.Price)).Append("G");
-            }
-        }
-        else
-        {
-            sb.Append("<b>없음</b>");
-        }
-        sb.Append('\n');
 
         _day.CountStaff(out int servers, out int chefs);
         sb.Append("<color=#7D6654>직원</color>   홀 <b>").Append(servers).Append("명</b> • 주방 <b>").Append(chefs).Append("명</b>\n");
@@ -161,13 +156,15 @@ public class FirstDayGuide : MonoBehaviour
         string block = _day.GetStartBlockReason();
         if (string.IsNullOrEmpty(block))
         {
-            _prepStatus.text = "준비 완료 — 아래 [운영 시작]을 누르면 손님이 들어와요.";
-            _prepStatus.color = DayLoopUI.Good;
+            _prepStatus.text = "준비 완료 — 왼쪽 [운영 시작]을 누르면 손님이 들어와요.";
+            _prepStatus.color = DayLoopUI.Kit.GoodInk;
+            _prepStatusPanel.color = DayLoopUI.Kit.GoodTint;
         }
         else
         {
             _prepStatus.text = "영업할 수 없어요: " + block;
-            _prepStatus.color = DayLoopUI.Warn;
+            _prepStatus.color = DayLoopUI.Kit.WarnInk;
+            _prepStatusPanel.color = DayLoopUI.Kit.WarnTint;
         }
 
         bool firstDay = ShouldGuide;
@@ -176,7 +173,60 @@ public class FirstDayGuide : MonoBehaviour
             _prepIntro.text = "첫날은 기본 메뉴와 직원이 이미 배치되어 있어 바로 영업할 수 있어요. 주문·조리·서빙은 직원이 자동으로 처리하고, 첫 손님이 오면 순서대로 짧게 안내해 드려요.";
 
         _prepBody.gameObject.SetActive(!_prepCollapsed);
+        _prepMenuTitle.gameObject.SetActive(!_prepCollapsed);
+        _prepMenu.gameObject.SetActive(!_prepCollapsed);
         DayLoopUI.SetButtonLabel(_prepToggle, _prepCollapsed ? "펼치기" : "접기");
+    }
+
+    // 오늘의 메뉴를 음식 칸으로 보여 준다. 메뉴가 바뀔 때만 다시 만든다.
+    private void RefreshPrepMenu(MenuManager menu)
+    {
+        IngredientInventoryService inventory = IngredientInventoryService.Instance;
+        StringBuilder signature = new StringBuilder();
+        int count = menu != null ? menu.DailyFoods.Count : 0;
+        for (int i = 0; i < count; i++)
+        {
+            RecipeData food = menu.DailyFoods[i];
+            signature.Append(food.RecipeId).Append(':').Append(inventory != null ? inventory.CraftableCount(food) : -1).Append(',');
+        }
+        _prepMenuTitle.text = $"오늘의 메뉴 <color={DayLoopUI.Hex(DayLoopUI.Kit.InkSoft)}>{count}개</color>";
+        if (signature.ToString() == _prepMenuSignature) return;
+        _prepMenuSignature = signature.ToString();
+
+        for (int i = _prepMenu.childCount - 1; i >= 0; i--)
+            Destroy(_prepMenu.GetChild(i).gameObject);
+
+        if (count == 0)
+        {
+            Image empty = DayLoopUI.Panel(_prepMenu, DayLoopUI.Kit.Sand, "Empty");
+            DayLoopUI.Layout(empty, flexibleWidth: 1, preferredHeight: 120);
+            TMP_Text label = DayLoopUI.Text(empty.transform, "등록된 메뉴가 없어요", 22, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
+            DayLoopUI.Stretch(label.rectTransform);
+            return;
+        }
+
+        float tileWidth = Mathf.Min(132f, (580f - (count - 1) * 10f) / count);
+        for (int i = 0; i < count; i++)
+        {
+            RecipeData food = menu.DailyFoods[i];
+            int portions = inventory != null ? inventory.CraftableCount(food) : -1;
+            bool low = portions >= 0 && portions < 3;
+            Image tile = DayLoopUI.Chunky(DayLoopUI.Panel(_prepMenu, low ? DayLoopUI.Kit.WarnTint : Color.white, "Food"), 2f, 0f);
+            if (low) tile.GetComponent<Outline>().effectColor = DayLoopUI.Kit.Awning;
+            DayLoopUI.Layout(tile, preferredWidth: tileWidth, preferredHeight: 120);
+            VerticalLayoutGroup column = DayLoopUI.Vertical(tile, 0, 0, TextAnchor.MiddleCenter);
+            column.padding = new RectOffset(6, 6, 8, 8);
+            column.childControlWidth = false;
+            column.childForceExpandWidth = false;
+            DayLoopUI.FoodIcon(tile.transform, food, 52);
+            TMP_Text name = DayLoopUI.Text(tile.transform, food.RecipeName, 18, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center, FontStyles.Bold);
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            name.rectTransform.sizeDelta = new Vector2(tileWidth - 12f, 24);
+            string meta = Mathf.RoundToInt(food.Price) + "G" + (portions >= 0 ? $" · {portions}인분" : "");
+            TMP_Text info = DayLoopUI.Text(tile.transform, meta, 16, low ? DayLoopUI.Kit.WarnInk : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
+            info.textWrappingMode = TextWrappingModes.NoWrap;
+            info.rectTransform.sizeDelta = new Vector2(tileWidth - 12f, 22);
+        }
     }
 
     private void TogglePrep()
@@ -285,7 +335,7 @@ public class FirstDayGuide : MonoBehaviour
                 SetGuide("6. 식사", "음식이 식탁에 놓이고 손님이 식사 중이에요.", "");
                 break;
             case Step.Paid:
-                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "위쪽 배속 버튼(x1·x2·x3)으로 빠르게, [|| 정지]로 일시정지할 수 있어요.");
+                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "왼쪽 배속 버튼(x1·x2·x3)으로 빠르게, [일시정지]로 일시정지할 수 있어요.");
                 WaitForContinue(() => EndGuide(true));
                 return;
         }
@@ -380,58 +430,88 @@ public class FirstDayGuide : MonoBehaviour
         _canvas = DayLoopUI.CreateCanvas("[DayLoop] Guide", 60, gameObject.scene);
         _canvas.transform.SetParent(transform, false);
 
-        // 준비 카드: 화면 오른쪽 가운데 (기존 준비 UI의 메뉴판·버튼과 겹치지 않는 자리)
-        Image card = DayLoopUI.Panel(_canvas.transform, DayLoopUI.Cream, "PrepCard");
+        // 기존 준비 화면은 상태 제어만 유지하고 표시와 입력을 새 UI로 옮긴다.
+        var legacy = PreOperationUIManager.Instance != null ? PreOperationUIManager.Instance.UIRoot : null;
+        if (legacy != null)
+        {
+            var group = legacy.GetComponent<CanvasGroup>();
+            if (group == null) group = legacy.AddComponent<CanvasGroup>();
+            group.alpha = 0; group.interactable = false; group.blocksRaycasts = false;
+        }
+        var rail = DayLoopUI.ScreenRail(_canvas.transform, "PreparationRail");
+        _prepRail = (RectTransform)rail.parent;
+        var status = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Status");
+        DayLoopUI.Layout(status, preferredHeight: 148); DayLoopUI.Vertical(status, 20, 10);
+        _prepDay = DayLoopUI.Text(status.transform, "", 32, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_prepDay, preferredHeight: 48);
+        _prepGold = DayLoopUI.Text(status.transform, "", 30, DayLoopUI.Kit.GoldInk, style: FontStyles.Bold);
+        DayLoopUI.Layout(_prepGold, preferredHeight: 40);
+        DayLoopUI.RailButton(rail, "운영 시작", () => PreOperationUIManager.Instance?.OnStartButtonClicked(), true, 92);
+        DayLoopUI.RailButton(rail, "메뉴 바꾸기", () => RestaurantManagementUI.OpenSection("메뉴"));
+        DayLoopUI.RailButton(rail, "자리 배치", () => PreOperationUIManager.Instance?.OnTablePlacementButtonClicked());
+        DayLoopUI.RailButton(rail, "직원 배치", () => RestaurantManagementUI.OpenSection("직원"));
+        DayLoopUI.RailButton(rail, "관리", () => RestaurantManagementUI.OpenSection("메뉴"));
+        DayLoopUI.Spacer(rail);
+        DayLoopUI.RailButton(rail, "섬으로", GameFlow.EnterDayStart);
+
+        // 준비 카드는 왼쪽 메뉴 옆에 놓는다.
+        Image card = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "PrepCard", 3f, 7f);
         _prepCard = card.rectTransform;
-        DayLoopUI.Place(_prepCard, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-40, 40), new Vector2(600, 0));
-        DayLoopUI.AddOutline(card, DayLoopUI.Wood, 2.5f);
+        DayLoopUI.Place(_prepCard, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(454, -36), new Vector2(760, 0));
         card.gameObject.AddComponent<CanvasGroup>();
-        DayLoopUI.Vertical(card, 26, 12);
+        VerticalLayoutGroup cardLayout = DayLoopUI.Vertical(card, 0, 14);
+        cardLayout.padding = new RectOffset(30, 30, 26, 28);
         ContentSizeFitter fit = card.gameObject.AddComponent<ContentSizeFitter>();
         fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         RectTransform header = DayLoopUI.Rect("Header", card.transform);
         DayLoopUI.Horizontal(header, 0, 10);
-        DayLoopUI.Layout(header, preferredHeight: 48);
-        _prepTitle = DayLoopUI.Text(header, "", 34, DayLoopUI.WoodDark, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_prepTitle, flexibleWidth: 1, preferredHeight: 48);
-        _prepToggle = DayLoopUI.Button(header, "접기", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, 20, TogglePrep, "Toggle");
-        DayLoopUI.Layout(_prepToggle, preferredWidth: 96, preferredHeight: 42);
+        DayLoopUI.Layout(header, preferredHeight: 56);
+        _prepTitle = DayLoopUI.Text(header, "", 40, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Layout(_prepTitle, flexibleWidth: 1, preferredHeight: 56);
+        _prepToggle = DayLoopUI.KitButton(header, "접기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 20, TogglePrep, "Toggle");
+        DayLoopUI.Layout(_prepToggle, preferredWidth: 100, preferredHeight: 48);
 
-        _prepIntro = DayLoopUI.Text(card.transform, "", 22, DayLoopUI.Ink, TextAlignmentOptions.TopLeft);
+        _prepIntro = DayLoopUI.Text(card.transform, "", 22, DayLoopUI.Kit.Ink, TextAlignmentOptions.TopLeft);
         DayLoopUI.Layout(_prepIntro, preferredHeight: 96);
 
-        _prepBody = DayLoopUI.Text(card.transform, "", 24, DayLoopUI.Ink, TextAlignmentOptions.TopLeft);
+        _prepMenuTitle = DayLoopUI.Text(card.transform, "", 25, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Layout(_prepMenuTitle, preferredHeight: 32);
+        _prepMenu = DayLoopUI.Rect("Menu", card.transform);
+        DayLoopUI.Horizontal(_prepMenu, 0, 10);
+        DayLoopUI.Layout(_prepMenu, preferredHeight: 124);
+
+        Image rule = DayLoopUI.Panel(card.transform, DayLoopUI.Kit.Divider, "Rule", false);
+        DayLoopUI.Layout(rule, preferredHeight: 2);
+
+        _prepBody = DayLoopUI.Text(card.transform, "", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.TopLeft);
         _prepBody.lineSpacing = 18f;
-        DayLoopUI.Layout(_prepBody, preferredHeight: 170);
+        DayLoopUI.Layout(_prepBody, preferredHeight: 130);
 
-        _prepStatus = DayLoopUI.Text(card.transform, "", 23, DayLoopUI.Good, TextAlignmentOptions.TopLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_prepStatus, preferredHeight: 64);
+        _prepStatusPanel = DayLoopUI.Panel(card.transform, DayLoopUI.Kit.GoodTint, "Status");
+        DayLoopUI.Layout(_prepStatusPanel, preferredHeight: 72);
+        _prepStatus = DayLoopUI.Text(_prepStatusPanel.transform, "", 22, DayLoopUI.Kit.GoodInk, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Stretch(_prepStatus.rectTransform, 18, 6, 18, 6);
 
-        // 영업 안내 바: 화면 아래 가운데
-        Image bar = DayLoopUI.Panel(_canvas.transform, DayLoopUI.Cream, "GuideBar");
+        Image bar = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "GuideBar", 3, 7);
         _guideBar = bar.rectTransform;
-        DayLoopUI.Place(_guideBar, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 28), new Vector2(1080, 150));
-        DayLoopUI.AddOutline(bar, DayLoopUI.Coral, 3f);
-        HorizontalLayoutGroup row = DayLoopUI.Horizontal(bar, 0, 20);
-        row.padding = new RectOffset(30, 22, 14, 14);
-
-        RectTransform texts = DayLoopUI.Rect("Texts", bar.transform);
-        DayLoopUI.Vertical(texts, 0, 2, TextAnchor.MiddleLeft);
-        DayLoopUI.Layout(texts, flexibleWidth: 1, preferredHeight: 122);
-        _guideStep = DayLoopUI.Text(texts, "", 22, DayLoopUI.Coral, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_guideStep, preferredHeight: 30);
-        _guideText = DayLoopUI.Text(texts, "", 28, DayLoopUI.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_guideText, preferredHeight: 44);
-        _guideHint = DayLoopUI.Text(texts, "", 21, DayLoopUI.InkSoft, TextAlignmentOptions.MidlineLeft);
-        DayLoopUI.Layout(_guideHint, preferredHeight: 30);
-
-        _continueButton = DayLoopUI.Button(bar.transform, "확인", DayLoopUI.Sea, Color.white, 24, Continue, "Continue");
-        DayLoopUI.Layout(_continueButton, preferredWidth: 130, preferredHeight: 56);
+        DayLoopUI.Place(_guideBar, new Vector2(0, 0), Vector2.zero, new Vector2(454, 32), new Vector2(620, 248));
+        DayLoopUI.Vertical(bar, 22, 8);
+        _guideStep = DayLoopUI.Text(bar.transform, "", 28, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        DayLoopUI.Layout(_guideStep, preferredHeight: 36);
+        _guideText = DayLoopUI.Text(bar.transform, "", 23, DayLoopUI.Kit.Ink);
+        DayLoopUI.Layout(_guideText, preferredHeight: 56);
+        _guideHint = DayLoopUI.Text(bar.transform, "", 20, DayLoopUI.Kit.InkSoft);
+        DayLoopUI.Layout(_guideHint, preferredHeight: 48);
+        RectTransform actions = DayLoopUI.Rect("Actions", bar.transform);
+        DayLoopUI.Horizontal(actions, 0, 14);
+        DayLoopUI.Layout(actions, preferredHeight: 50);
+        DayLoopUI.Spacer(actions);
+        var skip = DayLoopUI.KitButton(actions, "안내 건너뛰기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 22, SkipGuide);
+        DayLoopUI.Layout(skip, preferredWidth: 204, preferredHeight: 50);
+        _continueButton = DayLoopUI.KitButton(actions, "확인", DayLoopUI.Kit.WoodLight, Color.white, 24, Continue, "Continue");
+        DayLoopUI.Layout(_continueButton, preferredWidth: 100, preferredHeight: 50);
         _continueButton.gameObject.SetActive(false);
-
-        Button skip = DayLoopUI.Button(bar.transform, "안내 건너뛰기", DayLoopUI.CreamDeep, DayLoopUI.WoodDark, 21, SkipGuide, "Skip");
-        DayLoopUI.Layout(skip, preferredWidth: 170, preferredHeight: 56);
 
         _guideBar.gameObject.SetActive(false);
     }

@@ -16,6 +16,22 @@ public class RestaurantEntranceButton : MonoBehaviour
             return;
         }
 
+        // 대장간에 맡긴 확장 공사로 휴업하는 날
+        if (GameSession.IsActive && RestaurantRules.IsClosedForConstruction(GameSession.Current))
+        {
+            PopupManager.Instance.ShowConfirmPopup(
+                $"오늘은 식당 확장 공사로 휴업해요.\n집에서 잠들면 다음 날 아침 Lv.{GameSession.Current.progression.pendingRestaurantLevel} 식당이 문을 열어요.",
+                "확인",
+                "",
+                null
+            );
+            return;
+        }
+
+        // 섬 HUD가 있으면 오늘의 메뉴·직원·재료 부족을 보여 주는 식당 카드로 확인한다.
+        if (IslandDayHud.TryShowRestaurantCard(OnConfirmStartOperation))
+            return;
+
         PopupManager.Instance.ShowConfirmPopup(
             "오늘의 장사를 시작하시겠습니까?",
             "예",

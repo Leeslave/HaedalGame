@@ -6,6 +6,7 @@ public class CustomerOrderComponent : MonoBehaviour
     // 손님 유형별로 인스펙터에서 직접 배정하는 최애 메뉴 레시피 ID. -1이면 미설정(보너스 없음).
     [SerializeField] private int favoriteRecipeId = -1;
     public int FavoriteRecipeId => favoriteRecipeId;
+    private int favoriteIngredientId = -1;
     public bool FavoriteOnMenu { get; private set; }
     public int Species { get; set; }
 
@@ -20,7 +21,7 @@ public class CustomerOrderComponent : MonoBehaviour
     {
         IReadOnlyList<RecipeData> menu = MenuManager.Instance.DailyFoods;
         if (GameSession.IsActive && GameDatabase.Recipes.Recipes.Count > 0)
-            favoriteRecipeId = GameDatabase.Recipes.Recipes[(GameSession.Current.day + Species) % GameDatabase.Recipes.Recipes.Count].RecipeId;
+            favoriteIngredientId = CustomerPreferences.FavoriteIngredient(Species, GameSession.Current.day, GameSession.Current.runId);
         if (menu == null || menu.Count == 0)
         {
             Debug.LogWarning("오늘의 메뉴가 없습니다.");
@@ -33,15 +34,17 @@ public class CustomerOrderComponent : MonoBehaviour
                 available.Add(recipe);
         curData = available.Count == 0 ? null : available[Random.Range(0, available.Count)];
         FavoriteOnMenu = false;
-        foreach (var item in menu) if (item.RecipeId == favoriteRecipeId) FavoriteOnMenu = true;
-        var favorite = available.Find(r => r.RecipeId == favoriteRecipeId);
-        if (favorite != null)
+        foreach (var item in menu) if (IsFavorite(item)) FavoriteOnMenu = true;
+        var favorites = available.FindAll(IsFavorite);
+        if (favorites.Count > 0)
         {
-            var others = available.FindAll(r => r.RecipeId != favoriteRecipeId);
-            curData = others.Count == 0 || Random.value < .5f ? favorite : others[Random.Range(0, others.Count)];
+            var others = available.FindAll(r => !IsFavorite(r));
+            curData = others.Count == 0 || Random.value < .5f ? favorites[Random.Range(0, favorites.Count)] : others[Random.Range(0, others.Count)];
         }
     }
 
+
+    public bool IsFavorite(RecipeData recipe) => favoriteIngredientId > 0 ? CustomerPreferences.Likes(recipe, favoriteIngredientId) : recipe != null && recipe.RecipeId == favoriteRecipeId;
 
     void Start()
     {

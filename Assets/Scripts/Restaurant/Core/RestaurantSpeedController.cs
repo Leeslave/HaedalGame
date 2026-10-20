@@ -37,7 +37,7 @@ public static class RestaurantSpeedController
         SetSpeedIndex(value ? 1 : 0);
     }
 
-    private static void SetSpeedIndex(int index)
+    public static void SetSpeedIndex(int index)
     {
         if (index < 0 || index >= Speeds.Length || SpeedIndex == index) { return; }
         SpeedIndex = index;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +26,7 @@ public class TitleMenuController : MonoBehaviour
     [SerializeField] private IntroController _intro;
 
     private bool _busy;
+    private ReferenceTitleView _designView;
 
     private void Awake()
     {
@@ -38,6 +39,7 @@ public class TitleMenuController : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_designView != null) Destroy(_designView.gameObject);
         if (_newGameButton != null) _newGameButton.onClick.RemoveListener(OnClickNewGame);
         if (_continueButton != null) _continueButton.onClick.RemoveListener(OnClickContinue);
         if (_quitButton != null) _quitButton.onClick.RemoveListener(OnClickQuit);
@@ -77,31 +79,21 @@ public class TitleMenuController : MonoBehaviour
             GameSession.End();
 
         GameFlow.SetPhase(GamePhase.Title);
-        RefreshContinue();
+        // 기존 메뉴 Canvas는 표시와 입력만 끈다. 새 UI는 독립 Canvas에 만들어 부모 알파를 상속하지 않는다.
+        foreach (var button in new[] { _continueButton, _newGameButton, _settingsButton, _quitButton })
+        {
+            if (button == null) continue;
+            var legacyCanvas = button.GetComponentInParent<Canvas>();
+            if (legacyCanvas == null) continue;
+            var group = legacyCanvas.GetComponent<CanvasGroup>();
+            if (group == null) group = legacyCanvas.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0; group.interactable = false; group.blocksRaycasts = false;
+        }
+        _designView = ReferenceTitleView.Create(gameObject.scene, OnClickContinue, OnClickNewGame, OnClickSettings, OnClickQuit);
+        _designView.RefreshSave();
     }
 
-    private void RefreshContinue()
-    {
-        bool hasFile = SaveService.HasSaveFile();
-        bool hasValidSave = SaveService.TryGetSummary(out SaveSummary summary);
-
-        if (_continueButton != null)
-            _continueButton.interactable = hasFile;   // 손상 파일도 눌러서 오류 안내를 받을 수 있게 한다.
-
-        if (_continueSummaryText == null)
-            return;
-
-        if (hasValidSave)
-        {
-            TimeSpan playTime = TimeSpan.FromSeconds(summary.PlayTimeSeconds);
-            _continueSummaryText.text =
-                $"{summary.Day}일차 · Lv.{summary.RestaurantLevel} · {summary.Gold:N0}G\n{summary.SavedAtLocal:yyyy.MM.dd HH:mm} 저장 · 플레이 {(int)playTime.TotalHours}시간 {playTime.Minutes}분";
-        }
-        else
-        {
-            _continueSummaryText.text = hasFile ? "세이브 파일을 읽을 수 없습니다." : "";
-        }
-    }
+    private void RefreshContinue() => _designView?.RefreshSave();
 
     // ───── 버튼 ─────
 
@@ -171,6 +163,7 @@ public class TitleMenuController : MonoBehaviour
             return;
 
         _busy = true;
+        _designView?.SetVisible(false);
         GameFlow.BeginNewGame();
 
         if (_intro != null)

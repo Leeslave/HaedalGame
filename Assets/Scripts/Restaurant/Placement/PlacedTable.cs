@@ -15,7 +15,7 @@ public class PlacedTable : MonoBehaviour
     public void SetSkin(int skin)
     {
         Skin = skin;
-        foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.color = skin == 0 ? Color.white : new Color(.78f, .87f, .94f);
+        foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.color = skin == 0 ? Color.white : skin == 1 ? new Color(.78f, .87f, .94f) : new Color(.95f, .66f, .60f);
     }
 
     private List<Vector2Int> obstacleCells = new List<Vector2Int>(); // "테" 타일 위치
@@ -62,8 +62,15 @@ public class PlacedTable : MonoBehaviour
     }
 
     // 테이블 제거 (철거)
-    public void RemoveTable()
+    public void RemoveTable(bool returnToStorage = true)
     {
+        if (returnToStorage && GameSession.IsActive)
+        {
+            if (GameSession.Current.progression.furniture == null) GameSession.Current.progression.furniture = new List<FurnitureStock>();
+            int count = tableData.chairTiles.Length;
+            var stock = GameSession.Current.progression.furniture.Find(x => x.seats == count);
+            if (stock == null) GameSession.Current.progression.furniture.Add(new FurnitureStock { seats = count, amount = 1 }); else stock.amount++;
+        }
         PathfindingGrid.Instance.UnregisterObstacleTiles(obstacleCells);
         MarkRemoved();
         Destroy(gameObject);

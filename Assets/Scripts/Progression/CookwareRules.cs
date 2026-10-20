@@ -12,10 +12,12 @@ public static class CookwareRules
         if (entry == null) { entry = new CookwareEntry { toolId = Names[id - 201] }; data.cookware.Add(entry); }
         return entry;
     }
+    /// <summary>도구 강화 단계(읽기 전용, 기록이 없으면 1).</summary>
+    public static int Level(GameSaveData data, int id) => id < 201 || id > 204 ? 0 : data.cookware.Find(e => e.toolId == Names[id - 201])?.level ?? 1;
     public static bool CanCook(GameSaveData data, RecipeData recipe)
     {
         if (!RestaurantProgress.HasTool(data, recipe)) return false;
-        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202 } : new[] { recipe.ClassId };
+        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202, 204 } : new[] { recipe.ClassId };
         int needed = recipe.Requirements.Count(r => !IngredientInventoryService.IsUnlimited(r.IngredientId));
         foreach (int id in ids)
         {
@@ -28,7 +30,7 @@ public static class CookwareRules
     public static void RecordUse(RecipeData recipe)
     {
         if (!GameSession.IsActive) return;
-        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202 } : new[] { recipe.ClassId };
+        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202, 204 } : new[] { recipe.ClassId };
         foreach (int id in ids)
         {
             if (CookwareLevelState.Instance != null) CookwareLevelState.Instance.AddUseCount(Definition(id));

@@ -1,17 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 /// <summary>관리 화면의 거래는 사본에서 검증하고 한 번에 적용한다. 파일 쓰기는 취침에서만 한다.</summary>
-public static class RestaurantProgress
+public static partial class RestaurantProgress
 {
     public static int Gold(GameSaveData s) => s.wallets.FirstOrDefault(w => w.currencyId == GameSession.GoldCurrencyId)?.amount ?? 0;
     public static bool CanManage => GameSession.IsActive && GameFlow.Phase != GamePhase.Operation && GameFlow.Phase != GamePhase.ClosingReport;
-    private static bool Change(Func<GameSaveData, string> action, out string error)
+    private static bool Change(Func<GameSaveData, string> action, out string error, bool allowPayroll = false)
     {
         error = null;
         if (!CanManage) { error = "영업 중에는 변경할 수 없어요."; return false; }
+        if (!allowPayroll && GameSession.Current.progression.unpaidEmployeeIds.Count > 0) { error = "먼저 미지급 임금을 정산해 주세요."; return false; }
         var candidate = GameSession.CaptureSnapshot();
         error = action(candidate);
         if (error != null) return false;
@@ -31,7 +32,7 @@ public static class RestaurantProgress
         else w.amount += amount;
     }
     public static bool HasTool(GameSaveData s, RecipeData recipe) => recipe.ClassId == 205
-        ? s.progression.tools.Contains(201) && s.progression.tools.Contains(202)
+        ? s.progression.tools.Contains(201) && s.progression.tools.Contains(202) && s.progression.tools.Contains(204)
         : s.progression.tools.Contains(recipe.ClassId);
     public static bool TrySetMenu(int slot, int id, out string error)
     {
@@ -102,14 +103,23 @@ public static class RestaurantProgress
         }
         return null;
     }, out error);
+    /// <summary>
+    /// 대장간에 식당 확장 공사를 맡긴다. 조건: 순차 강화, 식당 평점, 공사 비용.
+    /// 공사 기간(1일)은 항상 휴업한다. 영업 전에 맡기면 오늘, 영업을 마친 뒤 맡기면 내일이 휴업일이고,
+    /// 휴업일 밤에 잠들면 다음 날 아침에 새 레벨로 문을 연다. (적용은 TrySleep)
+    /// </summary>
     public static bool TryUpgrade(out string error) => Change(s => {
-        if (s.restaurantLevel >= 10) return "최고 레벨이에요.";
+        if (s.restaurantLevel >= RestaurantRules.MaxLevel) return "최고 레벨이에요.";
         if (s.progression.pendingRestaurantLevel > 0) return "이미 공사 중이에요.";
-        float rating = s.dailyRatingHistory.Count == 0 ? 0 : (float)s.dailyRatingHistory.Average(r => r.value);
         int next = s.restaurantLevel + 1;
-        if (rating < RestaurantRules.UpgradeRating(next)) return $"평점 {RestaurantRules.UpgradeRating(next):0.0}이 필요해요.";
-        if (!Spend(s, RestaurantRules.UpgradeCost(next))) return "공사 비용이 부족해요.";
-        s.progression.pendingRestaurantLevel = next; s.progression.constructionUntilDay = s.day + 1; return null;
+        // 화면 표시와 같은 소수 첫째 자리 평점으로 비교한다.
+        float rating = Mathf.Round(RestaurantRules.RestaurantRating(s) * 10f) / 10f;
+        if (rating < RestaurantRules.UpgradeRating(next)) return $"식당 평점 {RestaurantRules.UpgradeRating(next):0.0} 이상이 필요해요.";
+        if (!Spend(s, RestaurantRules.UpgradeCost(next))) return $"공사 비용 {RestaurantRules.UpgradeCost(next):N0}G가 필요해요.";
+        int closedDay = s.progression.freeTime ? s.day + 1 : s.day;
+        s.progression.pendingRestaurantLevel = next;
+        s.progression.constructionUntilDay = closedDay + RestaurantRules.ConstructionDays(next);
+        return null;
     }, out error);
     public static bool TryUpgradeTool(int id, out string error) => Change(s => {
         if (!s.progression.tools.Contains(id)) return "먼저 도구를 선택하세요.";
@@ -159,15 +169,31 @@ public static class RestaurantProgress
     }
     private static void SyncIngredients(GameSaveData s) => s.ingredients = s.progression.ingredientGrades.GroupBy(x => x.ingredientId)
         .Select(g => new IngredientStackEntry { ingredientId = g.Key, amount = g.Sum(x => x.amount), source = "Management" }).ToList();
-    public static bool TryBuyIngredient(int id, int amount, out string error) => Change(s => {
-        if (amount <= 0 || !GameDatabase.Recipes.TryGetIngredientById(id, out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+    public static bool TryBuyIngredient(int id, int amount, out string error)
+        => TryBuyIngredients(new Dictionary<int, int> { { id, amount } }, out error);
+
+    /// <summary>장바구니 전체를 사본에서 검증한다. 한 재료라도 살 수 없으면 골드·재고를 바꾸지 않는다.</summary>
+    public static bool TryBuyIngredients(IReadOnlyDictionary<int, int> items, out string error) => Change(s => {
+        if (items == null || items.Count == 0) return "장바구니가 비어 있어요.";
         if (s.progression.regularStockDay != s.day) { s.progression.dailyStock.Clear(); s.progression.regularStockDay = s.day; }
-        var stock = s.progression.dailyStock.Find(x => x.itemId == id);
-        if (stock == null) { stock = new ShopStockEntry { itemId = id, currentStock = 50, maxStock = 50 }; s.progression.dailyStock.Add(stock); }
-        if (stock.currentStock < amount) return "오늘 재고가 부족해요.";
-        int cost = RegularUnitPrice(item) * amount;
-        if (!Spend(s, cost)) return "골드가 부족해요.";
-        stock.currentStock -= amount; EnsureGrades(s); AddIngredient(s, id, 0, amount); return null;
+        long total = 0;
+        foreach (var pair in items)
+        {
+            if (pair.Value <= 0 || !GameDatabase.Recipes.TryGetIngredientById(pair.Key, out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+            var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
+            if ((stock?.currentStock ?? 50) < pair.Value) return $"{item.IngredientName}의 오늘 재고가 부족해요.";
+            total += (long)RegularUnitPrice(item) * pair.Value;
+        }
+        if (total > int.MaxValue || !Spend(s, (int)total)) return "골드가 부족해요.";
+        EnsureGrades(s);
+        foreach (var pair in items)
+        {
+            var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
+            if (stock == null) { stock = new ShopStockEntry { itemId = pair.Key, currentStock = 50, maxStock = 50 }; s.progression.dailyStock.Add(stock); }
+            stock.currentStock -= pair.Value;
+            AddIngredient(s, pair.Key, 0, pair.Value);
+        }
+        return null;
     }, out error);
     public static int RegularUnitPrice(IngredientData item) => Mathf.Max(1, Mathf.RoundToInt(item.Price * 1.2f));
     public static void AcquireBlueprint(int id)
@@ -180,32 +206,42 @@ public static class RestaurantProgress
         if (!Spend(s, Mathf.RoundToInt(r.Price * 1.2f))) return "골드가 부족해요.";
         s.progression.blueprints.Add(id); return null;
     }, out error);
+    public static bool CanResearch => CanManage && GameSession.Current.progression.freeTime;
     public static bool TryStartResearch(int id, out string error) => Change(s => {
+        if (!s.progression.freeTime) return "연구실은 영업을 마친 자유시간에 이용할 수 있어요.";
         if (!GameDatabase.TryGetRecipe(id, out var r) || !s.progression.blueprints.Contains(id)) return "먼저 레시피 설계도를 구매하세요.";
         if (s.unlockedRecipeIds.Contains(id) || s.progression.research.Any(x => x.recipeId == id)) return "이미 연구했거나 연구 중이에요.";
         if (s.progression.research.Count >= RestaurantRules.ResearchSlots(s.restaurantLevel)) return "연구 칸이 부족해요.";
         if (!HasTool(s, r)) return "조리도구가 필요해요.";
+        if (RecipeResearchPlan.Find(id) == null) return "이 요리의 연구 과정이 준비되지 않았어요.";
         EnsureGrades(s);
-        var research = new ResearchEntry { recipeId = id, remainingDays = s.progression.timedResearch ? RestaurantRules.ResearchDays(r.RecipeGrade) : 0 };
-        foreach (var group in r.Requirements.GroupBy(x => x.IngredientId))
+        var research = new ResearchEntry { recipeId = id, remainingDays = 0 };
+        foreach (var group in RecipeResearchPlan.Requirements(r).GroupBy(x => x.IngredientId))
         {
             if (IngredientInventoryService.IsUnlimited(group.Key)) continue;
             int amount = group.Sum(x => x.Amount);
-            var stack = s.progression.ingredientGrades.Where(x => x.ingredientId == group.Key && x.amount > 0).OrderByDescending(x => x.grade).FirstOrDefault();
-            if (stack == null || stack.amount < amount) return "연구 재료가 부족해요.";
-            stack.amount -= amount;
-            research.paidIngredients.Add(new IngredientGradeEntry { ingredientId = stack.ingredientId, grade = stack.grade, amount = amount });
+            var stacks = s.progression.ingredientGrades.Where(x => x.ingredientId == group.Key && x.amount > 0).OrderByDescending(x => x.grade).ToList();
+            if (stacks.Sum(x => x.amount) < amount) return "연구 재료가 부족해요.";
+            foreach (var stack in stacks)
+            {
+                int used = Mathf.Min(amount, stack.amount);
+                if (used == 0) break;
+                stack.amount -= used; amount -= used;
+                research.paidIngredients.Add(new IngredientGradeEntry { ingredientId = stack.ingredientId, grade = stack.grade, amount = used });
+            }
         }
         SyncIngredients(s); s.progression.research.Add(research); return null;
     }, out error);
     public static bool TryCancelResearch(int id, out string error) => Change(s => {
+        if (!s.progression.freeTime) return "연구 취소는 자유시간에 할 수 있어요.";
         var entry = s.progression.research.Find(x => x.recipeId == id);
         if (entry == null) return "진행 중인 연구가 없어요.";
         EnsureGrades(s);
         foreach (var paid in entry.paidIngredients) AddIngredient(s, paid.ingredientId, paid.grade, paid.amount);
-        s.progression.research.Remove(entry); return null;
+        s.progression.research.Remove(entry); s.progression.blueprints.Remove(id); return null;
     }, out error);
     public static bool TryCompleteResearch(int id, float score, out string error) => Change(s => {
+        if (!s.progression.freeTime) return "실습은 자유시간에 할 수 있어요.";
         var r = s.progression.research.Find(x => x.recipeId == id);
         if (r == null || r.remainingDays > 0) return "연구 시간이 남았어요.";
         if (float.IsNaN(score) || float.IsInfinity(score) || score < 4 || score > 5) return "4점 이상이면 연구가 완료돼요. 다시 도전할 수 있어요.";
@@ -218,18 +254,20 @@ public static class RestaurantProgress
         tier = Mathf.Clamp(tier, 0, 3);
         if (s.restaurantLevel < RestaurantRules.ScoutLevel(tier)) return "식당 레벨이 부족해요.";
         if (!Spend(s, RestaurantRules.ScoutCost(tier))) return "스카우트 비용이 부족해요.";
-        int candidates = 3 - (s.scoutPenaltyPending ? Mathf.Min(3, (s.unpaidDismissalCount + 1) / 2) : 0);
+        int candidates = StaffRecruitmentRules.ApplicantCount(tier, s.unpaidDismissalCount, s.scoutPenaltyPending);
         s.scoutPenaltyPending = false;
         s.progression.candidates.Clear();
+        var random = new System.Random(UnityEngine.Random.Range(0, int.MaxValue));
         for (int i = 0; i < candidates; i++)
         {
-            int grade = Mathf.Clamp(tier + (UnityEngine.Random.value < .15f ? 2 : UnityEngine.Random.value < .4f ? 1 : 0), 0, 5);
-            string gradeName = new[] { "F", "E", "D", "C", "B", "A" }[grade];
+            int grade = StaffRecruitmentRules.RollGrade(tier, random);
+            var stats = StaffRecruitmentRules.RollStats(grade, random);
+            string gradeName = "FEDCBA"[grade].ToString();
+            int serial = s.nextEmployeeSerial++;
             s.progression.candidates.Add(new EmployeeEntry {
-                instanceId = "emp-" + s.nextEmployeeSerial++, name = "해달 " + s.nextEmployeeSerial, grade = gradeName,
-                serving = UnityEngine.Random.Range(2f + grade * 2, 5f + grade * 2), cooking = UnityEngine.Random.Range(2f + grade * 2, 5f + grade * 2),
-                handy = UnityEngine.Random.Range(1f + grade, 3f + grade * 2), hp = 10 + grade * 5,
-                wage = RestaurantRules.Wage(gradeName), appearanceSeed = UnityEngine.Random.Range(0, 100000) });
+                instanceId = "emp-" + serial, name = "해달 " + serial, grade = gradeName,
+                serving = stats.serving, cooking = stats.cooking, handy = stats.handy, hp = stats.hp,
+                wage = RestaurantRules.Wage(gradeName), appearanceSeed = random.Next(1, int.MaxValue) });
         }
         return null;
     }, out error);
@@ -243,17 +281,24 @@ public static class RestaurantProgress
     public static bool TryAssign(string id, PartTimerRole role, out string error) => Change(s => {
         var e = s.employees.Find(x => x.instanceId == id);
         if (e == null) return "직원이 없어요.";
+        if (ReferenceExpedition.IsAway(s, id)) return "탐험 중인 직원은 돌아온 뒤 배치할 수 있어요.";
         var assigned = s.employees.Where(x => x.instanceId != id && x.role == role.ToString()).ToList();
         if (role != PartTimerRole.None && assigned.Count >= RestaurantRules.StaffLimit(s.restaurantLevel, role)) return "배치 가능한 인원이 가득 찼어요.";
         e.role = role.ToString(); e.slotIndex = role == PartTimerRole.None ? -1 : Enumerable.Range(0, 5).First(i => !assigned.Any(x => x.slotIndex == i)); return null;
     }, out error);
     public static bool TryDismiss(string id, out string error) => Change(s => {
         var e = s.employees.Find(x => x.instanceId == id); if (e == null) return "직원이 없어요.";
+        if (ReferenceExpedition.IsAway(s, id)) return "탐험 중인 직원은 돌아온 뒤 내보낼 수 있어요.";
         if (s.progression.unpaidEmployeeIds.Contains(id)) { s.unpaidDismissalCount++; s.scoutPenaltyPending = true; }
         if (s.progression.unpaidEmployeeIds.Contains(id) && s.dailyRatingHistory.Count > 0)
-            s.dailyRatingHistory[s.dailyRatingHistory.Count - 1].value = Mathf.Max(0, s.dailyRatingHistory[s.dailyRatingHistory.Count - 1].value - .1f);
+            foreach (var rating in s.dailyRatingHistory) rating.value = Mathf.Max(0, rating.value - .1f);
         s.progression.unpaidEmployeeIds.Remove(id); s.employees.Remove(e); return null;
-    }, out error);
+    }, out error, true);
+    public static bool TryPayWages(out string error) => Change(s => {
+        if (s.day % 7 != 0 || s.progression.wagesPaidThroughDay >= s.day) return "지금은 임금 정산일이 아니거나 이미 정산했어요.";
+        if (!Spend(s, s.employees.Sum(e => e.wage))) return "골드가 부족해요. 해고할 직원을 선택하세요.";
+        s.progression.wagesPaidThroughDay = s.day; s.progression.unpaidEmployeeIds.Clear(); return null;
+    }, out error, true);
     public static bool TrySleep(out string error)
     {
         error = null;
@@ -281,16 +326,15 @@ public static class RestaurantProgress
         GameSession.ApplyCheckpoint(s); GameFlow.EnterDayStart(); return true;
     }
     public static bool TryExplore(out string error) => Change(s => {
-        if (!s.progression.freeTime) return "영업을 마친 자유시간에 탐험할 수 있어요.";
+        if (!s.progression.freeTime) return "영업을 마친 자유시간에 주민을 만날 수 있어요.";
         if (s.day < 2) return "둘째 날부터 주민을 만날 수 있어요.";
         if (s.progression.questRecipeId > 0) return "먼저 주민이 부탁한 음식을 전해주세요.";
         string flag = "ExploreDay-" + s.day;
-        if (s.storyFlags.Contains(flag)) return "오늘 탐험은 마쳤어요.";
+        if (s.storyFlags.Contains(flag)) return "오늘 주민과의 만남은 마쳤어요.";
         int required = Mathf.Min(10, 1 + s.progression.islandChapter * 2);
         if (s.restaurantLevel < required) return $"다음 섬에는 식당 레벨 {required}이 필요해요.";
         s.storyFlags.Add(flag); EnsureGrades(s);
-        int id = Mathf.Clamp(1 + s.progression.islandChapter * 3 + UnityEngine.Random.Range(0, 3), 1, 10);
-        AddIngredient(s, id, Mathf.Min(5, s.progression.islandChapter), 10);
+        // 확정 기획: 식재료 획득은 상점에서만. 주민 교류는 요청과 도안 보상만 제공한다.
         var available = s.unlockedRecipeIds.Where(recipe => GameDatabase.TryGetRecipe(recipe, out _)).ToArray();
         if (available.Length > 0) { s.progression.questRecipeId = available[(s.day + s.progression.islandChapter) % available.Length]; s.progression.questIssuedDay = s.day; }
         if (s.progression.endingSeen) s.progression.epilogueSeen = true;

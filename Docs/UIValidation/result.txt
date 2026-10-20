@@ -1,0 +1,1 @@
+PASS: 5 transaction tests (cart, furniture, expedition); Jua and NanumGothic Korean glyph checks. Rendered title, island, preparation, operation HUD, placement, settlement, research practice, 11 management tabs, house and settings at 1920x1080. No save files changed.

@@ -1,0 +1,1 @@
+PASS: actual PlayMode startup created title with Korean glyph meshes; island and restaurant preparation UI installed. Used memory-only dev session; no save files written.

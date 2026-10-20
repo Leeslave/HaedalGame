@@ -297,6 +297,12 @@ public class RecipeLabInventoryController : MonoBehaviour
 
     private void OnClickResearch()
     {
+        if (GameSession.IsActive)
+        {
+            var management = FindFirstObjectByType<RestaurantManagementUI>();
+            if (management != null) management.Open("연구");
+            return;
+        }
         if (_selectedRecipe == null)
             return;
 

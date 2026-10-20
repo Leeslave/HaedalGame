@@ -22,13 +22,14 @@ public class TableSaveLoadManager : MonoBehaviour
     {
         if (!RestaurantProgress.CanManage || undo.Count == 0) return;
         TablePlacementManager.Instance?.OnCancelClicked();
-        GameSession.Current.placedTables = undo.Pop(); LoadPlacement();
+        var target = undo.Pop(); AdjustWarehouse(target);
+        GameSession.Current.placedTables = target; LoadPlacement();
     }
     public void ResetEdits()
     {
         if (!RestaurantProgress.CanManage || original == null) return;
         TablePlacementManager.Instance?.OnCancelClicked(); RememberEdit();
-        GameSession.Current.placedTables = Copy(original); LoadPlacement();
+        AdjustWarehouse(original); GameSession.Current.placedTables = Copy(original); LoadPlacement();
     }
 
     private void Awake()
@@ -70,7 +71,7 @@ public class TableSaveLoadManager : MonoBehaviour
 
         foreach (PlacedTable existing in new List<PlacedTable>(PlacedTable.Active))
         {
-            existing.RemoveTable();
+            existing.RemoveTable(false);
         }
 
         foreach (PlacedTableEntry entry in GameSession.Current.placedTables)
@@ -102,5 +103,19 @@ public class TableSaveLoadManager : MonoBehaviour
         if (typeStr == TableType.FourSeat.ToString()) { return fourSeatData; }
         if (typeStr == TableType.OneSeat.ToString()) { return TableVariants.OneSeat(twoSeatData); }
         return null;
+    }
+
+    private static void AdjustWarehouse(List<PlacedTableEntry> target)
+    {
+        var s = GameSession.Current;
+        if (s.progression.furniture == null) s.progression.furniture = new List<FurnitureStock>();
+        foreach (int seats in new[] { 1, 2, 4 })
+        {
+            string type = seats == 1 ? TableType.OneSeat.ToString() : seats == 2 ? TableType.TwoSeat.ToString() : TableType.FourSeat.ToString();
+            int delta = s.placedTables.Count(x => x.tableType == type) - target.Count(x => x.tableType == type);
+            var stock = s.progression.furniture.Find(x => x.seats == seats);
+            if (stock == null) s.progression.furniture.Add(new FurnitureStock { seats = seats, amount = Mathf.Max(0, delta) });
+            else stock.amount = Mathf.Max(0, stock.amount + delta);
+        }
     }
 }

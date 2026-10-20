@@ -256,7 +256,8 @@ public class NpcStatusOverlay : MonoBehaviour
     // 음식 아이콘을 보여 준다. 아이콘이 없는 메뉴는 같은 자리에 음식 이름표를 띄운다. food가 null이면 모두 숨긴다.
     private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position)
     {
-        bool hasIcon = food != null && food.Icon != null;
+        Sprite designIcon = DesignArt.Food(food);
+        bool hasIcon = designIcon != null;
         icon.gameObject.SetActive(hasIcon);
         if (hasIcon)
         {
