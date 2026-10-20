@@ -55,7 +55,10 @@ public static class DayLoopInstaller
         else if (scene.name == GameScenes.Island)
             Create<IslandDayHud>("[DayLoop] Island", scene);
         else if (scene.name == GameScenes.Title)
+        {
             Create<TitleTransitionGuard>("[DayLoop] Title", scene);
+            Create<TitleLayout>("[DayLoop] Title layout", scene);
+        }
     }
 
     private static void Create<T>(string name, Scene scene) where T : Component

@@ -82,6 +82,7 @@ public class TitleMenuController : MonoBehaviour
     }
 
     // 씬에 요약 텍스트가 연결되지 않았으면 [이어하기] 버튼 바로 아래에 작은 요약 띠를 만든다. (UI 시안: 저장 요약은 이어하기에 붙인다)
+    // TEST 타이틀에서는 TitleLayout이 이어하기 아래에 이 띠가 들어갈 자리를 비워 둔다.
     private void EnsureSummaryLabel()
     {
         if (_continueSummaryText != null || _continueButton == null || !(_continueButton.transform is RectTransform buttonRect))
@@ -90,9 +91,10 @@ public class TitleMenuController : MonoBehaviour
         Image pill = DayLoopUI.Panel(buttonRect, new Color(DayLoopUI.Kit.Line.r, DayLoopUI.Kit.Line.g, DayLoopUI.Kit.Line.b, 0.78f), "[Title] SaveSummary");
         pill.raycastTarget = false;
         pill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-        DayLoopUI.Place(pill.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -8f), new Vector2(Mathf.Max(460f, buttonRect.rect.width), 66f));
-        TextMeshProUGUI text = DayLoopUI.Text(pill.transform, "", 21, DayLoopUI.Kit.Sail, TextAlignmentOptions.Center, FontStyles.Bold);
-        DayLoopUI.Stretch(text.rectTransform, 12, 4, 12, 4);
+        DayLoopUI.Place(pill.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -6f), new Vector2(440f, 58f));
+        TextMeshProUGUI text = DayLoopUI.Text(pill.transform, "", 19, DayLoopUI.Kit.Sail, TextAlignmentOptions.Center, FontStyles.Bold);
+        text.lineSpacing = -6f;
+        DayLoopUI.Stretch(text.rectTransform, 12, 3, 12, 3);
         _continueSummaryText = text;
     }
 
