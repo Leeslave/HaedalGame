@@ -69,6 +69,10 @@ public class RestaurantRatingManager : MonoBehaviour, ISaveParticipant
     {
         get
         {
+            // 게임 세션에서는 저장 데이터의 식당 레벨과 RestaurantRules 표를 쓴다. (레벨 관리자·테이블 에셋이 없는 씬 대비)
+            if (GameSession.IsActive)
+                return RestaurantRules.Expectation(GameSession.Current.restaurantLevel);
+
             int level = RestaurantLevelManager.Instance != null ? RestaurantLevelManager.Instance.CurrentLevel : 1;
 
             if (_levelTable != null && _levelTable.TryGetEntry(level, out RestaurantLevelEntry entry))

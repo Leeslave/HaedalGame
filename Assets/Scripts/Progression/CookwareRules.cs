@@ -12,6 +12,8 @@ public static class CookwareRules
         if (entry == null) { entry = new CookwareEntry { toolId = Names[id - 201] }; data.cookware.Add(entry); }
         return entry;
     }
+    /// <summary>도구 강화 단계(읽기 전용, 기록이 없으면 1).</summary>
+    public static int Level(GameSaveData data, int id) => id < 201 || id > 204 ? 0 : data.cookware.Find(e => e.toolId == Names[id - 201])?.level ?? 1;
     public static bool CanCook(GameSaveData data, RecipeData recipe)
     {
         if (!RestaurantProgress.HasTool(data, recipe)) return false;

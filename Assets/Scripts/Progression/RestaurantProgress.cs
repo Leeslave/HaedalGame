@@ -103,14 +103,23 @@ public static class RestaurantProgress
         }
         return null;
     }, out error);
+    /// <summary>
+    /// 대장간에 식당 확장 공사를 맡긴다. 조건: 순차 강화, 식당 평점, 공사 비용.
+    /// 공사 기간(1일)은 항상 휴업한다. 영업 전에 맡기면 오늘, 영업을 마친 뒤 맡기면 내일이 휴업일이고,
+    /// 휴업일 밤에 잠들면 다음 날 아침에 새 레벨로 문을 연다. (적용은 TrySleep)
+    /// </summary>
     public static bool TryUpgrade(out string error) => Change(s => {
-        if (s.restaurantLevel >= 10) return "최고 레벨이에요.";
+        if (s.restaurantLevel >= RestaurantRules.MaxLevel) return "최고 레벨이에요.";
         if (s.progression.pendingRestaurantLevel > 0) return "이미 공사 중이에요.";
-        float rating = s.dailyRatingHistory.Count == 0 ? 0 : (float)s.dailyRatingHistory.Average(r => r.value);
         int next = s.restaurantLevel + 1;
-        if (rating < RestaurantRules.UpgradeRating(next)) return $"평점 {RestaurantRules.UpgradeRating(next):0.0}이 필요해요.";
-        if (!Spend(s, RestaurantRules.UpgradeCost(next))) return "공사 비용이 부족해요.";
-        s.progression.pendingRestaurantLevel = next; s.progression.constructionUntilDay = s.day + 1; return null;
+        // 화면 표시와 같은 소수 첫째 자리 평점으로 비교한다.
+        float rating = Mathf.Round(RestaurantRules.RestaurantRating(s) * 10f) / 10f;
+        if (rating < RestaurantRules.UpgradeRating(next)) return $"식당 평점 {RestaurantRules.UpgradeRating(next):0.0} 이상이 필요해요.";
+        if (!Spend(s, RestaurantRules.UpgradeCost(next))) return $"공사 비용 {RestaurantRules.UpgradeCost(next):N0}G가 필요해요.";
+        int closedDay = s.progression.freeTime ? s.day + 1 : s.day;
+        s.progression.pendingRestaurantLevel = next;
+        s.progression.constructionUntilDay = closedDay + RestaurantRules.ConstructionDays(next);
+        return null;
     }, out error);
     public static bool TryUpgradeTool(int id, out string error) => Change(s => {
         if (!s.progression.tools.Contains(id)) return "먼저 도구를 선택하세요.";
