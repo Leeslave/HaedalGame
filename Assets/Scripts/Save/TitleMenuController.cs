@@ -82,7 +82,7 @@ public class TitleMenuController : MonoBehaviour
     }
 
     // 씬에 요약 텍스트가 연결되지 않았으면 [이어하기] 버튼 바로 아래에 작은 요약 띠를 만든다. (UI 시안: 저장 요약은 이어하기에 붙인다)
-    // TEST 타이틀에서는 TitleLayout이 이어하기 아래에 이 띠가 들어갈 자리를 비워 둔다.
+    // StartScene_TEST는 이어하기와 새로하기 사이에 이 띠가 들어갈 자리를 비워 두었다.
     private void EnsureSummaryLabel()
     {
         if (_continueSummaryText != null || _continueButton == null || !(_continueButton.transform is RectTransform buttonRect))
