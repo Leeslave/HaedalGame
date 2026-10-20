@@ -163,6 +163,8 @@ public class IslandDayHud : MonoBehaviour
             DaySettlementRecord last = GameSession.Current.lastSettlement;
             if (last != null && last.day > 0) stats += $"   <color={soft}>평점</color> {DayLoopUI.Rating(last.totalRating)}";
             stats += $"   <color={soft}>Lv.{GameSession.Current.restaurantLevel}</color>";
+            if (GameSession.Current.progression.pendingRestaurantLevel > 0)
+                stats += $" <color={DayLoopUI.Hex(DayLoopUI.Kit.SeaDeep)}>→ {GameSession.Current.progression.pendingRestaurantLevel} 공사 중</color>";
 
             RestaurantManagementUI.Mission(GameSession.Current, out string missionName, out int target);
             int progress = GameSession.Current.progression.missionProgress;
@@ -203,9 +205,9 @@ public class IslandDayHud : MonoBehaviour
         if (!GameSession.IsActive) return;
         GameSaveData s = GameSession.Current;
 
-        SetBadge("Restaurant", GameSession.OperationCompletedToday ? "영업 끝" : "영업 가능",
-            GameSession.OperationCompletedToday ? DayLoopUI.Kit.Sand : DayLoopUI.Kit.Awning,
-            GameSession.OperationCompletedToday ? DayLoopUI.Kit.InkSoft : Color.white);
+        bool closed = GameSession.OperationCompletedToday || RestaurantRules.IsClosedForConstruction(s);
+        SetBadge("Restaurant", RestaurantRules.IsClosedForConstruction(s) ? "공사 중" : GameSession.OperationCompletedToday ? "영업 끝" : "영업 가능",
+            closed ? DayLoopUI.Kit.Sand : DayLoopUI.Kit.Awning, closed ? DayLoopUI.Kit.InkSoft : Color.white);
 
         string lab = null;
         if (s.progression.research.Count > 0)
@@ -215,7 +217,7 @@ public class IslandDayHud : MonoBehaviour
         }
         SetBadge("Lab", lab, DayLoopUI.Kit.Sea, Color.white);
 
-        SetBadge("House", s.progression.freeTime ? "취침 가능" : null, DayLoopUI.Kit.Night, Color.white);
+        SetBadge("House", s.progression.freeTime || RestaurantRules.IsClosedForConstruction(s) ? "취침 가능" : null, DayLoopUI.Kit.Night, Color.white);
     }
 
     private void SetBadge(string buttonName, string label, Color background, Color foreground)

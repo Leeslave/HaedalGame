@@ -165,7 +165,7 @@ public class ChefAgent : PartTimerAgent
         }
         if (curTask.Recipe != null) CookwareRules.RecordUse(curTask.Recipe);
         if (curTask.Customer != null && Random.value < Mathf.Clamp01(status.handy / 100f))
-            curTask.Customer.FoodQuality = Mathf.Min(5, curTask.Customer.FoodQuality + 1);
+            curTask.Customer.FoodQuality = RestaurantRules.CapFoodQuality(Mathf.Min(5, curTask.Customer.FoodQuality + 1));
         Advance(ChefState.ApproachingDropoff, ApproachingDropoffRoutine());
     }
 

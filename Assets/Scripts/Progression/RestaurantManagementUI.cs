@@ -22,10 +22,10 @@ public class RestaurantManagementUI : MonoBehaviour
     private readonly Dictionary<string, Button> tabButtons = new Dictionary<string, Button>();
     private ResearchPractice practice;
     private static readonly string[] RestaurantTabs = { "메뉴", "재료", "직원", "가구", "식당" };
-    private static readonly string[] IslandTabs = { "상점", "엘프", "연구", "탐험", "집" };
+    private static readonly string[] IslandTabs = { "상점", "엘프", "연구", "대장간", "탐험", "집" };
     private static readonly string[] DestructiveActions = { "제외", "해고", "철거", "취소·환불", "돌아가기" };
 
-    private static string TabLabel(string section) => section == "식당" ? "식당 · 도구" : section == "엘프" ? "엘프 상점" : section;
+    private static string TabLabel(string section) => section == "대장간" ? "대장간" : section == "엘프" ? "엘프 상점" : section;
 
     private void Start()
     {
@@ -46,7 +46,7 @@ public class RestaurantManagementUI : MonoBehaviour
         window.gameObject.SetActive(false);
         if (!GameSession.Current.progression.firstToolChosen)
         {
-            Open("식당"); message.text = "첫 조리도구를 무료로 선택하세요. 만들 수 있는 기본 메뉴가 자동 등록돼요.";
+            Open("대장간"); message.text = "첫 조리도구를 무료로 선택하세요. 만들 수 있는 기본 메뉴가 자동 등록돼요.";
         }
         else if (GameSession.Current.day == 1 && GameSession.Current.progression.freeTime)
         {
@@ -133,7 +133,7 @@ public class RestaurantManagementUI : MonoBehaviour
         var label = b.GetComponentInChildren<TMP_Text>();
         label.alignment = TextAlignmentOptions.MidlineLeft;
         label.rectTransform.offsetMin = new Vector2(18, 0);
-        DayLoopUI.Layout(b, preferredHeight: 54);
+        DayLoopUI.Layout(b, preferredHeight: 50);
         tabButtons[section] = b;
     }
 
@@ -268,16 +268,13 @@ public class RestaurantManagementUI : MonoBehaviour
                 }
                 Pages(employees.Count); break;
             case "식당":
-                Note($"손님 {RestaurantRules.DailyVisitors(s.restaurantLevel)}명 · 좌석 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 주방 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Kitchen)} / 홀 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Serving)}명");
-                for (int id = 201; id <= 204; id++)
-                {
-                    int tool = id;
-                    Row(new[] { "프라이팬", "도마", "튀김기", "냄비" }[id - 201] + (s.progression.tools.Contains(id) ? " · 보유" : s.progression.firstToolChosen ? " · 500G" : " · 첫 도구 무료"),
-                        ("선택·구매", () => Run((out string e) => RestaurantProgress.TryBuyTool(tool, out e))),
-                        ("강화", () => Run((out string e) => RestaurantProgress.TryUpgradeTool(tool, out e))));
-                }
-                Row(s.restaurantLevel == 10 ? "최고 레벨" : $"다음 레벨 · {RestaurantRules.UpgradeCost(s.restaurantLevel + 1):N0}G · 평점 {RestaurantRules.UpgradeRating(s.restaurantLevel + 1):0.0} · 1일 공사", ("확장", () => Run(RestaurantProgress.TryUpgrade)));
+                Note($"식당 Lv.{s.restaurantLevel} · 손님 {RestaurantRules.DailyVisitors(s.restaurantLevel)}명 · 좌석 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 대기열 {RestaurantRules.WaitingLimit(s.restaurantLevel)}명 · 주방 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Kitchen)} / 홀 {RestaurantRules.StaffLimit(s.restaurantLevel, PartTimerRole.Serving)}명 · 레시피 {RestaurantRules.GradeRange(s.restaurantLevel)}");
+                Row(s.progression.pendingRestaurantLevel > 0 ? $"Lv.{s.progression.pendingRestaurantLevel} 확장 공사 중 · {s.progression.constructionUntilDay}일차 아침 완공" : "식당 확장과 조리도구 강화는 대장간에서 맡겨요.", ("대장간", () => Open("대장간")));
+                Note($"식당 평점 {RestaurantRules.RestaurantRating(s):0.0} (최근 7일 평균)");
                 RatingHistory(s);
+                break;
+            case "대장간":
+                BlacksmithTab(s);
                 break;
             case "탐험":
                 string island = new[] { "요정의 숲", "돌고래 바다", "해달 왕국", "곡물 섬", "목장 섬", "다시 만난 이웃들" }[Mathf.Clamp(s.progression.islandChapter, 0, 5)];
@@ -393,6 +390,124 @@ public class RestaurantManagementUI : MonoBehaviour
                 DayLoopUI.Place(chipRect, new Vector2(1, 1), new Vector2(1, .5f), new Vector2(-10, 0), Vector2.zero);
             }
         }
+    }
+
+    // ───── 대장간 탭 ─────
+
+    private static readonly string[] ToolNames = { "프라이팬", "도마", "튀김기", "냄비" };
+
+    private void BlacksmithTab(GameSaveData s)
+    {
+        int level = s.restaurantLevel;
+        int pending = s.progression.pendingRestaurantLevel;
+        bool isMax = level >= RestaurantRules.MaxLevel;
+        int next = Mathf.Min(level + 1, RestaurantRules.MaxLevel);
+
+        var top = DayLoopUI.Rect("Restaurant level", content);
+        DayLoopUI.Layout(top, preferredHeight: 338);
+        var topLayout = DayLoopUI.Horizontal(top, 0, 18);
+        topLayout.childForceExpandHeight = true;
+        topLayout.padding = new RectOffset(0, 0, 0, 8);
+
+        // 왼쪽: 현재 → 다음 레벨, 강화 조건, 강화 버튼, 공사 안내
+        var upgrade = BlacksmithCard(top, "식당 레벨 강화", 560);
+        var levels = DayLoopUI.Text(upgrade, isMax ? $"Lv.{level}  ·  최고 레벨" : pending > 0 ? $"Lv.{level}  →  Lv.{pending}  공사 중" : $"Lv.{level}  →  Lv.{next}",
+            36, pending > 0 ? DayLoopUI.Kit.SeaDeep : DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Layout(levels, preferredHeight: 46);
+
+        if (pending > 0)
+        {
+            bool closedToday = RestaurantRules.IsClosedForConstruction(s);
+            string when = closedToday
+                ? $"오늘은 공사로 휴업해요. 집에서 잠들면 {s.progression.constructionUntilDay}일차 아침에 Lv.{pending} 식당이 문을 열어요."
+                : $"내일({s.day + 1}일차) 하루 공사로 휴업하고, {s.progression.constructionUntilDay}일차 아침에 Lv.{pending} 식당이 문을 열어요.";
+            var status = DayLoopUI.Text(upgrade, when, 22, DayLoopUI.Kit.Ink, TextAlignmentOptions.TopLeft, FontStyles.Bold);
+            DayLoopUI.Layout(status, preferredHeight: 96);
+        }
+        else if (!isMax)
+        {
+            float rating = Mathf.Round(RestaurantRules.RestaurantRating(s) * 10f) / 10f;
+            float needRating = RestaurantRules.UpgradeRating(next);
+            int gold = RestaurantProgress.Gold(GameSession.CaptureSnapshot());
+            int cost = RestaurantRules.UpgradeCost(next);
+            bool ratingMet = rating >= needRating, goldMet = gold >= cost;
+            ConditionRow(upgrade, "식당 평점", $"{rating:0.0} / {needRating:0.0}", ratingMet);
+            ConditionRow(upgrade, "공사 비용", $"{gold:N0} / {cost:N0}G", goldMet);
+            DayLoopUI.Spacer(upgrade);
+            var button = DayLoopUI.KitButton(upgrade, $"Lv.{next}로 강화", ratingMet && goldMet ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand,
+                ratingMet && goldMet ? Color.white : DayLoopUI.Kit.InkSoft, 28, () => Run(RestaurantProgress.TryUpgrade), "Upgrade");
+            DayLoopUI.Layout(button, preferredHeight: 56);
+            string closed = s.progression.freeTime ? "지금 맡기면 내일 하루 쉬어요" : "지금 맡기면 오늘 하루 쉬어요";
+            var note = DayLoopUI.Text(upgrade, $"공사 기간 {RestaurantRules.ConstructionDays(next)}일 (휴업) · {closed}", 20, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            DayLoopUI.Layout(note, preferredHeight: 26);
+        }
+        else
+        {
+            DayLoopUI.Layout(DayLoopUI.Text(upgrade, "모든 확장을 마쳤어요.", 22, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), preferredHeight: 40);
+        }
+
+        // 오른쪽: 레벨 혜택 (현재 / 다음)
+        int target = pending > 0 ? pending : next;
+        bool hasNext = pending > 0 || !isMax;
+        var benefits = BlacksmithCard(top, "레벨 혜택", -1);
+        BenefitRow(benefits, "", $"현재 Lv.{level}", hasNext ? $"다음 Lv.{target}" : "-", true);
+        BenefitRow(benefits, "손님 좌석", $"{RestaurantRules.SeatLimit(level)}개", hasNext ? Delta(RestaurantRules.SeatLimit(level), RestaurantRules.SeatLimit(target), "개") : "-");
+        BenefitRow(benefits, "요리 공간", $"{RestaurantRules.CookingSpace(level)}개", hasNext ? Delta(RestaurantRules.CookingSpace(level), RestaurantRules.CookingSpace(target), "개") : "-");
+        BenefitRow(benefits, "대기열", $"{RestaurantRules.WaitingLimit(level)}명", hasNext ? Delta(RestaurantRules.WaitingLimit(level), RestaurantRules.WaitingLimit(target), "명") : "-");
+        BenefitRow(benefits, "레시피 등급", RestaurantRules.GradeRange(level), hasNext ? RestaurantRules.GradeRange(target) : "-");
+        BenefitRow(benefits, "하루 방문 손님", $"{RestaurantRules.DailyVisitors(level)}명", hasNext ? Delta(RestaurantRules.DailyVisitors(level), RestaurantRules.DailyVisitors(target), "명") : "-");
+
+        // 아래: 조리도구 선택·강화
+        var toolsTitle = DayLoopUI.Text(content, "조리도구 강화", 26, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Layout(toolsTitle, preferredHeight: 36);
+        for (int id = 201; id <= 204; id++)
+        {
+            int tool = id;
+            string state = s.progression.tools.Contains(id) ? $" · Lv.{CookwareRules.Level(s, id)}" : s.progression.firstToolChosen ? " · 500G" : " · 첫 도구 무료";
+            Row(ToolNames[id - 201] + state,
+                ("선택·구매", () => Run((out string e) => RestaurantProgress.TryBuyTool(tool, out e))),
+                ("강화", () => Run((out string e) => RestaurantProgress.TryUpgradeTool(tool, out e))));
+        }
+    }
+
+    private static RectTransform BlacksmithCard(Transform parent, string heading, float width)
+    {
+        var card = DayLoopUI.Chunky(DayLoopUI.Panel(parent, DayLoopUI.Kit.Sail, heading), 3f, 5f);
+        if (width > 0) DayLoopUI.Layout(card, preferredWidth: width);
+        else DayLoopUI.Layout(card, flexibleWidth: 1);
+        var layout = DayLoopUI.Vertical(card, 0, 6);
+        layout.padding = new RectOffset(24, 24, 16, 18);
+        DayLoopUI.Layout(DayLoopUI.Text(card.transform, heading, 27, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), preferredHeight: 36);
+        return card.rectTransform;
+    }
+
+    private static void ConditionRow(Transform parent, string label, string value, bool met)
+    {
+        var row = DayLoopUI.Chunky(DayLoopUI.Panel(parent, Color.white, label), 2f, 0f);
+        DayLoopUI.Layout(row, preferredHeight: 46);
+        var layout = DayLoopUI.Horizontal(row, 0, 12);
+        layout.padding = new RectOffset(16, 12, 6, 6);
+        DayLoopUI.Layout(DayLoopUI.Text(row.transform, label, 22, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), flexibleWidth: 1, preferredHeight: 40);
+        DayLoopUI.Layout(DayLoopUI.Text(row.transform, value, 22, met ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.WarnInk, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 220, preferredHeight: 40);
+        DayLoopUI.Chip(row.transform, met ? "충족" : "부족", met ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sand, met ? Color.white : DayLoopUI.Kit.WarnInk, 18);
+    }
+
+    private static void BenefitRow(Transform parent, string label, string current, string next, bool header = false)
+    {
+        var row = DayLoopUI.Rect(string.IsNullOrEmpty(label) ? "Header" : label, parent);
+        DayLoopUI.Horizontal(row, 0, 10);
+        DayLoopUI.Layout(row, preferredHeight: header ? 30 : 34);
+        Color soft = DayLoopUI.Kit.InkSoft;
+        DayLoopUI.Layout(DayLoopUI.Text(row, label, 22, soft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), flexibleWidth: 1, preferredHeight: 34);
+        DayLoopUI.Layout(DayLoopUI.Text(row, current, header ? 19 : 22, header ? soft : DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 150, preferredHeight: 34);
+        DayLoopUI.Layout(DayLoopUI.Text(row, next, header ? 19 : 22, header ? soft : DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 210, preferredHeight: 34);
+    }
+
+    /// <summary>"16개 (+4)" 형식. 늘지 않으면 값만.</summary>
+    private static string Delta(int current, int next, string unit)
+    {
+        int delta = next - current;
+        return delta > 0 ? $"{next}{unit} <color={DayLoopUI.Hex(DayLoopUI.Kit.GoodInk)}>(+{delta})</color>" : $"{next}{unit}";
     }
 
     // ───── 집 탭 ─────

@@ -113,4 +113,56 @@ public class ProgressionTests
     {
         Assert.AreEqual(expected, ResearchPractice.TimingScore(position), .001f);
     }
+    private static void PrepareUpgrade(float rating, int gold, bool freeTime)
+    {
+        var s = GameSession.Current;
+        s.restaurantLevel = 1; s.day = 3; s.progression.freeTime = freeTime;
+        s.progression.pendingRestaurantLevel = 0; s.progression.constructionUntilDay = 0;
+        s.dailyRatingHistory.Clear(); s.dailyRatingHistory.Add(new DailyRatingEntry { day = 0, value = rating });
+        s.wallets.RemoveAll(w => w.currencyId == GameSession.GoldCurrencyId);
+        s.wallets.Add(new WalletEntry { currencyId = GameSession.GoldCurrencyId, amount = gold });
+    }
+    [Test] public void RestaurantUpgrade_InMorning_ClosesToday()
+    {
+        PrepareUpgrade(4f, 1000, false);
+        Assert.IsTrue(RestaurantProgress.TryUpgrade(out string error), error);
+        var s = GameSession.Current;
+        Assert.AreEqual(2, s.progression.pendingRestaurantLevel);
+        Assert.AreEqual(4, s.progression.constructionUntilDay);
+        Assert.AreEqual(1, s.restaurantLevel);
+        Assert.AreEqual(500, RestaurantProgress.Gold(s));
+        Assert.IsTrue(RestaurantRules.IsClosedForConstruction(s));
+        Assert.IsFalse(RestaurantProgress.TryUpgrade(out _));
+    }
+    [Test] public void RestaurantUpgrade_AfterOperation_ClosesTomorrow()
+    {
+        PrepareUpgrade(4f, 1000, true);
+        Assert.IsTrue(RestaurantProgress.TryUpgrade(out string error), error);
+        var s = GameSession.Current;
+        Assert.AreEqual(5, s.progression.constructionUntilDay);
+        Assert.IsFalse(RestaurantRules.IsClosedForConstruction(s));
+        s.day = 4; s.progression.freeTime = false;
+        Assert.IsTrue(RestaurantRules.IsClosedForConstruction(s));
+    }
+    [Test] public void RestaurantUpgrade_RequiresRatingAndCost_Atomically()
+    {
+        PrepareUpgrade(2.4f, 1000, false);
+        Assert.IsFalse(RestaurantProgress.TryUpgrade(out _));
+        PrepareUpgrade(2.5f, 499, false);
+        Assert.IsFalse(RestaurantProgress.TryUpgrade(out _));
+        Assert.AreEqual(0, GameSession.Current.progression.pendingRestaurantLevel);
+        Assert.AreEqual(499, RestaurantProgress.Gold(GameSession.Current));
+    }
+    [Test] public void RestaurantLevel_FollowsLevelTable()
+    {
+        Assert.AreEqual(180, RestaurantRules.DailyVisitors(10));
+        Assert.AreEqual(6, RestaurantRules.StaffLimit(10, PartTimerRole.Kitchen));
+        Assert.AreEqual("F~D", RestaurantRules.GradeRange(1));
+        Assert.AreEqual("C~A", RestaurantRules.GradeRange(10));
+        GameSession.Current.restaurantLevel = 1;
+        Assert.AreEqual(2, RestaurantRules.CapFoodQuality(5));
+        Assert.AreEqual(1, RestaurantRules.CapFoodQuality(1));
+        GameSession.Current.restaurantLevel = 10;
+        Assert.AreEqual(5, RestaurantRules.CapFoodQuality(5));
+    }
 }

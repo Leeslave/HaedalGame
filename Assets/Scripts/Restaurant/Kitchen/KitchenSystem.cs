@@ -55,7 +55,7 @@ public class KitchenSystem : MonoBehaviour
             var inventory = IngredientInventoryService.Instance;
             if (inventory == null || !inventory.TryConsumeRecipe(data, out int quality)) { customer.ForceLeave(); return; }
             customer.IngredientsReserved = true;
-            customer.FoodQuality = quality;
+            customer.FoodQuality = RestaurantRules.CapFoodQuality(quality);   // 식당 레벨의 레시피 등급 상한
             var type = (CookingType)data.ClassId;
             taskQueue.Enqueue(new CookingTask(customer, type, data.CookTime));
         }
