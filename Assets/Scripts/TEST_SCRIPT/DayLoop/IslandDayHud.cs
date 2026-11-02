@@ -10,10 +10,11 @@ using UnityEngine.UI;
 ///  - 왼쪽 위 하루 명판: 일차, 하루 흐름(아침 → 영업 → 밤) 중 지금 단계, 보유 골드·식당 평점·레벨, 미션 진행
 ///  - 섬 건물 버튼(레스토랑·실험실·집)에 들를 이유가 있을 때만 작은 배지를 붙인다. (버튼 자체는 그대로)
 ///  - 레스토랑을 누르면 오늘의 메뉴·직원·재료 부족을 보여 주는 식당 카드를 띄운다.
+///  - 첫날에는 왼쪽 띠 대신 일차·골드 칩과 "첫 영업 준비" 카드 하나만 보여 준다. (IslandDayHud.Onboarding.cs)
 ///  - 결산을 확정한 뒤 결산 화면을 닫기 전에 종료했다면, 이어하기 때 저장된 결산을 한 번 더 보여 준다.
 ///    (값은 저장된 스냅샷 그대로이며 매출을 다시 지급하지 않는다)
 /// </summary>
-public class IslandDayHud : MonoBehaviour
+public partial class IslandDayHud : MonoBehaviour
 {
     private static IslandDayHud _instance;
 
@@ -25,6 +26,7 @@ public class IslandDayHud : MonoBehaviour
     private readonly TMP_Text[] _stepLabels = new TMP_Text[3];
     private readonly Dictionary<string, TMP_Text> _badges = new Dictionary<string, TMP_Text>();
     private RectTransform _restaurantCard;
+    private RectTransform _rail;
     private SettlementPanel _settlement;
     private float _nextRefresh;
 
@@ -48,6 +50,7 @@ public class IslandDayHud : MonoBehaviour
         ReferenceTitleView.Place(background.rectTransform, 150, 0, 1920, 1080);
         BuildPlaque();
         BuildMapButtons();
+        BuildOnboardingChips();
         AttachBadge("Restaurant");
         AttachBadge("Lab");
         AttachBadge("House");
@@ -80,6 +83,7 @@ public class IslandDayHud : MonoBehaviour
     private void BuildPlaque()
     {
         var rail = DayLoopUI.ScreenRail(_canvas.transform, "IslandRail");
+        _rail = (RectTransform)rail.parent;
         var status = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "DayStatus");
         DayLoopUI.Layout(status, preferredHeight: 150);
         DayLoopUI.Vertical(status, 20, 8);
@@ -109,12 +113,9 @@ public class IslandDayHud : MonoBehaviour
         _prepareAction = DayLoopUI.RailButton(rail, "영업 준비", () => {
             if (!GameFlow.TryEnterRestaurant()) _mission.text = "오늘은 영업을 시작할 수 없어요.\n집에서 다음 날을 준비해요.";
         }, true, 99);
-        foreach (string section in new[] { "상점", "연구", "대장간", "주민", "집" })
-        {
-            string target = section;
-            DayLoopUI.RailButton(rail, section == "주민" ? "선착장 · 탐험" : section == "연구" ? "연구소" : section,
-                () => { if (target == "집") ReferenceHouseView.Open(gameObject.scene); else RestaurantManagementUI.OpenSection(target); }, height: 63);
-        }
+        // 건물(상점·연구소·대장간·선착장·집)은 지도 위 표식으로 들어간다. 같은 버튼을 띠에 한 번 더 두지 않는다.
+        var hint = DayLoopUI.Text(rail, "건물은 지도에서 눌러 들어가요.", 20, new Color32(0xF1, 0xDC, 0xBE, 0xFF), TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        DayLoopUI.Layout(hint, preferredHeight: 30);
         DayLoopUI.Spacer(rail);
         var footer = DayLoopUI.Rect("Footer", rail); DayLoopUI.Layout(footer, preferredHeight: 63); DayLoopUI.Horizontal(footer, 0, 12).childForceExpandWidth = true;
         var manage = DayLoopUI.RailButton(footer, "관리", () => RestaurantManagementUI.OpenSection("메뉴"), height: 63); DayLoopUI.Layout(manage, flexibleWidth: 1, preferredHeight: 63);
@@ -185,6 +186,7 @@ public class IslandDayHud : MonoBehaviour
         }
         _mission.transform.parent.gameObject.SetActive(GameSession.IsActive);
         _stats.text = stats;
+        RefreshOnboarding(day, gold);
 
         if (GameSession.IsActive && _prepareAction != null)
             DayLoopUI.SetButtonLabel(_prepareAction, $"영업 준비\n<size=65%>메뉴 {GameSession.Current.menuSlots.Count(x => x >= 0)}개 · 직원 {GameSession.Current.employees.Count}명 · {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석</size>");

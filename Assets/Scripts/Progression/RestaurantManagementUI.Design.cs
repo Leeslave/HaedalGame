@@ -150,7 +150,12 @@ public partial class RestaurantManagementUI
         var icon = DayLoopUI.Panel(row, DayLoopUI.Kit.Sand, "Icon");
         icon.raycastTarget = false;
         DayLoopUI.Layout(icon, preferredWidth: 66, preferredHeight: 66);
-        if (sprite != null) { icon.sprite = sprite; icon.type = Image.Type.Simple; icon.preserveAspect = true; icon.color = Color.white; }
+        if (sprite != null)
+        {
+            // 선 아이콘(흰 선)은 모래색 바탕에서 보이도록 나무색으로 칠한다.
+            icon.sprite = sprite; icon.type = Image.Type.Simple; icon.preserveAspect = true;
+            icon.color = sprite.name.StartsWith("Design Icon") ? DayLoopUI.Kit.Wood : Color.white;
+        }
         else
         {
             var initial = DayLoopUI.Text(icon.transform, heading.Length > 0 ? heading.Substring(0, 1) : "?", 30,
@@ -655,25 +660,20 @@ public partial class RestaurantManagementUI
         Copy(card.transform, heading, 48, 33); return card.rectTransform;
     }
 
+    private static readonly string[] ToolIcons = { "IconPan", "IconBoard", "IconFryer", "IconPot" };
+
     private void DesignedTools(GameSaveData s)
     {
         info.text = $"식당 Lv.{s.restaurantLevel} · 평점 {RestaurantRules.RestaurantRating(s):0.0} · 조리도구 {s.progression.tools.Count} / 4";
+        // 식당 레벨·증축 정보는 식당 증축 화면에서만 보여 준다.
         var list = Split(out var detail);
-        var levelCard = DayLoopUI.Card(list, Color.white, "RestaurantLevel");
-        DayLoopUI.Layout(levelCard, preferredHeight: 230);
-        DayLoopUI.Vertical(levelCard, 20, 8);
-        var level = levelCard.rectTransform;
-        Copy(level, $"해달식당 Lv.{s.restaurantLevel}", 44, 30);
-        Copy(level, $"최대 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 하루 손님 {RestaurantRules.DailyVisitors(s.restaurantLevel)}명\n주방 {RestaurantRules.CookingSpace(s.restaurantLevel)}명 · 품질 {RestaurantRules.GradeRange(s.restaurantLevel)}", 76, 25);
-        if (s.restaurantLevel < RestaurantRules.MaxLevel)
-            Copy(level, $"다음 레벨: 평점 {RestaurantRules.UpgradeRating(s.restaurantLevel + 1):0.0} · 공사 {RestaurantRules.UpgradeCost(s.restaurantLevel + 1):N0}G", 46, 23, DayLoopUI.Kit.InkSoft);
         var items = ScrollList(list);
         for (int i = 201; i <= 204; i++)
         {
             int id = i;
             var definition = CookwareRules.Definition(id);
             string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? "미보유 · 500G" : "첫 도구 무료";
-            SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load("IconTools"));
+            SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load(ToolIcons[id - 201]));
         }
         selectedId = Mathf.Clamp(selectedId, 201, 204); int toolId = selectedId;
         var tool = CookwareRules.Definition(toolId);
@@ -698,6 +698,6 @@ public partial class RestaurantManagementUI
         DayLoopUI.Spacer(detail);
         if (!owned) DetailAction(detail, s.progression.firstToolChosen ? "도구 구매 · 500G" : "첫 도구 선택 · 무료", () => Run((out string error) => RestaurantProgress.TryBuyTool(toolId, out error)), true);
         else DetailAction(detail, "강화하기", () => Run((out string error) => RestaurantProgress.TryUpgradeTool(toolId, out error)), true, tool != null && currentLevel < tool.MaxLevel);
-        DetailAction(detail, "식당 확장 · 대장간", () => Open("대장간"));
+        DetailAction(detail, "식당 증축 보기", () => Open("대장간"));
     }
 }
