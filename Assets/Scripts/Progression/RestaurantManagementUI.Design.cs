@@ -640,8 +640,9 @@ public partial class RestaurantManagementUI
         Copy(todos, "□  식당에서 영업 시작", 48, 24);
         DetailAction(todos, "영업 준비", () => { if (!GameFlow.TryEnterRestaurant()) message.text = "오늘은 영업을 시작할 수 없어요."; });
         var mission = ReferenceHomeCard(grid, "미션"); Mission(s, out string name, out int target);
-        Copy(mission, $"{name}   {s.progression.missionProgress} / {target}", 48, 26);
-        var progress = DayLoopUI.Bar(mission, target > 0 ? (float)s.progression.missionProgress / target : 0, DayLoopUI.Kit.Sea); DayLoopUI.Layout(progress.transform.parent, preferredHeight: 18);
+        int done = MissionProgress(s);
+        Copy(mission, $"{name}   {done} / {target}", 48, 26);
+        var progress = DayLoopUI.Bar(mission, target > 0 ? (float)done / target : 0, DayLoopUI.Kit.Sea); DayLoopUI.Layout(progress.transform.parent, preferredHeight: 18);
         Copy(mission, $"보상 {200 + s.progression.missionIndex * 100:N0}G", 42, 22, DayLoopUI.Kit.GoldInk);
         DetailAction(mission, "보상 받기", () => Run(RestaurantProgress.TryClaimMission), enabled: s.progression.missionProgress >= target);
         var wage = ReferenceHomeCard(grid, "다음 주급"); int wages = s.employees.Sum(x => x.wage);

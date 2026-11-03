@@ -149,6 +149,9 @@ public static partial class RestaurantProgress
         var p = GameSession.Current.progression;
         if (p.missionIndex % 3 == 0) p.missionProgress++;
         if (p.missionIndex % 3 == 1) p.missionProgress += amount;
+        // 목표를 채우면 보상을 받을 때까지 더 쌓지 않는다.
+        RestaurantManagementUI.Mission(GameSession.Current, out _, out int target);
+        p.missionProgress = Mathf.Min(p.missionProgress, target);
     }
     public static bool TryClaimMission(out string error) => Change(s => {
         int type = s.progression.missionIndex % 3;

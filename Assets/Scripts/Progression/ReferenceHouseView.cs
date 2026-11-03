@@ -48,7 +48,7 @@ public sealed class ReferenceHouseView : MonoBehaviour
 
         var mission = Card(transform, 300, 20, 311, 148, "미션 · " + missionName);
         Text(mission, "오늘까지 대접한 손님", 20, 55, 270, 22, 14);
-        Text(mission, $"{s.progression.missionProgress} / {target}", 20, 78, 270, 28, 26, true);
+        Text(mission, $"{RestaurantManagementUI.MissionProgress(s)} / {target}", 20, 78, 270, 28, 26, true);
         Text(mission, $"보상 {reward:N0}G", 20, 116, 270, 20, 13);
         int wages = s.employees.Sum(e => e.wage), days = (7 - s.day % 7) % 7;
         var wage = Card(transform, 629, 20, 311, 148, "다음 주급");
