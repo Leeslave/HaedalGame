@@ -90,9 +90,9 @@ public static class FirstToolPicker
         DayLoopUI.Stretch(dim.rectTransform);
 
         var card = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "Card", 4f, 8f);
-        DayLoopUI.Place(card.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(880, 0));
+        DayLoopUI.Place(card.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(960, 0));
         var layout = DayLoopUI.Vertical(card, 0, 22);
-        layout.padding = new RectOffset(44, 44, 34, 40);
+        layout.padding = new RectOffset(42, 42, 33, 39);
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         Header(card.transform);
@@ -105,9 +105,9 @@ public static class FirstToolPicker
     private static void Header(Transform card)
     {
         var header = DayLoopUI.Rect("Header", card);
-        DayLoopUI.Layout(header, preferredHeight: 64);
+        DayLoopUI.Layout(header, preferredHeight: 66);
         DayLoopUI.Horizontal(header, 0, 12);
-        var title = DayLoopUI.Text(header, "첫 조리도구 선택", 44, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        var title = DayLoopUI.Text(header, "첫 조리도구 선택", 45, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         DayLoopUI.Layout(title, flexibleWidth: 1, preferredHeight: 64);
         IconButton(header, "Close", Close);
     }
@@ -122,7 +122,7 @@ public static class FirstToolPicker
         var bulb = ReferenceTitleView.Picture(notice.transform, "IconIdea");
         bulb.color = DayLoopUI.Kit.SeaDeep; bulb.preserveAspect = true;
         DayLoopUI.Layout(bulb, preferredWidth: 54, preferredHeight: 54);
-        var text = DayLoopUI.Text(notice.transform, "처음에는 도구 1개를 무료로 받아요.\n선택한 도구의 기본 메뉴가 자동 등록돼요.", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft);
+        var text = DayLoopUI.Text(notice.transform, "처음에는 도구 1개를 무료로 받아요.\n받은 도구의 기본 메뉴가 오늘의 메뉴에 자동으로 올라가요.", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft);
         text.lineSpacing = 12f;
         DayLoopUI.Layout(text, flexibleWidth: 1, preferredHeight: 80);
     }
@@ -198,7 +198,7 @@ public static class FirstToolPicker
     {
         var rule = DayLoopUI.Panel(card, DayLoopUI.Kit.Divider, "Rule", false);
         DayLoopUI.Layout(rule, preferredHeight: 2);
-        string note = string.IsNullOrEmpty(_error) ? "다른 도구는 나중에 대장간에서 구매할 수 있어요." : _error;
+        string note = string.IsNullOrEmpty(_error) ? "다른 도구는 나중에 대장간에서 살 수 있어요." : _error;
         var text = DayLoopUI.Text(card, note, 22, string.IsNullOrEmpty(_error) ? DayLoopUI.Kit.InkSoft : DayLoopUI.Kit.WarnInk, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Layout(text, preferredHeight: 32);
 
@@ -214,12 +214,13 @@ public static class FirstToolPicker
 
     private static void IconButton(Transform parent, string icon, UnityEngine.Events.UnityAction action)
     {
-        var button = DayLoopUI.Button(parent, "", Color.clear, Color.clear, 10, action, icon);
+        // 시안 02-B: 모래색 네모 닫기 버튼 (66×66)
+        var button = DayLoopUI.KitButton(parent, "", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 10, action, icon);
         button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
-        DayLoopUI.Layout(button, preferredWidth: 60, preferredHeight: 60);
+        DayLoopUI.Layout(button, preferredWidth: 66, preferredHeight: 66);
         var image = ReferenceTitleView.Picture(button.transform, "Icon" + icon);
         image.color = DayLoopUI.Kit.Line; image.preserveAspect = true;
-        DayLoopUI.Place(image.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(46, 46));
+        DayLoopUI.Place(image.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(34, 34));
     }
 
     private static void CornerBadge(Transform parent, string icon, Color color)

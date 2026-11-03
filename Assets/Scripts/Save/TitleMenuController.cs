@@ -108,10 +108,8 @@ public class TitleMenuController : MonoBehaviour
             return;
         }
 
-        ShowPopup(
-            "새 게임의 첫날을 마치고 잠들면\n기존 진행이 새 게임으로 교체됩니다.\n시작하시겠습니까?",
-            "시작", "취소",
-            StartNewGame);
+        // 시안 01: 지금 저장과 새 게임을 나란히 비교하는 확인 창
+        NewGameConfirmView.Show(gameObject.scene, StartNewGame);
     }
 
     public void OnClickContinue()
