@@ -4,16 +4,20 @@ using UnityEngine;
 /// [TEST 하루 루프] 식당 구역 카메라 구도. (VIEW-02)
 /// 식당 구역(CameraZone.Restaurant)에서 배경 맵과 주방·테이블·대기석·입구·출구 전체를 담는다.
 /// 게임 화면을 최대한 크게 보여 주고, 안내창·도구 모음 같은 UI는 게임 화면 위에 겹쳐 띄운다.
-/// 왼쪽 메뉴 띠를 비워 두고 남은 공간의 중앙에 식당을 담는다.
+/// 준비 중에는 왼쪽 메뉴 띠를 비워 두고 남은 공간의 중앙에 식당을 담는다.
+/// 영업 중에는 HUD가 네 귀퉁이 카드뿐이라 띠가 없다. 대신 위아래 카드 높이만큼 살짝 여유를 둔다.
 ///  - 화면비가 바뀌어도(16:9, 16:10, 4:3, 21:9) 핵심 영역이 잘리지 않도록 가로·세로 중 더 빡빡한 쪽에 맞춘다.
 ///  - 손님처럼 움직이는 오브젝트는 범위에서 제외해 구도가 출렁이지 않는다. 고정 시설 배치만 주기적으로 확인한다.
 ///  - 월드 카메라만 조정하며 UI 스케일은 각 Canvas가 따로 처리한다.
 /// </summary>
 public class RestaurantCameraFramer : MonoBehaviour
 {
-    private const float HudTopFraction = 0f;
-    private float HudLeftFraction => DayLoopUI.RailWidth / Mathf.Max(DayLoopUI.RefWidth, DayLoopUI.RefHeight * _camera.aspect);
-    private const float BottomFraction = 0f;
+    private bool Operating => _day != null && (_day.Phase == DayLoopPhase.Open || _day.Phase == DayLoopPhase.Closing);
+    private float HudTopFraction => Operating ? 0.07f : 0f;
+    private float HudLeftFraction => Operating ? 0f : DayLoopUI.RailWidth / Mathf.Max(DayLoopUI.RefWidth, DayLoopUI.RefHeight * _camera.aspect);
+    private float BottomFraction => Operating ? 0.09f : 0f;
+
+    private DayCycleController _day;
     private const float Padding = 0.5f; // 맵 가장자리 직원의 상태 문구까지 들어갈 여백
 
     private Camera _camera;
@@ -37,6 +41,7 @@ public class RestaurantCameraFramer : MonoBehaviour
         }
 
         _originalSize = _camera.orthographicSize;
+        _day = GetComponent<DayCycleController>();
         GameObject env = GameObject.Find("Environment");
         _environment = env != null ? env.transform : null;
         // 배경과 타일맵은 Environment가 아닌 별도 Grid 루트에 있다.

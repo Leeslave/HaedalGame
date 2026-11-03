@@ -23,6 +23,9 @@ public class ChefAgent : PartTimerAgent
     private Transform stationTransform;
     private Coroutine stateCoroutine;
 
+    // 화면 표시용: 지금 조리 중인 메뉴 (조리 중이 아니면 null)
+    public RecipeData CookingRecipe => state == ChefState.Cooking && curTask != null ? curTask.Recipe : null;
+
     // 화면 표시용 현재 상태 이름
     public string StateLabel
     {

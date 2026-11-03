@@ -22,6 +22,8 @@ public class PartTimerAgent : MonoBehaviour
     protected PartTimerStatus SavedStatus(PartTimerStatus fallback) => employee == null ? fallback : new PartTimerStatus
     { serving = 3f * (1 + employee.serving / 100f), cooking = employee.cooking, handy = employee.handy, hp = employee.hp };
     public void WakeUp() { IsSleeping = false; }
+    // 화면 표시용 남은 체력 비율 (직원 정보가 없으면 1)
+    public float StaminaRatio => employee == null || employee.hp <= 0 ? 1f : Mathf.Clamp01(employee.stamina / employee.hp);
     private void Update()
     {
         if (employee == null || Time.time - lastWork < 5) return;
