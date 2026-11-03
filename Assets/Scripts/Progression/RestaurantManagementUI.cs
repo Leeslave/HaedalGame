@@ -22,14 +22,67 @@ public partial class RestaurantManagementUI : MonoBehaviour
     private string tab = "메뉴";
     private int page;
     private readonly List<Button> openers = new List<Button>();
-    private readonly Dictionary<string, Button> tabButtons = new Dictionary<string, Button>();
     private ResearchPractice practice;
     private RectTransform practiceRoot;
-    private static readonly string[] RestaurantTabs = { "메뉴", "재료", "직원", "가구", "식당" };
-    private static readonly string[] IslandTabs = { "상점", "엘프", "연구", "주민", "집" };
+    private RectTransform railGroups;
+    private Image messageBar;
+    private string expandedGroup;
     private static readonly string[] DestructiveActions = { "제외", "해고", "철거", "취소·환불", "돌아가기" };
 
-    private static string TabLabel(string section) => section == "엘프" ? "엘프 상점" : section == "주민" ? "탐험" : section == "식당" ? "식당 · 도구" : section;
+    /// <summary>
+    /// 관리 항목 10개를 세 묶음으로 접어 둔다. 한 번에 한 묶음만 펼치고, 상세는 항목을 고른 뒤 오른쪽에 보여 준다.
+    /// (섹션 키는 저장·다른 화면에서 쓰는 기존 이름을 유지한다)
+    /// </summary>
+    private static readonly (string name, string summary, string icon, string[] sections)[] Groups =
+    {
+        ("영업 준비", "메뉴 · 재료 · 직원", "Menu", new[] { "메뉴", "재료", "직원" }),
+        ("식당 꾸미기", "가구 · 조리도구 · 식당 증축", "Furniture", new[] { "가구", "식당", "대장간" }),
+        ("섬 생활", "상점 · 연구 · 탐험 · 집", "Explore", new[] { "상점", "엘프", "연구", "주민", "집" }),
+    };
+
+    private static string GroupOf(string section) => Groups.FirstOrDefault(g => g.sections.Contains(section)).name;
+
+    private static string TabLabel(string section) => section switch
+    {
+        "엘프" => "엘프 상점",
+        "주민" => "탐험",
+        "식당" => "조리도구",
+        "가구" => "가구 배치",
+        "대장간" => "식당 증축",
+        _ => section,
+    };
+
+    private static string TabHint(string section) => section switch
+    {
+        "메뉴" => "판매할 음식",
+        "재료" => "재고와 구매",
+        "직원" => "배치와 고용",
+        "가구" => "테이블 · 대기석 놓기",
+        "식당" => "도구 구매와 강화",
+        "대장간" => "레벨업 공사",
+        "상점" => "재료 구매",
+        "엘프" => "특별 재료 · 설계도",
+        "연구" => "새 요리 배우기",
+        "주민" => "직원 파견 · 수확",
+        "집" => "할 일 · 주급 · 취침",
+        _ => "",
+    };
+
+    private static string TabIcon(string section) => section switch
+    {
+        "메뉴" => "Menu",
+        "재료" => "Ingredient",
+        "직원" => "Staff",
+        "가구" => "Furniture",
+        "식당" => "Tools",
+        "대장간" => "Hammer",
+        "상점" => "Shop",
+        "엘프" => "Elf",
+        "연구" => "Research",
+        "주민" => "Explore",
+        "집" => "House",
+        _ => "Play",
+    };
 
     private void Start()
     {
@@ -44,20 +97,16 @@ public partial class RestaurantManagementUI : MonoBehaviour
             if (button.name == "House") button.onClick.AddListener(() => Open("집"));
         }
         canvas = DayLoopUI.CreateCanvas("Restaurant management", 140, gameObject.scene);
-        if (gameObject.scene.name == GameScenes.Restaurant) BuildOpener();
-        else BuildQuickBar();
+        bool restaurant = gameObject.scene.name == GameScenes.Restaurant;
+        if (restaurant) BuildOpener(); // 섬 화면은 IslandDayHud의 메뉴 띠와 건물 표식으로 연다.
         BuildWindow();
         window.gameObject.SetActive(false);
-        if (pendingPlacement > 0 && gameObject.scene.name == GameScenes.Restaurant)
+        if (pendingPlacement > 0 && restaurant)
         { int count = pendingPlacement; pendingPlacement = 0; StartCoroutine(PlaceAfterStart(count)); }
-        if (!GameSession.Current.progression.firstToolChosen)
-        {
-            Open("대장간"); message.text = "첫 조리도구를 무료로 선택하세요. 만들 수 있는 기본 메뉴가 자동 등록돼요.";
-        }
-        else if (GameSession.Current.day == 1 && GameSession.Current.progression.freeTime)
-        {
-            Open("집"); message.text = "첫 영업을 마쳤어요. 자유시간을 보낸 뒤 취침하면 다음 날 아침으로 저장돼요.";
-        }
+        // 관리 창을 자동으로 열지 않는다. 첫날 안내는 섬의 첫 영업 준비 카드(IslandDayHud)가 맡고,
+        // 첫 도구 없이 식당에 들어온 경우에만 도구 선택 창 하나를 띄운다.
+        if (restaurant && !GameSession.Current.progression.firstToolChosen)
+            FirstToolPicker.Show(gameObject.scene);
     }
 
     // 식당: 하단에 운영 시작 버튼이 있으므로 관리 버튼은 그 위에 배치한다.
@@ -68,9 +117,6 @@ public partial class RestaurantManagementUI : MonoBehaviour
         openers.Add(opener);
     }
 
-    // 섬: 자주 여는 탭을 바로 여는 빠른 관리 막대
-    private void BuildQuickBar() { } // 섬 화면은 IslandDayHud의 메뉴 띠로 연다.
-
     private void BuildWindow()
     {
         window = DayLoopUI.Rect("ManagementWindow", canvas.transform);
@@ -78,69 +124,147 @@ public partial class RestaurantManagementUI : MonoBehaviour
         var dim = ReferenceTitleView.Picture(window, "IslandBackground");
         DayLoopUI.Stretch(dim.rectTransform);
         var rail = DayLoopUI.ScreenRail(window, "ManagementRail");
-        DayLoopUI.Layout(DayLoopUI.Text(rail, "관리", 48, Color.white, style: FontStyles.Bold), preferredHeight: 66);
-        rail.GetComponent<VerticalLayoutGroup>().spacing = 10.5f;
-        TabGroup(rail, "식당", RestaurantTabs);
-        TabGroup(rail, "섬", IslandTabs);
+        rail.GetComponent<VerticalLayoutGroup>().spacing = 18f;
+        // 시안 03-A: 제목 → 묶음 3개 → 맨 아래 [설정][닫기]. 닫기는 이 버튼 하나만 둔다.
+        DayLoopUI.Layout(DayLoopUI.Text(rail, "관리", 54, Color.white), preferredHeight: 66);
+        railGroups = DayLoopUI.Rect("Groups", rail);
+        DayLoopUI.Vertical(railGroups, 0, 18);
         DayLoopUI.Spacer(rail);
         var footer = DayLoopUI.Rect("SettingsAndClose", rail);
-        DayLoopUI.Layout(footer, preferredHeight: 63);
-        DayLoopUI.Horizontal(footer, 0, 12).childForceExpandWidth = true;
-        var settings = DayLoopUI.KitButton(footer, "설정", DayLoopUI.Kit.WoodLight, Color.white, 28.5f, () => SettingsWindow.Open(gameObject.scene));
-        DayLoopUI.Layout(settings, flexibleWidth: 1, preferredHeight: 63);
-        var close = DayLoopUI.KitButton(footer, "닫기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 28.5f, CloseWindow);
-        DayLoopUI.Layout(close, flexibleWidth: 1, preferredHeight: 63);
+        DayLoopUI.Layout(footer, preferredHeight: 66);
+        var footerRow = DayLoopUI.Horizontal(footer, 0, 12);
+        footerRow.childForceExpandWidth = true; footerRow.childForceExpandHeight = true;
+        var settings = DayLoopUI.RailButton(footer, "설정", () => SettingsWindow.Open(gameObject.scene), height: 66);
+        DayLoopUI.Layout(settings, flexibleWidth: 1, preferredHeight: 66);
+        var close = DayLoopUI.KitButton(footer, "닫기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Line, 28, CloseWindow, "Close");
+        DayLoopUI.Layout(close, flexibleWidth: 1, preferredHeight: 66);
+        DesignArt.ButtonIcon(close, "닫기");
 
         var frame = DayLoopUI.Card(window, DayLoopUI.Kit.Sail, "ContentFrame", 4, 8);
         frame.rectTransform.anchorMin = new Vector2(0, 0);
         frame.rectTransform.anchorMax = Vector2.one;
         frame.rectTransform.offsetMin = new Vector2(450, 39);
         frame.rectTransform.offsetMax = new Vector2(-30, -30);
-        title = DayLoopUI.Text(frame.transform, "", 38, DayLoopUI.Kit.Line, style: FontStyles.Bold);
-        DayLoopUI.Place(title.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(39, -36), new Vector2(440, 66));
-        info = DayLoopUI.Text(frame.transform, "", 23, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineRight, FontStyles.Bold);
-        DayLoopUI.Place(info.rectTransform, Vector2.one, Vector2.one, new Vector2(-32, -20), new Vector2(790, 64));
+        // 제목 줄(66): 제목 42 + 아래 설명 한 줄 20. 오른쪽에 핵심 버튼 하나.
+        title = DayLoopUI.Text(frame.transform, "", 42, DayLoopUI.Kit.Line);
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        title.rectTransform.anchorMin = new Vector2(0, 1); title.rectTransform.anchorMax = Vector2.one; title.rectTransform.pivot = new Vector2(0, 1);
+        title.rectTransform.offsetMin = new Vector2(33, -73); title.rectTransform.offsetMax = new Vector2(-300, -27);
+        info = DayLoopUI.Text(frame.transform, "", 20, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        info.textWrappingMode = TextWrappingModes.NoWrap;
+        info.rectTransform.anchorMin = new Vector2(0, 1); info.rectTransform.anchorMax = Vector2.one; info.rectTransform.pivot = new Vector2(0, 1);
+        info.rectTransform.offsetMin = new Vector2(33, -101); info.rectTransform.offsetMax = new Vector2(-300, -73);
         headerAction = DayLoopUI.KitButton(frame.transform, "", DayLoopUI.Kit.Sea, Color.white, 28.5f, HeaderAction);
-        DayLoopUI.Place((RectTransform)headerAction.transform, Vector2.one, Vector2.one, new Vector2(-39, -36), new Vector2(240, 66));
-        var line = DayLoopUI.Panel(frame.transform, DayLoopUI.Kit.Divider, "Divider", false);
-        line.rectTransform.anchorMin = new Vector2(0, 1); line.rectTransform.anchorMax = Vector2.one;
-        line.rectTransform.offsetMin = new Vector2(32, -90); line.rectTransform.offsetMax = new Vector2(-32, -88);
-        line.color = Color.clear; line.raycastTarget = false;
+        DayLoopUI.Place((RectTransform)headerAction.transform, Vector2.one, Vector2.one, new Vector2(-33, -27), new Vector2(240, 66));
+        // 본문은 제목 줄 아래부터, 맨 아래 안내 띠(60) 자리를 비워 두고 쌓는다. 겹치거나 넘치지 않는다.
         content = DayLoopUI.Rect("Rows", frame.transform);
-        DayLoopUI.Stretch(content, 39, 123, 39, 36);
+        DayLoopUI.Stretch(content, 33, 122, 33, 102);
         DayLoopUI.Vertical(content, 0, 21);
-        message = DayLoopUI.Text(frame.transform, "", 22, DayLoopUI.Kit.SeaDeep, style: FontStyles.Bold);
-        message.rectTransform.anchorMin = Vector2.zero; message.rectTransform.anchorMax = new Vector2(1, 0);
-        message.rectTransform.offsetMin = new Vector2(32, 12); message.rectTransform.offsetMax = new Vector2(-32, 82);
+        messageBar = DayLoopUI.Chunky(DayLoopUI.Panel(frame.transform, DayLoopUI.Kit.SeaTint, "MessageBar"), 3f, 0f);
+        messageBar.GetComponent<Outline>().effectColor = new Color32(0xB9, 0xDD, 0xDF, 0xFF);
+        messageBar.rectTransform.anchorMin = Vector2.zero; messageBar.rectTransform.anchorMax = new Vector2(1, 0);
+        messageBar.rectTransform.offsetMin = new Vector2(33, 27); messageBar.rectTransform.offsetMax = new Vector2(-33, 87);
+        var check = ReferenceTitleView.Picture(messageBar.transform, "IconCheck");
+        check.color = DayLoopUI.Kit.SeaDeep; check.preserveAspect = true;
+        DayLoopUI.Place(check.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(18, 0), new Vector2(30, 30));
+        message = DayLoopUI.Text(messageBar.transform, "", 21, DayLoopUI.Kit.SeaDeep, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        message.textWrappingMode = TextWrappingModes.NoWrap;
+        DayLoopUI.Stretch(message.rectTransform, 60, 0, 18, 0);
+        messageBar.gameObject.SetActive(false);
     }
 
-    private void TabGroup(Transform rail, string label, string[] sections)
-    {
-        var heading = DayLoopUI.Text(rail, label, 19, new Color32(0xE9, 0xC9, 0xA4, 0xFF), TextAlignmentOptions.BottomLeft, FontStyles.Bold);
-        DayLoopUI.Layout(heading, preferredHeight: 24);
-        foreach (var section in sections) TabButton(rail, section);
-    }
+    // ───── 관리 묶음 (접고 펼치기) ─────
 
-    private void TabButton(Transform rail, string section)
-    {
-        var b = DayLoopUI.Button(rail, TabLabel(section), DayLoopUI.Kit.WoodLight, Color.white, 25, () => Open(section), section);
-        DayLoopUI.Chunky(b.image, 4.5f, 6f);
-        var label = b.GetComponentInChildren<TMP_Text>();
-        label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.rectTransform.offsetMin = new Vector2(18, 0);
-        DayLoopUI.Layout(b, preferredHeight: 63);
-        DesignArt.ButtonIcon(b, TabLabel(section));
-        tabButtons[section] = b;
-    }
-
+    /// <summary>왼쪽 띠를 지금 탭에 맞게 다시 그린다. 펼친 묶음 하나만 항목을 보여 준다.</summary>
     private void PaintTabs()
     {
-        foreach (var pair in tabButtons)
+        if (railGroups == null) return;
+        foreach (Transform child in railGroups) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+        foreach (var group in Groups)
         {
-            bool selected = pair.Key == tab;
-            DayLoopUI.SetButtonColors(pair.Value, selected ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.WoodLight, Color.white);
-            pair.Value.GetComponent<Outline>().enabled = true;
+            if (group.name == expandedGroup) ExpandedGroup(group.name, group.summary, group.icon, group.sections);
+            else CollapsedGroup(group.name, group.summary, group.icon, group.sections);
         }
+    }
+
+    private void ToggleGroup(string name, string[] sections)
+    {
+        if (expandedGroup == name) { expandedGroup = null; PaintTabs(); return; }
+        expandedGroup = name;
+        if (sections.Contains(tab)) PaintTabs();
+        else Open(sections[0]);
+    }
+
+    private void CollapsedGroup(string name, string summary, string icon, string[] sections)
+    {
+        bool current = sections.Contains(tab);
+        var button = DayLoopUI.KitButton(railGroups, "", DayLoopUI.Kit.WoodLight, Color.white, 28, () => ToggleGroup(name, sections), name);
+        button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+        DayLoopUI.Layout(button, preferredHeight: 93);
+        if (current) button.GetComponent<Outline>().effectColor = DayLoopUI.Kit.Awning;
+        GroupHeading(button.transform, name, summary, icon, "ChevronDown", Color.white, new Color32(0xFF, 0xE9, 0xDF, 0xFF));
+    }
+
+    private void ExpandedGroup(string name, string summary, string icon, string[] sections)
+    {
+        var card = DayLoopUI.Card(railGroups, DayLoopUI.Kit.Sail, name, 4.5f, 6f);
+        card.GetComponent<Outline>().effectColor = DayLoopUI.Kit.Sea;
+        var layout = DayLoopUI.Vertical(card, 0, 9);
+        layout.padding = new RectOffset(12, 12, 9, 15);
+
+        // 펼친 묶음 머리(66): 아이콘 + 제목 + 접기 화살표. 설명은 본문 제목 아래에 쓴다.
+        var header = DayLoopUI.Button(card.transform, "", Color.clear, Color.clear, 10, () => ToggleGroup(name, sections), "Header");
+        header.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+        DayLoopUI.Layout(header, preferredHeight: 66);
+        RailIcon(header.transform, icon, DayLoopUI.Kit.Sea, 36, 9);
+        var title = DayLoopUI.Text(header.transform, name, 32, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft);
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        DayLoopUI.Stretch(title.rectTransform, 60, 0, 44, 0);
+        RailIcon(header.transform, "ChevronUp", DayLoopUI.Kit.Line, 27, -9);
+
+        foreach (string section in sections) GroupItem(card.transform, section);
+    }
+
+    private static void GroupHeading(Transform parent, string name, string summary, string icon, string chevron, Color ink, Color soft, Color? iconColor = null)
+    {
+        // 접힌 묶음(93): 제목 30 + 설명 18 한 줄. 글자를 자동으로 줄이지 않는다(설명은 짧게 유지).
+        RailIcon(parent, icon, iconColor ?? ink, 36, 18);
+        var title = DayLoopUI.Text(parent, name, 30, ink, TextAlignmentOptions.BottomLeft, FontStyles.Normal, "Title");
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        title.rectTransform.anchorMin = new Vector2(0, .5f); title.rectTransform.anchorMax = Vector2.one;
+        title.rectTransform.offsetMin = new Vector2(66, -2); title.rectTransform.offsetMax = new Vector2(-48, -10);
+        var sub = DayLoopUI.Text(parent, summary, 18, soft, TextAlignmentOptions.TopLeft, FontStyles.Bold, "Summary");
+        sub.textWrappingMode = TextWrappingModes.NoWrap;
+        sub.rectTransform.anchorMin = Vector2.zero; sub.rectTransform.anchorMax = new Vector2(1, .5f);
+        sub.rectTransform.offsetMin = new Vector2(66, 10); sub.rectTransform.offsetMax = new Vector2(-48, -4);
+        RailIcon(parent, chevron, ink, 27, -18);
+    }
+
+    private void GroupItem(Transform parent, string section)
+    {
+        bool selected = section == tab;
+        Color ink = selected ? Color.white : DayLoopUI.Kit.Ink;
+        var item = DayLoopUI.Button(parent, "", selected ? DayLoopUI.Kit.Sea : Color.white, Color.clear, 10, () => Open(section), section);
+        DayLoopUI.Chunky(item.image, 2f, 0f);
+        item.GetComponent<Outline>().effectColor = selected ? DayLoopUI.Kit.SeaDeep : DayLoopUI.Kit.Divider;
+        item.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+        // 항목(66): 아이콘 + 이름 한 줄. 설명은 본문 제목 아래에 쓴다.
+        DayLoopUI.Layout(item, preferredHeight: 66);
+        RailIcon(item.transform, TabIcon(section), selected ? Color.white : DayLoopUI.Kit.Wood, 30, 18);
+        var title = DayLoopUI.Text(item.transform, TabLabel(section), 27, ink, TextAlignmentOptions.MidlineLeft);
+        title.font = DesignFonts.Heading; title.fontSharedMaterial = title.font.material;
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        DayLoopUI.Stretch(title.rectTransform, 63, 0, 15, 0);
+    }
+
+    /// <summary>선 아이콘. x &gt; 0이면 왼쪽에서, x &lt; 0이면 오른쪽에서 띄우고, 0이면 가운데에 둔다.</summary>
+    private static Image RailIcon(Transform parent, string icon, Color color, float size, float x)
+    {
+        var image = ReferenceTitleView.Picture(parent, "Icon" + icon);
+        image.color = color; image.preserveAspect = true;
+        float anchor = x > 0 ? 0f : x < 0 ? 1f : .5f;
+        DayLoopUI.Place(image.rectTransform, new Vector2(anchor, .5f), new Vector2(anchor, .5f), new Vector2(x, 0), new Vector2(size, size));
+        return image;
     }
 
     private void OnDestroy() { if (canvas != null) Destroy(canvas.gameObject); }
@@ -148,6 +272,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
     private void Update()
     {
         if (window == null) return;
+        bool hasMessage = !string.IsNullOrEmpty(message.text);
+        if (messageBar.gameObject.activeSelf != hasMessage) messageBar.gameObject.SetActive(hasMessage);
         if (PayrollPending && (tab != "임금 정산" || !window.gameObject.activeSelf)) Open("임금 정산");
         bool usable = RestaurantProgress.CanManage || GameFlow.Phase == GamePhase.Operation;
         foreach (var opener in openers) opener.interactable = usable;
@@ -158,6 +284,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         if (window == null || (!RestaurantProgress.CanManage && !(GameFlow.Phase == GamePhase.Operation && section == "메뉴"))) return;
         if (PayrollPending) section = "임금 정산";
+        string group = GroupOf(section);
+        if (group != null) expandedGroup = group;
         tab = section; page = 0; selectedId = -1; selectedEmployee = null; filter = "전체"; StopPractice(); message.text = "";
         window.gameObject.SetActive(true); Refresh();
     }
@@ -167,11 +295,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         foreach (Transform child in content) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
         var s = GameSession.Current;
         title.text = tab == "메뉴" ? "오늘의 메뉴" : tab == "재료" ? "재료 창고" : TabLabel(tab);
-        float headingWidth = title.GetPreferredValues(title.text).x;
-        title.rectTransform.sizeDelta = new Vector2(headingWidth, 66);
-        DayLoopUI.Place(info.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(39 + headingWidth + 18, -36), new Vector2(780 - headingWidth, 66));
-        info.alignment = TextAlignmentOptions.MidlineLeft;
-        string actionLabel = tab == "메뉴" ? "자동 편성" : tab == "재료" ? "상점에서 채우기" : tab == "직원" ? "직원 고용" : tab == "가구" ? "자리 배치 열기" : tab == "식당" ? "대장간 가기" : tab == "연구" ? "연구소 가기" : tab == "집" ? "집으로 가기" : null;
+        string actionLabel = tab == "메뉴" ? "자동 편성" : tab == "재료" ? "상점에서 채우기" : tab == "직원" ? "직원 고용" : tab == "가구" ? "자리 배치 열기" : tab == "식당" ? "식당 증축" : tab == "연구" ? "연구소 가기" : tab == "집" ? "집으로 가기" : null;
         headerAction.gameObject.SetActive(actionLabel != null);
         if (actionLabel != null) DayLoopUI.SetButtonLabel(headerAction, actionLabel);
         info.text = $"{s.day}일차  ·  식당 Lv.{s.restaurantLevel}  ·  <color={DayLoopUI.Hex(DayLoopUI.Kit.GoldInk)}>{RestaurantProgress.Gold(GameSession.CaptureSnapshot()):N0}G</color>";
@@ -258,6 +382,9 @@ public partial class RestaurantManagementUI : MonoBehaviour
                 Row("타이틀로 돌아가면 오늘의 저장하지 않은 진행을 잃어요.", ("돌아가기", () => { Clear(); Note("마지막 취침 이후 진행을 버리고 타이틀로 돌아갈까요?"); Row("", ("돌아가기", GameFlow.ReturnToTitle), ("계속하기", Refresh)); }));
                 break;
         }
+        // 묶음 띠에서 뺀 항목 설명은 본문 제목 아래 한 줄로 보여 준다.
+        string hint = TabHint(tab);
+        if (!string.IsNullOrEmpty(hint)) info.text = string.IsNullOrEmpty(info.text) ? hint : $"{hint}  ·  {info.text}";
     }
     private void ConfirmCancelResearch(int id)
     {
@@ -273,25 +400,25 @@ public partial class RestaurantManagementUI : MonoBehaviour
     private void MenuSlots(GameSaveData s)
     {
         var strip = DayLoopUI.Chunky(DayLoopUI.Panel(content, DayLoopUI.Kit.Sand, "Slots"), 3f, 0f);
-        DayLoopUI.Layout(strip, preferredHeight: 123);
-        var layout = DayLoopUI.Horizontal(strip, 0, 10);
-        layout.padding = new RectOffset(19, 19, 19, 19);
+        DayLoopUI.Layout(strip, preferredHeight: 99);
+        var layout = DayLoopUI.Horizontal(strip, 0, 15);
+        layout.padding = new RectOffset(12, 12, 12, 12);
         layout.childForceExpandWidth = true;
         foreach (int id in s.menuSlots)
         {
             if (id >= 0 && GameDatabase.TryGetRecipe(id, out var recipe))
             {
                 var cell = DayLoopUI.Chunky(DayLoopUI.Panel(strip.transform, Color.white, "Slot"), 2f, 0f);
-                DayLoopUI.Layout(cell, flexibleWidth: 1, preferredHeight: 84);
+                DayLoopUI.Layout(cell, flexibleWidth: 1, preferredHeight: 72);
                 var row = DayLoopUI.Horizontal(cell, 0, 8);
                 row.padding = new RectOffset(10, 10, 6, 6);
-                DayLoopUI.FoodIcon(cell.transform, recipe, 60);
+                DayLoopUI.FoodIcon(cell.transform, recipe, 54);
                 DayLoopUI.Layout(DayLoopUI.Text(cell.transform, recipe.RecipeName, 20, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), flexibleWidth: 1, preferredHeight: 48);
             }
             else
             {
                 var empty = DayLoopUI.Panel(strip.transform, new Color(1, 1, 1, .35f), "EmptySlot");
-                DayLoopUI.Layout(empty, flexibleWidth: 1, preferredHeight: 84);
+                DayLoopUI.Layout(empty, flexibleWidth: 1, preferredHeight: 72);
                 var label = DayLoopUI.Text(empty.transform, "빈 슬롯", 20, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
                 DayLoopUI.Stretch(label.rectTransform);
             }
@@ -363,17 +490,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
         BenefitRow(benefits, "레시피 등급", RestaurantRules.GradeRange(level), hasNext ? RestaurantRules.GradeRange(target) : "-");
         BenefitRow(benefits, "하루 방문 손님", $"{RestaurantRules.DailyVisitors(level)}명", hasNext ? Delta(RestaurantRules.DailyVisitors(level), RestaurantRules.DailyVisitors(target), "명") : "-");
 
-        // 아래: 조리도구 선택·강화
-        var toolsTitle = DayLoopUI.Text(content, "조리도구 강화", 26, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        DayLoopUI.Layout(toolsTitle, preferredHeight: 36);
-        for (int id = 201; id <= 204; id++)
-        {
-            int tool = id;
-            string state = s.progression.tools.Contains(id) ? $" · Lv.{CookwareRules.Level(s, id)}" : s.progression.firstToolChosen ? " · 500G" : " · 첫 도구 무료";
-            Row(ToolNames[id - 201] + state,
-                ("선택·구매", () => Run((out string e) => RestaurantProgress.TryBuyTool(tool, out e))),
-                ("강화", () => Run((out string e) => RestaurantProgress.TryUpgradeTool(tool, out e))));
-        }
+        // 증축 화면에는 증축만 둔다. 조리도구 구매·강화는 조리도구 화면 한 곳에서 한다.
+        Row($"조리도구 {s.progression.tools.Count} / 4 보유 · 구매와 강화는 조리도구 화면에서 해요.", ("조리도구", () => Open("식당")));
     }
 
     private static RectTransform BlacksmithCard(Transform parent, string heading, float width)

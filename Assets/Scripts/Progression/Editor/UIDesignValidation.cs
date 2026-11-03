@@ -58,7 +58,25 @@ public static class UIDesignValidation
             titleCanvas.GetComponent<CanvasScaler>().scaleFactor = 1.5f;
             titleView.RefreshSave();
             Capture(camera, target, "01-Title");
+            NewGameConfirmView.Show(preview, null);
+            var confirmCanvas = preview.GetRootGameObjects().SelectMany(o => o.GetComponentsInChildren<Canvas>(true)).First(c => c.name == "Design / 01 New game confirm");
+            PrepareCanvas(confirmCanvas, camera, 1.5f);
+            Capture(camera, target, "01b-NewGameConfirm");
+            UnityEngine.Object.DestroyImmediate(confirmCanvas.gameObject);
             UnityEngine.Object.DestroyImmediate(titleView.gameObject);
+            // 첫 플레이: 첫 영업 준비 카드와 첫 조리도구 선택 창
+            GameSession.Begin(NewGameConfig.Load().CreateSaveData(), true); GameFlow.SetPhase(GamePhase.Preparation);
+            var firstIsland = new GameObject("First day preview", typeof(IslandDayHud));
+            SceneManager.MoveGameObjectToScene(firstIsland, preview);
+            Call(firstIsland.GetComponent<IslandDayHud>(), "Start");
+            CaptureOwnerCanvas(firstIsland, camera, target, "02a-FirstDay");
+            FirstToolPicker.Show(preview);
+            var pickerCanvas = preview.GetRootGameObjects().SelectMany(o => o.GetComponentsInChildren<Canvas>(true)).First(c => c.name == "[FirstTool] Picker");
+            PrepareCanvas(pickerCanvas, camera, 1);
+            Capture(camera, target, "02b-FirstTool");
+            UnityEngine.Object.DestroyImmediate(pickerCanvas.gameObject);
+            UnityEngine.Object.DestroyImmediate(firstIsland);
+            GameSession.End();
             var data = NewGameConfig.Load().CreateSaveData();
             data.day = 4; data.restaurantLevel = 2; data.progression.firstToolChosen = true;
             data.progression.tools.AddRange(new[] { 201, 202, 203, 204 });
@@ -150,7 +168,7 @@ public static class UIDesignValidation
             GameSession.End();
             UnityEngine.Object.DestroyImmediate(inventoryObject);
             UnityEngine.Object.DestroyImmediate(elfObject);
-            File.WriteAllText(Output + "/result.txt", "PASS: 5 transaction tests (cart, furniture, expedition); Jua and NanumGothic Korean glyph checks. Rendered title, island, preparation, operation HUD, placement, settlement, research practice, 11 management tabs, house and settings at 1920x1080. No save files changed.");
+            File.WriteAllText(Output + "/result.txt", "PASS: 5 transaction tests (cart, furniture, expedition); Jua and NanumGothic Korean glyph checks. Rendered title, new game confirm, first-day island guide, first tool picker, island, preparation, operation HUD, placement, settlement, research practice, 11 management tabs, house and settings at 1920x1080. No save files changed.");
         }
         catch (Exception error) { File.WriteAllText(Output + "/result.txt", "FAIL: " + error); Debug.LogException(error); }
         finally

@@ -77,6 +77,8 @@ public class NewGameConfig : ScriptableObject
     [SerializeField] private string _firstGuideStep = GuideSteps.IslandStory;
 
     public int MenuSlotCount => RestaurantRules.MenuLimit(_restaurantLevel);
+    public int StartGold => _startGold;
+    public int StartLevel => Mathf.Max(1, _restaurantLevel);
     private RecipeDatabaseSO Database => _database != null ? _database : GameDatabase.Recipes;
 
     public static NewGameConfig Load()

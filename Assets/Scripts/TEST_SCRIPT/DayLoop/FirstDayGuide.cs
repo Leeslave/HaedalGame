@@ -447,10 +447,9 @@ public class FirstDayGuide : MonoBehaviour
         _prepGold = DayLoopUI.Text(status.transform, "", 30, DayLoopUI.Kit.GoldInk, style: FontStyles.Bold);
         DayLoopUI.Layout(_prepGold, preferredHeight: 40);
         DayLoopUI.RailButton(rail, "운영 시작", () => PreOperationUIManager.Instance?.OnStartButtonClicked(), true, 92);
-        DayLoopUI.RailButton(rail, "메뉴 바꾸기", () => RestaurantManagementUI.OpenSection("메뉴"));
+        // 메뉴·재료·직원은 관리 > 영업 준비 묶음 한 곳에서 바꾼다. (같은 화면으로 가는 버튼을 여러 개 두지 않는다)
         DayLoopUI.RailButton(rail, "자리 배치", () => PreOperationUIManager.Instance?.OnTablePlacementButtonClicked());
-        DayLoopUI.RailButton(rail, "직원 배치", () => RestaurantManagementUI.OpenSection("직원"));
-        DayLoopUI.RailButton(rail, "관리", () => RestaurantManagementUI.OpenSection("메뉴"));
+        DayLoopUI.RailButton(rail, "메뉴 · 재료 · 직원", () => RestaurantManagementUI.OpenSection("메뉴"));
         DayLoopUI.Spacer(rail);
         DayLoopUI.RailButton(rail, "섬으로", GameFlow.EnterDayStart);
 

@@ -93,19 +93,26 @@ public static class DayLoopUI
     private static Sprite _rounded;
     private static Sprite _circle;
     private static Sprite _white;
+    private const string ShapeTextureName = "DayLoopRounded";
 
-    public static Sprite Circle => _circle != null ? _circle : _circle = CreateRoundedSprite(64, 32);
+    public static Sprite Circle => _circle != null ? _circle : _circle = CreateRoundedSprite(128, 64);
 
-    /// <summary>9-slice 둥근 사각형. Image.type = Sliced, SpriteRenderer.drawMode = Sliced로 크기를 바꿔 쓴다.</summary>
+    /// <summary>
+    /// 9-slice 둥근 사각형. Image.type = Sliced, SpriteRenderer.drawMode = Sliced로 크기를 바꿔 쓴다.
+    /// 128px(모서리 48px)로 그리고 PPU를 128로 두므로, 화면에서 보이는 크기와 반지름 비율은 예전 48px(모서리 18px)판과 같다.
+    /// </summary>
     public static Sprite Rounded
     {
         get
         {
             if (_rounded == null)
-                _rounded = CreateRoundedSprite(48, 18);
+                _rounded = CreateRoundedSprite(128, 48);
             return _rounded;
         }
     }
+
+    /// <summary>코드로 그린 둥근 사각형·원이거나 스프라이트 없는 사각형인지. RoundedOutline이 곡선 그대로 외곽선을 키울 수 있다.</summary>
+    public static bool IsShapeSprite(Sprite sprite) => sprite == null || (sprite.texture != null && sprite.texture.name == ShapeTextureName);
 
     public static Sprite White
     {
@@ -127,31 +134,44 @@ public static class DayLoopUI
 
     private static Sprite CreateRoundedSprite(int size, int radius)
     {
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        // 작게 줄여 그릴 때 가장자리가 계단처럼 보이지 않도록 밉맵을 만든다.
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true)
         {
-            name = "DayLoopRounded",
+            name = ShapeTextureName,
             wrapMode = TextureWrapMode.Clamp,
-            filterMode = FilterMode.Bilinear,
+            filterMode = FilterMode.Trilinear,
             hideFlags = HideFlags.DontSave,
         };
 
+        // 경계 부드럽게 하는 폭: 화면 기준 약 1px(텍스처 48px당 1px).
+        float soft = Mathf.Max(1f, size / 48f);
+        const int samples = 4;
         Color32[] pixels = new Color32[size * size];
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                float px = x + 0.5f;
-                float py = y + 0.5f;
-                float cx = Mathf.Clamp(px, radius, size - radius);
-                float cy = Mathf.Clamp(py, radius, size - radius);
-                float dist = Vector2.Distance(new Vector2(px, py), new Vector2(cx, cy));
-                float alpha = Mathf.Clamp01(radius - dist + 0.5f);
-                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255));
+                // 한 칸을 4x4로 나눠 평균을 낸다. 곡선 경계가 고르게 흐려진다.
+                float alpha = 0f;
+                for (int sy = 0; sy < samples; sy++)
+                {
+                    for (int sx = 0; sx < samples; sx++)
+                    {
+                        float px = x + (sx + 0.5f) / samples;
+                        float py = y + (sy + 0.5f) / samples;
+                        float cx = Mathf.Clamp(px, radius, size - radius);
+                        float cy = Mathf.Clamp(py, radius, size - radius);
+                        float dist = Vector2.Distance(new Vector2(px, py), new Vector2(cx, cy));
+                        alpha += Mathf.Clamp01((radius - dist) / soft + 0.5f);
+                    }
+                }
+                alpha /= samples * samples;
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255));
             }
         }
 
         tex.SetPixels32(pixels);
-        tex.Apply();
+        tex.Apply(true);
 
         // 월드 오브젝트에서도 쓰므로 PPU는 size(1칸 = 1유닛)로 둔다.
         Sprite sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size,
@@ -215,7 +235,10 @@ public static class DayLoopUI
         {
             image.sprite = Rounded;
             image.type = Image.Type.Sliced;
+            // 모서리 반지름이 캔버스 기준 18이 되도록 맞춘다(48 * 100 / (128 * 100/48) = 18).
             image.pixelsPerUnitMultiplier = 100f / 48f;
+            // 얇은 게이지·작은 칩은 반지름을 짧은 변의 절반으로 줄여 끝이 반원이 되게 한다.
+            rt.gameObject.AddComponent<RoundedCorner>();
         }
         return image;
     }
@@ -321,7 +344,7 @@ public static class DayLoopUI
 
     public static Outline AddOutline(Component target, Color color, float distance = 2f)
     {
-        Outline outline = target.gameObject.AddComponent<Outline>();
+        Outline outline = target.gameObject.AddComponent<RoundedOutline>();
         outline.effectColor = color;
         outline.effectDistance = new Vector2(distance, -distance);
         return outline;
@@ -332,7 +355,7 @@ public static class DayLoopUI
     /// <summary>진갈색 외곽선과 아래쪽 그림자를 붙인다. drop이 0이면 외곽선만 붙인다.</summary>
     public static T Chunky<T>(T target, float line = 3f, float drop = 5f) where T : Component
     {
-        Outline outline = target.gameObject.AddComponent<Outline>();
+        Outline outline = target.gameObject.AddComponent<RoundedOutline>();
         outline.effectColor = Kit.Line;
         outline.effectDistance = new Vector2(line, -line);
         if (drop > 0f)

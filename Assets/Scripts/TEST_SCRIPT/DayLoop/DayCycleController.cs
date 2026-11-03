@@ -103,6 +103,7 @@ public class DayCycleController : MonoBehaviour
         TidySceneForTest();
 
         _hud.Init(this);
+        gameObject.AddComponent<RestaurantSeaDecor>().Init(this);
         gameObject.AddComponent<NpcStatusOverlay>().Init(this);
         gameObject.AddComponent<FirstDayGuide>().Init(this);
         gameObject.AddComponent<PlacementToolbar>();

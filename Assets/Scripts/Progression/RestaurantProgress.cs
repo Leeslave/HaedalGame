@@ -92,6 +92,9 @@ public static partial class RestaurantProgress
     public static bool TryBuyTool(int id, out string error) => Change(s => {
         if (id < 201 || id > 204 || s.progression.tools.Contains(id)) return "이미 보유한 도구예요.";
         if (s.progression.tools.Count >= Mathf.Min(4, s.restaurantLevel)) return "식당 레벨이 오르면 다음 도구를 선택할 수 있어요.";
+        // 첫 도구는 기본 메뉴가 있어야 첫날 영업을 할 수 있다. (튀김기는 기본 메뉴가 없어 연구가 필요)
+        if (!s.progression.firstToolChosen && !GameDatabase.Recipes.Recipes.Any(r => r.DefaultUnlock && r.ClassId == id))
+            return "기본 메뉴가 있는 도구를 첫 도구로 골라 주세요.";
         int price = s.progression.firstToolChosen ? 500 : 0;
         if (!Spend(s, price)) return "500G가 필요해요.";
         s.progression.tools.Add(id); s.progression.firstToolChosen = true;

@@ -15,7 +15,8 @@ public sealed class ReferenceTitleView : MonoBehaviour
 
     public static ReferenceTitleView Create(Scene scene, UnityAction resume, UnityAction start, UnityAction settings, UnityAction quit)
     {
-        var canvas = DayLoopUI.CreateCanvas("Design / 01 Title", 100, scene);
+        // PopupCanvas (order 10) must stay above the title, including its opaque background.
+        var canvas = DayLoopUI.CreateCanvas("Design / 01 Title", 0, scene);
         canvas.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1280, 720);
         var view = canvas.gameObject.AddComponent<ReferenceTitleView>();
         view.canvas = canvas;

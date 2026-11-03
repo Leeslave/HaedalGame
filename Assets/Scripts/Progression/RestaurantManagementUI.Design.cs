@@ -44,10 +44,11 @@ public partial class RestaurantManagementUI
         return ScrollList(panel.transform);
     }
 
-    private RectTransform Split(out RectTransform detail, float height = 710)
+    /// <summary>목록 + 상세. 본문에서 남는 높이를 모두 쓴다(고정 높이로 본문 밖으로 넘치지 않게).</summary>
+    private RectTransform Split(out RectTransform detail)
     {
         var split = DayLoopUI.Rect("ListAndDetail", content);
-        DayLoopUI.Layout(split, preferredHeight: height);
+        DayLoopUI.Layout(split, preferredHeight: 0, flexibleHeight: 1);
         var row = DayLoopUI.Horizontal(split, 0, 24);
         row.childForceExpandHeight = true;
         var list = DayLoopUI.Rect("List", split);
@@ -150,7 +151,12 @@ public partial class RestaurantManagementUI
         var icon = DayLoopUI.Panel(row, DayLoopUI.Kit.Sand, "Icon");
         icon.raycastTarget = false;
         DayLoopUI.Layout(icon, preferredWidth: 66, preferredHeight: 66);
-        if (sprite != null) { icon.sprite = sprite; icon.type = Image.Type.Simple; icon.preserveAspect = true; icon.color = Color.white; }
+        if (sprite != null)
+        {
+            // 선 아이콘(흰 선)은 모래색 바탕에서 보이도록 나무색으로 칠한다.
+            icon.sprite = sprite; icon.type = Image.Type.Simple; icon.preserveAspect = true;
+            icon.color = sprite.name.StartsWith("Design Icon") ? DayLoopUI.Kit.Wood : Color.white;
+        }
         else
         {
             var initial = DayLoopUI.Text(icon.transform, heading.Length > 0 ? heading.Substring(0, 1) : "?", 30,
@@ -201,7 +207,7 @@ public partial class RestaurantManagementUI
         info.text = $"{s.menuSlots.Count(x => x >= 0)} / {RestaurantRules.MenuLimit(s.restaurantLevel)} 슬롯 · 변경 간격 30초";
         MenuSlots(s);
         Filters(content, "전체", "만들 수 있음", "구이", "회 · 숙회", "찜 · 탕", "튀김", "연구 필요");
-        var list = Split(out var detail, 639);
+        var list = Split(out var detail);
         var recipes = GameDatabase.Recipes.Recipes.Where(r =>
             filter == "전체" || filter == "만들 수 있음" && s.unlockedRecipeIds.Contains(r.RecipeId) && CookwareRules.CanCook(s, r) && IngredientInventoryService.Instance.CraftableCount(r) > 0 ||
             filter == "연구 필요" && !s.unlockedRecipeIds.Contains(r.RecipeId) ||
@@ -264,7 +270,7 @@ public partial class RestaurantManagementUI
     {
         info.text = $"{s.ingredients.Count(x => x.amount > 0)}종 보유 · 등급별 재료 창고";
         Filters(content, "전체", "생선", "조개 · 해산물", "양념", "부족한 재료");
-        var list = Split(out var detail, 783);
+        var list = Split(out var detail);
         var ingredients = GameDatabase.Recipes.Ingredients.Where(i => filter == "전체" ||
             filter == "생선" && IngredientGroup(i) == "생선" || filter == "조개 · 해산물" && IngredientGroup(i) == "조개 · 해산물" ||
             filter == "양념" && i.IsBasicSeasoning || filter == "부족한 재료" && IngredientInventoryService.Instance.GetCount(i.IngredientId) < 3).ToList();
@@ -316,7 +322,7 @@ public partial class RestaurantManagementUI
         if (cartDay != s.day) { cart.Clear(); cartDay = s.day; }
         info.text = $"새 재고 · 오늘 재고 · 내일 아침 새로 들어와요 · {RestaurantProgress.Gold(s):N0}G";
         Filters(content, "전체", "생선", "조개 · 해산물", "양념", "오늘 메뉴에 필요");
-        var list = Split(out var detail, 783);
+        var list = Split(out var detail);
         var ingredients = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning && (filter == "전체" ||
             filter == "생선" && IngredientGroup(i) == "생선" || filter == "조개 · 해산물" && IngredientGroup(i) == "조개 · 해산물" ||
             filter == "오늘 메뉴에 필요" && GameDatabase.Recipes.Recipes.Any(r => s.menuSlots.Contains(r.RecipeId) && r.Requirements.Any(q => q.IngredientId == i.IngredientId)))).ToList();
@@ -386,7 +392,7 @@ public partial class RestaurantManagementUI
     private void DesignedStaff(GameSaveData s)
     {
         info.text = $"홀 {s.employees.Count(e => e.role == "Serving")}명 · 주방 {s.employees.Count(e => e.role == "Kitchen")}명 · 주급 {s.employees.Sum(e => e.wage):N0}G";
-        var list = Split(out var detail, 852);
+        var list = Split(out var detail);
         var employees = s.employees.Concat(s.progression.candidates).ToList();
         var items = ScrollList(list);
         var grid = CardGrid(items, 2, 409.5f, Mathf.Max(2, Mathf.CeilToInt((employees.Count + 1) / 2f)));
@@ -438,7 +444,7 @@ public partial class RestaurantManagementUI
     {
         info.text = $"연구 칸 {s.progression.research.Count} / {RestaurantRules.ResearchSlots(s.restaurantLevel)} · 해금한 메뉴 {s.unlockedRecipeIds.Count}개";
         Filters(content, "전체", "연구 중", "시작할 수 있음", "잠김", "완료");
-        var list = Split(out var detail, 783);
+        var list = Split(out var detail);
         var recipes = GameDatabase.Recipes.Recipes.Where(r => filter == "전체" || filter == "연구 중" && s.progression.research.Any(x => x.recipeId == r.RecipeId) ||
             filter == "시작할 수 있음" && s.progression.blueprints.Contains(r.RecipeId) && !s.unlockedRecipeIds.Contains(r.RecipeId) ||
             filter == "완료" && s.unlockedRecipeIds.Contains(r.RecipeId) || filter == "잠김" && !s.progression.blueprints.Contains(r.RecipeId) && !s.unlockedRecipeIds.Contains(r.RecipeId)).ToList();
@@ -510,7 +516,7 @@ public partial class RestaurantManagementUI
         int seats = PlacedTable.Active.Sum(t => t.tableData.chairTiles.Length);
         info.text = $"좌석 {seats} / 최대 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 테이블 {PlacedTable.Active.Count}개";
         Filters(content, "전체", "테이블", "대기석", "테이블 색상", "창고에 있음");
-        var list = Split(out var detail, 783);
+        var list = Split(out var detail);
         var grid = CardGrid(list);
         foreach (int size in new[] { 1, 2, 4 })
         {
@@ -582,7 +588,7 @@ public partial class RestaurantManagementUI
             Row(ready ? ReferenceExpedition.Names[trip.destination] + " 탐험이 끝났어요\n" + rewards : $"{ReferenceExpedition.Names[trip.destination]} 탐험 중 · {trip.returnDay}일차 아침에 돌아와요",
                 (ready ? "받기" : "탐험 중", () => Run(RestaurantProgress.TryClaimExpedition)));
         }
-        var list = Split(out var detail, trip.destination >= 0 ? 741 : 852);
+        var list = Split(out var detail);
         Copy(list, "갈 수 있는 곳", 40, 23, DayLoopUI.Kit.InkSoft);
         string[] resources = { "고등어 · 광어 · 새우  F~E등급", "조개 · 가리비  F~E등급", "전복 · 문어 · 식당 레벨 3에 열려요" };
         int destination = Mathf.Clamp(selectedId, 0, 2);
@@ -624,13 +630,14 @@ public partial class RestaurantManagementUI
     private void DesignedHome(GameSaveData s)
     {
         info.text = $"{s.day}일차 {(s.progression.freeTime ? "밤" : "아침")} · Lv.{s.restaurantLevel} · 밤에 집에서 잠들면 저장돼요";
-        var grid = DayLoopUI.Rect("HomeCards", content); DayLoopUI.Layout(grid, preferredHeight: 852);
-        var layout = grid.gameObject.AddComponent<GridLayoutGroup>(); layout.cellSize = new Vector2(669, 414); layout.spacing = new Vector2(24, 24);
+        var grid = DayLoopUI.Rect("HomeCards", content); DayLoopUI.Layout(grid, preferredHeight: 786);
+        // 본문 높이(787)에 2줄이 들어가게 칸 높이를 맞춘다. 카드 안 합계도 381을 넘지 않는다.
+        var layout = grid.gameObject.AddComponent<GridLayoutGroup>(); layout.cellSize = new Vector2(669, 381); layout.spacing = new Vector2(24, 24);
         layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount; layout.constraintCount = 2;
         var todos = ReferenceHomeCard(grid, "오늘의 할 일");
-        Copy(todos, (s.menuSlots.Any(x => x >= 0) ? "완료  " : "□  ") + "오늘의 메뉴 정하기", 60, 24);
-        Copy(todos, "□  상점에서 재료 채우기", 60, 24, DayLoopUI.Kit.SeaDeep);
-        Copy(todos, "□  식당에서 영업 시작", 60, 24);
+        Copy(todos, (s.menuSlots.Any(x => x >= 0) ? "완료  " : "□  ") + "오늘의 메뉴 정하기", 48, 24);
+        Copy(todos, "□  상점에서 재료 채우기", 48, 24, DayLoopUI.Kit.SeaDeep);
+        Copy(todos, "□  식당에서 영업 시작", 48, 24);
         DetailAction(todos, "영업 준비", () => { if (!GameFlow.TryEnterRestaurant()) message.text = "오늘은 영업을 시작할 수 없어요."; });
         var mission = ReferenceHomeCard(grid, "미션"); Mission(s, out string name, out int target);
         Copy(mission, $"{name}   {s.progression.missionProgress} / {target}", 48, 26);
@@ -651,29 +658,24 @@ public partial class RestaurantManagementUI
 
     private static RectTransform ReferenceHomeCard(Transform parent, string heading)
     {
-        var card = DayLoopUI.Card(parent, Color.white, heading, 3, 0); DayLoopUI.Vertical(card, 27, 18);
+        var card = DayLoopUI.Card(parent, Color.white, heading, 3, 0); DayLoopUI.Vertical(card, 27, 10);
         Copy(card.transform, heading, 48, 33); return card.rectTransform;
     }
+
+    private static readonly string[] ToolIcons = { "ToolPan", "ToolBoard", "ToolFryer", "ToolPot" };
 
     private void DesignedTools(GameSaveData s)
     {
         info.text = $"식당 Lv.{s.restaurantLevel} · 평점 {RestaurantRules.RestaurantRating(s):0.0} · 조리도구 {s.progression.tools.Count} / 4";
+        // 식당 레벨·증축 정보는 식당 증축 화면에서만 보여 준다.
         var list = Split(out var detail);
-        var levelCard = DayLoopUI.Card(list, Color.white, "RestaurantLevel");
-        DayLoopUI.Layout(levelCard, preferredHeight: 230);
-        DayLoopUI.Vertical(levelCard, 20, 8);
-        var level = levelCard.rectTransform;
-        Copy(level, $"해달식당 Lv.{s.restaurantLevel}", 44, 30);
-        Copy(level, $"최대 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 하루 손님 {RestaurantRules.DailyVisitors(s.restaurantLevel)}명\n주방 {RestaurantRules.CookingSpace(s.restaurantLevel)}명 · 품질 {RestaurantRules.GradeRange(s.restaurantLevel)}", 76, 25);
-        if (s.restaurantLevel < RestaurantRules.MaxLevel)
-            Copy(level, $"다음 레벨: 평점 {RestaurantRules.UpgradeRating(s.restaurantLevel + 1):0.0} · 공사 {RestaurantRules.UpgradeCost(s.restaurantLevel + 1):N0}G", 46, 23, DayLoopUI.Kit.InkSoft);
         var items = ScrollList(list);
         for (int i = 201; i <= 204; i++)
         {
             int id = i;
             var definition = CookwareRules.Definition(id);
             string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? "미보유 · 500G" : "첫 도구 무료";
-            SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load("IconTools"));
+            SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load(ToolIcons[id - 201]));
         }
         selectedId = Mathf.Clamp(selectedId, 201, 204); int toolId = selectedId;
         var tool = CookwareRules.Definition(toolId);
@@ -698,6 +700,6 @@ public partial class RestaurantManagementUI
         DayLoopUI.Spacer(detail);
         if (!owned) DetailAction(detail, s.progression.firstToolChosen ? "도구 구매 · 500G" : "첫 도구 선택 · 무료", () => Run((out string error) => RestaurantProgress.TryBuyTool(toolId, out error)), true);
         else DetailAction(detail, "강화하기", () => Run((out string error) => RestaurantProgress.TryUpgradeTool(toolId, out error)), true, tool != null && currentLevel < tool.MaxLevel);
-        DetailAction(detail, "식당 확장 · 대장간", () => Open("대장간"));
+        DetailAction(detail, "식당 증축 보기", () => Open("대장간"));
     }
 }

@@ -50,6 +50,12 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
             _hoverRoot.gameObject.SetActive(visible);
     }
 
+    private void OnDisable() => SetVisible(false);
+
+    private float CapWidth(Sprite sprite) => sprite != null && sprite.rect.height > 0f
+        ? _signHeight * sprite.rect.width / sprite.rect.height
+        : _capWidth;
+
     private void BuildHoverSign()
     {
         GameObject rootObject = new GameObject("HoverSign", typeof(RectTransform));
@@ -59,6 +65,7 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
         root.anchorMax = new Vector2(0.5f, 1f);
         root.pivot = new Vector2(0.5f, 0f);
         root.anchoredPosition = new Vector2(0f, _gapAboveButton);
+        root.sizeDelta = new Vector2(_signWidth, _chainHeight + _signHeight);
 
         float chainOffsetX = (_signWidth * 0.5f) - (_capWidth * 0.5f);
         CreateChain(root, -chainOffsetX);
@@ -76,7 +83,10 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
-        rect.sizeDelta = new Vector2(_chainWidth, _chainHeight);
+        float width = _chainSprite != null && _chainSprite.rect.height > 0f
+            ? _chainHeight * _chainSprite.rect.width / _chainSprite.rect.height
+            : _chainWidth;
+        rect.sizeDelta = new Vector2(width, _chainHeight);
         rect.anchoredPosition = new Vector2(anchoredX, 0f);
 
         Image image = chainObject.GetComponent<Image>();
@@ -110,7 +120,7 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
         rect.anchorMin = new Vector2(anchorX, 0f);
         rect.anchorMax = new Vector2(anchorX, 1f);
         rect.pivot = new Vector2(anchorX, 0.5f);
-        rect.sizeDelta = new Vector2(_capWidth, 0f);
+        rect.sizeDelta = new Vector2(CapWidth(sprite), 0f);
         rect.anchoredPosition = Vector2.zero;
 
         Image image = capObject.GetComponent<Image>();
@@ -125,12 +135,15 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
         rect.SetParent(parent, false);
         rect.anchorMin = new Vector2(0f, 0f);
         rect.anchorMax = new Vector2(1f, 1f);
-        rect.offsetMin = new Vector2(_capWidth, 0f);
-        rect.offsetMax = new Vector2(-_capWidth, 0f);
+        // A small overlap prevents a transparent seam at fractional canvas scales.
+        rect.offsetMin = new Vector2(CapWidth(_signCapLeftSprite) - 0.5f, 0f);
+        rect.offsetMax = new Vector2(-CapWidth(_signCapRightSprite) + 0.5f, 0f);
 
         Image image = middleObject.GetComponent<Image>();
         image.sprite = _signMiddleSprite;
-        image.type = Image.Type.Tiled;
+        // The source contains both horizontal borders; tiling crops those borders
+        // when its native pixel size is larger than this small UI sign.
+        image.type = Image.Type.Simple;
         image.raycastTarget = false;
     }
 
@@ -141,8 +154,8 @@ public class IslandMenuButtonHoverSign : MonoBehaviour, IPointerEnterHandler, IP
         rect.SetParent(parent, false);
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        rect.offsetMin = new Vector2(CapWidth(_signCapLeftSprite) + 4f, 6f);
+        rect.offsetMax = new Vector2(-CapWidth(_signCapRightSprite) - 4f, -6f);
 
         TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
         label.text = _labelText;

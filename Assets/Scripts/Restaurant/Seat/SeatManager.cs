@@ -29,6 +29,7 @@ public class SeatManager : MonoBehaviour
     public int IndoorSeatCount => GameSession.IsActive ? Mathf.Min(seats.Count, RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)) : seats.Count;
     public int WaitingBenchCount => GameSession.IsActive ? Mathf.Min(waitingBenchSeats.Count, RestaurantRules.WaitingLimit(GameSession.Current.restaurantLevel)) : waitingBenchSeats.Count;
     public int WaitingCount => waitingLine.Count;
+    public int WaitingIndexOf(CustomerAgent customer) => waitingLine.IndexOf(customer); // 줄에 없으면 -1
 
     public void RegisterSeats(List<TableGroup> sortedTables)
     {
