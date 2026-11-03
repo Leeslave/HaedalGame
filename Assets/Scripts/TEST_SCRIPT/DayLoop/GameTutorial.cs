@@ -17,8 +17,9 @@ using UnityEngine.UI;
 ///
 /// 2일차부터는 기능 안내(Lesson)를 필요한 순간에 하나씩 띄운다. 안내마다 한 번만 나오고(Tutorial.{이름}.Done),
 /// 하나가 진행 중이면 끝날 때까지 다른 안내가 끼어들지 않는다. 시작 조건을 먼저 채운 순서(Lessons 순서)대로 나온다.
-///  재료 채우기 (2일차~, 영업 전에 오늘 메뉴 재료가 RestockBelow인분 아래)
+///  재료 채우기 (2일차 영업 전. 재료가 넉넉해도 일부러 한 번 사 보게 한다. 오늘 메뉴가 있어야 한다)
 ///    지도 [상점] → 오늘 메뉴에 필요한 재료 담고 사기 → 마무리. 안내 전에 스스로 사면 아는 것으로 보고 끝낸다.
+///    가장 적게 남은 메뉴가 RestockBelow인분 아래면 "떨어져 간다", 아니면 "미리 채워 보자"고 말한다.
 ///  미션 보상 (2일차~, 미션을 채우고 아직 보상을 받지 않았을 때) 섬 화면 미션 카드를 눌러 받기
 ///  주급 날 (5일차~, 직원이 있고 주급날이 이틀 안으로 다가왔을 때) 7일마다 잠들 때 주급이 나간다는 안내
 ///  평점과 폐업 (2일차~ 결산) 식당 평점이 무엇이고 폐업 기준이 얼마인지
@@ -215,7 +216,7 @@ public class GameTutorial : MonoBehaviour
         }
         if (!started)
         {
-            if (ShortMenu(out _) == null) return Step.None;
+            if (LowestMenu(out _) == null) return Step.None;   // 오늘 메뉴가 없으면 상점 필터가 비어 있다
             GameSession.TryMarkTutorialCompleted(RestockStartedId);
         }
         return RestaurantManagementUI.OpenTab == "상점" ? Step.RestockBuy : Step.RestockShop;
@@ -357,12 +358,15 @@ public class GameTutorial : MonoBehaviour
                 return Target("하루 마무리", "영업을 마치면 자유시간이에요.\n집에서 잠들면 하루가 저장돼요. [집]을 눌러요.", Find("[DayLoop] IslandHUD", "Map 집"), "map");
 
             case Step.RestockShop:
-                RecipeData low = ShortMenu(out int left);
-                string need = low == null ? "재료가 떨어져 가요." : left == 0 ? $"'{low.RecipeName}' 재료가 다 떨어졌어요." : $"'{low.RecipeName}' 재료가 {left}인분 남았어요.";
-                return MapOrAsk("재료 채우기", need + "\n재료가 없으면 그 메뉴는 품절돼요.", "상점", "상점 열기", "상점");
+                RecipeData low = LowestMenu(out int left);
+                string need = low == null ? "재료는 상점에서 사요.\n재료가 없으면 그 메뉴는 품절돼요."
+                    : left == 0 ? $"'{low.RecipeName}' 재료가 다 떨어졌어요.\n재료가 없으면 그 메뉴는 품절돼요."
+                    : left < RestockBelow ? $"'{low.RecipeName}' 재료가 {left}인분 남았어요.\n재료가 없으면 그 메뉴는 품절돼요."
+                    : $"재료는 상점에서 사요. 지금 '{low.RecipeName}'{Particle(low.RecipeName)} {left}인분 남았는데,\n떨어지면 그 메뉴는 품절되니 미리 조금 채워 봐요.";
+                return MapOrAsk("재료 채우기", need, "상점", "상점 열기", "상점");
 
             case Step.RestockBuy:
-                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누를 때마다 1개씩 장바구니에 담겨요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
+                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누를 때마다 1개씩 장바구니에 담겨요. 하나만 담아도 돼요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
                     Find("Restaurant management", "ContentFrame"), "shop");
 
             case Step.RestockDone:
@@ -463,19 +467,21 @@ public class GameTutorial : MonoBehaviour
 
     private static void OpenMenu() => RestaurantManagementUI.OpenSection("메뉴");
 
-    /// <summary>오늘 메뉴 중 재료가 RestockBelow인분보다 적게 남은 첫 메뉴. 없으면 null.</summary>
-    private static RecipeData ShortMenu(out int portions)
+    /// <summary>오늘 메뉴 중 재료가 가장 적게 남은 메뉴. 메뉴가 없으면 null.</summary>
+    private static RecipeData LowestMenu(out int portions)
     {
         portions = 0;
+        RecipeData lowest = null;
         var inventory = IngredientInventoryService.Instance;
         if (inventory == null) return null;
         foreach (int id in GameSession.Current.menuSlots)
         {
             if (id < 0 || !GameDatabase.TryGetRecipe(id, out RecipeData recipe)) continue;
-            portions = inventory.CraftableCount(recipe);
-            if (portions < RestockBelow) return recipe;
+            int count = inventory.CraftableCount(recipe);
+            if (lowest != null && count >= portions) continue;
+            lowest = recipe; portions = count;
         }
-        return null;
+        return lowest;
     }
 
     private static bool BoughtToday(GameSaveData s)
