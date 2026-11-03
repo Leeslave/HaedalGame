@@ -113,8 +113,18 @@ public partial class RestaurantManagementUI : MonoBehaviour
     private void BuildOpener()
     {
         var opener = DayLoopUI.KitButton(canvas.transform, "관리", DayLoopUI.Kit.Sea, Color.white, 28, () => Open("메뉴"), "Opener");
-        DayLoopUI.Place((RectTransform)opener.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 124), new Vector2(170, 66));
+        PlaceOpener(opener, false);
         openers.Add(opener);
+    }
+
+    // 영업 중에는 오른쪽 위 골드 알약 왼쪽에, 그 밖에는 운영 시작 버튼 위(오른쪽 아래)에 둔다.
+    private static void PlaceOpener(Button opener, bool besideHud)
+    {
+        var rt = (RectTransform)opener.transform;
+        if (besideHud)
+            DayLoopUI.Place(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-(24 + RestaurantHud.Current.TopRightWidth + 12), -24), new Vector2(150, 64));
+        else
+            DayLoopUI.Place(rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 124), new Vector2(170, 66));
     }
 
     private void BuildWindow()
@@ -276,7 +286,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
         if (messageBar.gameObject.activeSelf != hasMessage) messageBar.gameObject.SetActive(hasMessage);
         if (PayrollPending && (tab != "임금 정산" || !window.gameObject.activeSelf)) Open("임금 정산");
         bool usable = RestaurantProgress.CanManage || GameFlow.Phase == GamePhase.Operation;
-        foreach (var opener in openers) opener.interactable = usable;
+        bool besideHud = RestaurantHud.Current != null && RestaurantHud.Current.IsShowing;
+        foreach (var opener in openers) { opener.interactable = usable; PlaceOpener(opener, besideHud); }
         if (!RestaurantProgress.CanManage && GameFlow.Phase != GamePhase.Operation && window.gameObject.activeSelf) { window.gameObject.SetActive(false); StopPractice(); }
     }
 

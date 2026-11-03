@@ -10,7 +10,7 @@ using UnityEngine.UI;
 ///  - 오른쪽 위: 보유 골드 · 평점 · 배속(눌러서 x1 → x2 → x3) · 일시정지
 ///  - 왼쪽 아래: 오늘의 메뉴. 음식 그림에 남은 인분 스티커 (2인분 이하 코랄, 0이면 품절)
 ///  - 오른쪽 아래: 직원 얼굴. 둘레 링이 체력, 잠들면 Zz와 [깨우기]
-/// 가운데는 월드(주방·식탁·웨이팅석)를 가리지 않게 비운다. 자리 대기 인원은 웨이팅석 옆 팻말(RestaurantSeaDecor)이 보여 준다.
+/// 가운데는 월드(주방·식탁·웨이팅석)를 가리지 않게 비운다. 자리 대기 인원은 웨이팅석 아래 팻말(SeaRestaurantLayout)이 보여 준다.
 /// 평점: 오늘 받은 평가의 평균(평가 전에는 식당 평점). 평가가 들어올 때마다 강조 이펙트와 점수 팝업.
 /// </summary>
 public class RestaurantHud : MonoBehaviour
@@ -56,6 +56,14 @@ public class RestaurantHud : MonoBehaviour
     private Coroutine _ratingPunch;
     private Button _speedButton, _pauseButton;
     private RectTransform _menuRow, _staffRow;
+    private RectTransform _topRight;
+
+    // 다른 UI가 영업 HUD 귀퉁이 카드를 피해 자리를 잡을 때 쓴다. (관리 버튼·첫날 안내 카드)
+    public static RestaurantHud Current { get; private set; }
+    public bool IsShowing => _bar != null && _bar.gameObject.activeInHierarchy;
+    public float TopRightWidth => _topRight != null ? _topRight.rect.width : 0f;           // 오른쪽 위 알약 줄의 폭
+    public float StaffTrayTop => _staffRow != null && _staffRow.parent.gameObject.activeInHierarchy
+        ? ((RectTransform)_staffRow.parent).rect.height + 30f : 0f;                          // 오른쪽 아래 직원 카드 윗변 (화면 아래에서)
     private readonly List<MenuSlot> _menu = new List<MenuSlot>();
     private readonly List<StaffSlot> _staff = new List<StaffSlot>();
     private readonly List<int> _menuIds = new List<int>();
@@ -82,8 +90,11 @@ public class RestaurantHud : MonoBehaviour
         HandlePhaseChanged(_day.Phase);
     }
 
+    private void Awake() { Current = this; }
+
     private void OnDestroy()
     {
+        if (Current == this) Current = null;
         if (_day != null)
         {
             _day.OnPhaseChanged -= HandlePhaseChanged;
@@ -176,6 +187,7 @@ public class RestaurantHud : MonoBehaviour
             _menuIds.AddRange(slots);
             foreach (MenuSlot slot in _menu) Destroy(slot.bubble.gameObject);
             _menu.Clear();
+            _menuRow.parent.gameObject.SetActive(true);
             foreach (int id in slots)
                 if (GameDatabase.TryGetRecipe(id, out RecipeData recipe)) _menu.Add(CreateMenuSlot(recipe));
             _menuRow.parent.gameObject.SetActive(_menu.Count > 0);
@@ -231,8 +243,9 @@ public class RestaurantHud : MonoBehaviour
 
         foreach (StaffSlot slot in _staff) Destroy(slot.root);
         _staff.Clear();
+        // 카드를 먼저 켜 두고 만든다. (꺼진 채로 만들면 버튼 등의 Awake가 미뤄진다)
+        _staffRow.parent.gameObject.SetActive(agents.Count > 0);
         foreach (PartTimerAgent agent in agents) _staff.Add(CreateStaffSlot(agent));
-        _staffRow.parent.gameObject.SetActive(_staff.Count > 0);
     }
 
     private StaffSlot CreateStaffSlot(PartTimerAgent agent)
@@ -479,6 +492,7 @@ public class RestaurantHud : MonoBehaviour
     private void BuildTopRight()
     {
         RectTransform group = DayLoopUI.Rect("TopRight", _bar);
+        _topRight = group;
         DayLoopUI.Place(group, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24, -24), Vector2.zero);
         DayLoopUI.Horizontal(group, 0, 12, TextAnchor.MiddleRight);
         Fit(group);

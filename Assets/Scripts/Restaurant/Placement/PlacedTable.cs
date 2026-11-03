@@ -9,8 +9,13 @@ public class PlacedTable : MonoBehaviour
     private static readonly List<PlacedTable> _active = new List<PlacedTable>();
     public static IReadOnlyList<PlacedTable> Active => _active;
 
+    // 바다 식당 배치도의 정해진 자리(슬롯)에 놓인 테이블은 anchorCell을 (슬롯 번호, SlotAnchorY)로 저장한다.
+    public const int SlotAnchorY = -9999;
+
     public TableData tableData { get; private set; }
     public Vector2Int anchorCell { get; private set; }
+    public bool IsSlotted => anchorCell.y == SlotAnchorY;
+    public int Slot => IsSlotted ? anchorCell.x : -1;
     public int Skin { get; private set; }
     public void SetSkin(int skin)
     {
@@ -61,6 +66,14 @@ public class PlacedTable : MonoBehaviour
         PathfindingGrid.Instance.RegisterObstacleTiles(obstacleCells);
     }
 
+    // 배치도 슬롯에 놓는다. 좌석 위치·방향은 만든 쪽(SeaTableSlots)이 이미 정해 두었다. (칸 장애물 없음)
+    public void InitializeSlot(TableData data, int slot)
+    {
+        tableData = data;
+        anchorCell = new Vector2Int(slot, SlotAnchorY);
+        if (!_active.Contains(this)) { _active.Add(this); }
+    }
+
     // 테이블 제거 (철거)
     public void RemoveTable(bool returnToStorage = true)
     {
@@ -71,7 +84,7 @@ public class PlacedTable : MonoBehaviour
             var stock = GameSession.Current.progression.furniture.Find(x => x.seats == count);
             if (stock == null) GameSession.Current.progression.furniture.Add(new FurnitureStock { seats = count, amount = 1 }); else stock.amount++;
         }
-        PathfindingGrid.Instance.UnregisterObstacleTiles(obstacleCells);
+        if (obstacleCells.Count > 0 && PathfindingGrid.Instance != null) PathfindingGrid.Instance.UnregisterObstacleTiles(obstacleCells);
         MarkRemoved();
         Destroy(gameObject);
     }

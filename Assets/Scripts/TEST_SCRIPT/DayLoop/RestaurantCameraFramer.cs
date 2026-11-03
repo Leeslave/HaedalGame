@@ -5,7 +5,9 @@ using UnityEngine;
 /// 식당 구역(CameraZone.Restaurant)에서 배경 맵과 주방·테이블·대기석·입구·출구 전체를 담는다.
 /// 게임 화면을 최대한 크게 보여 주고, 안내창·도구 모음 같은 UI는 게임 화면 위에 겹쳐 띄운다.
 /// 준비 중에는 왼쪽 메뉴 띠를 비워 두고 남은 공간의 중앙에 식당을 담는다.
-/// 영업 중에는 HUD가 네 귀퉁이 카드뿐이라 띠가 없다. 대신 위아래 카드 높이만큼 살짝 여유를 둔다.
+/// 영업 중에는 HUD가 네 귀퉁이 카드뿐이라 띠가 없다.
+/// 바다 식당 배치도(SeaRestaurantLayout)가 있으면 시안 한 화면(1920×1080 = 35.56×20유닛)을 그대로 담는다.
+/// 영업 중 HUD는 시안처럼 바다 위에 겹쳐 뜨므로 여유를 두지 않는다. 배치도가 없으면 예전처럼 시설 그림 범위를 담는다.
 ///  - 화면비가 바뀌어도(16:9, 16:10, 4:3, 21:9) 핵심 영역이 잘리지 않도록 가로·세로 중 더 빡빡한 쪽에 맞춘다.
 ///  - 손님처럼 움직이는 오브젝트는 범위에서 제외해 구도가 출렁이지 않는다. 고정 시설 배치만 주기적으로 확인한다.
 ///  - 월드 카메라만 조정하며 UI 스케일은 각 Canvas가 따로 처리한다.
@@ -13,9 +15,10 @@ using UnityEngine;
 public class RestaurantCameraFramer : MonoBehaviour
 {
     private bool Operating => _day != null && (_day.Phase == DayLoopPhase.Open || _day.Phase == DayLoopPhase.Closing);
-    private float HudTopFraction => Operating ? 0.07f : 0f;
+    private bool SeaFloor => SeaRestaurantLayout.Instance != null;
+    private float HudTopFraction => Operating && !SeaFloor ? 0.07f : 0f;
     private float HudLeftFraction => Operating ? 0f : DayLoopUI.RailWidth / Mathf.Max(DayLoopUI.RefWidth, DayLoopUI.RefHeight * _camera.aspect);
-    private float BottomFraction => Operating ? 0.09f : 0f;
+    private float BottomFraction => Operating && !SeaFloor ? 0.09f : 0f;
 
     private DayCycleController _day;
     private const float Padding = 0.5f; // 맵 가장자리 직원의 상태 문구까지 들어갈 여백
@@ -84,8 +87,9 @@ public class RestaurantCameraFramer : MonoBehaviour
     private void Apply()
     {
         float usable = 1f - HudTopFraction - BottomFraction;
-        float sizeForHeight = (_content.size.y + Padding * 2f) / (2f * usable);
-        float sizeForWidth = (_content.size.x + Padding * 2f) / (2f * Mathf.Max(0.1f, _camera.aspect) * (1f - HudLeftFraction));
+        float padding = SeaFloor ? 0f : Padding;
+        float sizeForHeight = (_content.size.y + padding * 2f) / (2f * usable);
+        float sizeForWidth = (_content.size.x + padding * 2f) / (2f * Mathf.Max(0.1f, _camera.aspect) * (1f - HudLeftFraction));
         // 축소 상한을 두면 넓은 맵이나 좁은 화면에서 가장자리가 잘린다.
         float size = Mathf.Max(sizeForHeight, sizeForWidth);
 
@@ -98,6 +102,13 @@ public class RestaurantCameraFramer : MonoBehaviour
 
     private bool CollectBounds(out Bounds bounds)
     {
+        if (SeaFloor)
+        {
+            Rect rect = SeaRestaurantLayout.DesignRect;
+            bounds = new Bounds(rect.center, rect.size);
+            return true;
+        }
+
         bounds = default;
         bool any = false;
         IncludeSprites(_map, ref bounds, ref any);

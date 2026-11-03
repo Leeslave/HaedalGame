@@ -66,7 +66,7 @@ public class TableContextMenu : MonoBehaviour
         designMenu = panel.rectTransform;
         DayLoopUI.Place(designMenu, new Vector2(.5f, .5f), new Vector2(0, 1), Vector2.zero, new Vector2(304, 284));
         DayLoopUI.Vertical(panel, 16, 12);
-        Add("이동 · 회전", OnMoveClicked);
+        Add(SeaTableSlots.Instance != null ? "옮기기" : "이동 · 회전", OnMoveClicked);
         Add("색상 바꾸기", () => {
             if (selectedTable == null) return;
             TableSaveLoadManager.Instance.RememberEdit();

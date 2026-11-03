@@ -57,6 +57,8 @@ public class TablePlacementManager : MonoBehaviour
         if (!RestaurantProgress.CanManage) return;
         if (GameSession.IsActive && RestaurantProgress.FurnitureCount(GameSession.Current, data.chairTiles.Length) <= 0)
         { DayCycleController.Instance?.Toast("창고에 테이블이 없어요. 관리 > 가구에서 구매해 주세요."); return; }
+        // 바다 식당 배치도: 고른 테이블을 빈 자리를 눌러 놓는다. (칸 위 미리보기 없음)
+        if (SeaTableSlots.Instance != null) { SeaTableSlots.Instance.Select(data.tableType); return; }
         CancelGhost();
         SpawnGhost(data);
         state = PlacementState.PlacingGhost;
@@ -66,6 +68,7 @@ public class TablePlacementManager : MonoBehaviour
     public void StartMoving(PlacedTable table)
     {
         if (!RestaurantProgress.CanManage) return;
+        if (SeaTableSlots.Instance != null) { SeaTableSlots.Instance.PickUp(table); return; }
         CancelGhost();
         movingTable = table;
         // 이동 동안만 장애물 임시 해제
@@ -122,6 +125,7 @@ public class TablePlacementManager : MonoBehaviour
 
     public void OnCancelClicked()
     {
+        CancelSlotSelection();
         if (state == PlacementState.Moving && movingTable != null)
         {
             // 원래 위치 장애물 복원
@@ -133,6 +137,11 @@ public class TablePlacementManager : MonoBehaviour
     }
 
     // ─── 내부 유틸 ───────────────────────────────────
+
+    private static void CancelSlotSelection()
+    {
+        if (SeaTableSlots.Instance != null) SeaTableSlots.Instance.Select(null);
+    }
 
     private void SpawnGhost(TableData data)
     {
@@ -155,7 +164,7 @@ public class TablePlacementManager : MonoBehaviour
 
     private void Update()
     {
-        if (state == PlacementState.Idle) { return; }
+        if (state == PlacementState.Idle || SeaTableSlots.Instance != null) { return; }
         if (Input.GetKeyDown(KeyCode.R)) OnRotateClicked();
         if (Input.GetKeyDown(KeyCode.Escape)) { OnCancelClicked(); }
         if (Input.GetMouseButton(0)) { OnClickWhilePlacing(); }
