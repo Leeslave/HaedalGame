@@ -45,8 +45,12 @@ public static class RestaurantRules
         return Mathf.Min(quality, MaxFoodGrade(GameSession.Current.restaurantLevel));
     }
 
-    /// <summary>손님 기대치 = 레시피 등급 상한 - 1. (기존 RestaurantLevelTableSO 기준과 같다)</summary>
-    public static int Expectation(int level) => Mathf.Max(0, MaxFoodGrade(level) - 1);
+    /// <summary>
+    /// 손님 기대치 = 레시피 등급 상한 - 2. 상점 재료가 F등급이라 Lv.1(상한 D)에서는 F 음식이 기대치(F)와 같아 4.0점,
+    /// 합성·탐험으로 등급을 올리면 4.5~5.0점이 나온다. (상한 - 1이면 Lv.1 음식이 늘 3.0점이라 평점이 오르지 않고,
+    /// 품질이 상한에서 잘려 5.0점 구간에 닿을 수 없었다)
+    /// </summary>
+    public static int Expectation(int level) => Mathf.Max(0, MaxFoodGrade(level) - 2);
 
     /// <summary>식당 평점 = 저장된 일일 평점 이력(시작 평판 포함, 최근 7일)의 평균. 레벨업 조건과 화면 표시가 같은 값을 쓴다.</summary>
     public static float RestaurantRating(GameSaveData s) => s.dailyRatingHistory.Count == 0 ? 0f : s.dailyRatingHistory.Average(r => r.value);
