@@ -273,7 +273,7 @@ public class SettlementPanel : MonoBehaviour
 
     private static void BuildStat(Transform parent, string label, out TMP_Text value, out TMP_Text sub)
     {
-        Image tile = DayLoopUI.Chunky(DayLoopUI.Panel(parent, Color.white, "Stat"), 3f, 0f);
+        Image tile = DayLoopUI.Chunky(DayLoopUI.Panel(parent, Color.white, "Stat " + label), 3f, 0f);
         DayLoopUI.Layout(tile, flexibleWidth: 1, preferredHeight: 116);
         RectTransform tileBody = DayLoopUI.Rect("Body", tile.transform);
         DayLoopUI.Stretch(tileBody, 22, 12, 22, 12);

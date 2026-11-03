@@ -21,6 +21,24 @@ public partial class RestaurantManagementUI
         if (ui != null) ui.Open(section);
     }
 
+    /// <summary>지금 열려 있는 관리 탭. 창이 닫혀 있으면 null.</summary>
+    public static string OpenTab
+    {
+        get
+        {
+            var ui = FindFirstObjectByType<RestaurantManagementUI>();
+            return ui != null && ui.window != null && ui.window.gameObject.activeSelf ? ui.tab : null;
+        }
+    }
+
+    /// <summary>열린 관리 창의 목록 필터를 바꾼다. (튜토리얼이 필요한 항목만 모아 보여 줄 때)</summary>
+    public static void ShowFilter(string value)
+    {
+        var ui = FindFirstObjectByType<RestaurantManagementUI>();
+        if (ui == null || ui.window == null || !ui.window.gameObject.activeSelf) return;
+        ui.filter = value; ui.page = 0; ui.Refresh();
+    }
+
     private void CloseWindow()
     {
         if (PayrollPending) return;
