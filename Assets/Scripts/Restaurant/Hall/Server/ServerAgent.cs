@@ -128,12 +128,7 @@ public class ServerAgent : PartTimerAgent
         MoveResult moveResult = new MoveResult();
         if (curTask.Customer != null)
         {
-            PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(curTask.Customer.transform.position);
-            PathNode approachNode = FindApproachNode(customerNode);
-            if (approachNode != null)
-            {
-                yield return MoveToWithRetry(approachNode.worldPos, status.serving, moveResult);
-            }
+            yield return MoveToWithRetry(ApproachPoint(curTask.Customer), status.serving, moveResult);
         }
 
         if (curTask.Customer != null && !moveResult.Success)
@@ -182,12 +177,7 @@ public class ServerAgent : PartTimerAgent
         MoveResult moveResult = new MoveResult();
         if (curTask.Customer != null)
         {
-            PathNode customerNode = PathfindingGrid.Instance.GetNodeFromWorld(curTask.Customer.transform.position);
-            PathNode approachNode = FindApproachNode(customerNode);
-            if (approachNode != null)
-            {
-                yield return MoveToWithRetry(approachNode.worldPos, status.serving, moveResult);
-            }
+            yield return MoveToWithRetry(ApproachPoint(curTask.Customer), status.serving, moveResult);
         }
 
         if (curTask.Customer != null && !moveResult.Success)

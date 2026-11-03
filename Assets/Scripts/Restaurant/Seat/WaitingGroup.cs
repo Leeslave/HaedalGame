@@ -10,6 +10,7 @@ public class WaitingGroup : MonoBehaviour
     {
         // 웨이팅 좌석도 실제 타일을 등록해야 착석 시 그 타일이 장애물로 막힌다.
         // (PathfindingGrid.Instance는 Awake에서 초기화되므로 Start에서 안전하게 접근 가능)
+        if (PathfindingGrid.Instance == null) return;
         foreach (Seat seat in seats)
         {
             Vector2Int gridPos = PathfindingGrid.Instance.WorldToGridPos(seat.GetSeatPoint().position);

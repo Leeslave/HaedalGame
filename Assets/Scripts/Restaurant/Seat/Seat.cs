@@ -6,7 +6,7 @@ public class Seat : MonoBehaviour
 {
     [SerializeField] private Transform seatPoint;               // 좌석의 정확한 위치
     private CustomerAgent occupant;                             // 점유하고 있는 손님 [EX] occupant ==  null => 아무도 없음. [But] occupant != null => 누군가 자리를 점유하고 있음
-    public Transform GetSeatPoint() { return seatPoint; }       // 현재 자리의 위치가 어딘지 리턴
+    public Transform GetSeatPoint() { return seatPoint != null ? seatPoint : transform; }   // 현재 자리의 위치 (따로 지정하지 않았으면 좌석 자신)
 
     private bool isOccupied = false;                            // 현재 누군가 자리를 점유하고 있는지를 보여주는 flag
     

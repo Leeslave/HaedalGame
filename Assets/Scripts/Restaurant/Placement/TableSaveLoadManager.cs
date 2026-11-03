@@ -69,6 +69,13 @@ public class TableSaveLoadManager : MonoBehaviour
     {
         if (!GameSession.IsActive) { return; }
 
+        // 바다 식당 배치도에서는 정해진 자리(슬롯)에 다시 놓는다.
+        if (SeaTableSlots.Instance != null)
+        {
+            SeaTableSlots.Instance.Load(GameSession.Current.placedTables);
+            return;
+        }
+
         foreach (PlacedTable existing in new List<PlacedTable>(PlacedTable.Active))
         {
             existing.RemoveTable(false);

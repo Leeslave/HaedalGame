@@ -68,12 +68,16 @@ public class DayCycleController : MonoBehaviour
 
     public int CurrentGold => CurrencyManager.Instance != null ? CurrencyManager.Instance.GetCurrencyById(GameSession.GoldCurrencyId) : GameSession.IsActive ? RestaurantProgress.Gold(GameSession.Current) : -1;
 
+    private SeaRestaurantLayout _layout;
+
     private void Awake()
     {
         Instance = this;
         _hud = gameObject.AddComponent<RestaurantHud>();
         _settlement = gameObject.AddComponent<SettlementPanel>();
         gameObject.AddComponent<RestaurantCameraFramer>();
+        // 바다 식당 배치도는 씬 오브젝트들의 Start(테이블 불러오기·웨이팅 등록·직원 배치)보다 먼저 깔려야 한다.
+        _layout = gameObject.AddComponent<SeaRestaurantLayout>();
     }
 
     private void Start()
@@ -103,7 +107,7 @@ public class DayCycleController : MonoBehaviour
         TidySceneForTest();
 
         _hud.Init(this);
-        gameObject.AddComponent<RestaurantSeaDecor>().Init(this);
+        _layout.Init(this);
         gameObject.AddComponent<NpcStatusOverlay>().Init(this);
         gameObject.AddComponent<FirstDayGuide>().Init(this);
         gameObject.AddComponent<PlacementToolbar>();
@@ -138,7 +142,14 @@ public class DayCycleController : MonoBehaviour
         }
         if (phase == DayLoopPhase.Preparation)
             RefreshPreparationBoard();
-        OnPhaseChanged?.Invoke(phase);
+
+        // 화면 하나가 예외를 내도 나머지 화면(준비 안내·상태 표시 등)은 단계 전환을 받아야 한다.
+        if (OnPhaseChanged == null) return;
+        foreach (Action<DayLoopPhase> listener in OnPhaseChanged.GetInvocationList())
+        {
+            try { listener(phase); }
+            catch (Exception e) { Debug.LogException(e); }
+        }
     }
 
     public void Toast(string message) => OnToast?.Invoke(message);

@@ -11,11 +11,13 @@ public class ServerManager : MonoBehaviour
     [SerializeField] private Transform[] serverInitposition;
     [SerializeField] private Transform kitchen;
     [SerializeField] private GameObject parent;
-    public Vector2 GetKitchenPosition() { return kitchen.position; }
+    public Vector2 GetKitchenPosition() { return RestaurantNav.Floor != null ? RestaurantNav.Floor.KitchenPickup : (Vector2)kitchen.position; }
 
     // index는 0-based. 씬에 배치된 알바 순서를 그대로 사용하므로 인스펙터에서 별도로 맞춰줄 필요가 없다.
+    // 식당 배치도가 있으면 배치도의 대기 위치를 쓴다.
     public Vector2 GetInitPosition(int index)
     {
+        if (RestaurantNav.Floor != null) return RestaurantNav.Floor.IdlePoint(PartTimerRole.Serving, index);
         if (index < 0 || index >= serverInitposition.Length)
         {
             return serverInitposition.Length > 0 ? serverInitposition[index % serverInitposition.Length].position : transform.position;

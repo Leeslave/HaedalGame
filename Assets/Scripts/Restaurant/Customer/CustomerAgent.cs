@@ -54,13 +54,10 @@ public class CustomerAgent : MonoBehaviour
 
     private Seat currentSeat;
     public Seat GetCurrentSeat() { return currentSeat; }
+    private Coroutine shiftRoutine;   // 웨이팅 줄이 당겨져 옆 의자로 옮겨 앉는 중
 
     private const float BaseMoveSpeed = 3f;
     private float MoveSpeed => BaseMoveSpeed * RestaurantSpeedController.SpeedMultiplier;
-
-    // MoveToSeat에서 경로 탐색에 실패한 좌석들. 만석+대기열 만석 상태에서 유일하게 빈 좌석이
-    // 도달 불가능할 경우, 같은 좌석을 무한히 재배정받아 TrySeat<->MoveToSeat이 무한 반복되는 것을 막기 위함.
-    private readonly HashSet<Seat> failedSeats = new HashSet<Seat>();
 
     /* [ Awake & Start ] */
     private void Awake()
@@ -163,11 +160,10 @@ public class CustomerAgent : MonoBehaviour
     // CustomerState.Seating 
     private void TrySeat()
     {
-        // 좌석은 InitPatience에서 스폰과 동시에 이미 예약됨. 여기서 null이라면 MoveToSeat 중
-        // 경로 탐색 실패로 자리를 반납하고 재시도하는 경우이므로 다시 잡아본다.
+        // 좌석은 InitPatience에서 스폰과 동시에 이미 예약됨. 혹시 비어 있으면 다시 잡아본다.
         if (currentSeat == null)
         {
-            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor, failedSeats);
+            currentSeat = gm.seatManager.TryAssignSeat(this, out indoor);
             if (currentSeat == null) // 만약 재시도했는데도 자리가 없는 경우
             {
                 ratingFlag = RatingFlag.Low;
@@ -176,69 +172,34 @@ public class CustomerAgent : MonoBehaviour
             }
         }
 
-        //transform.position = currentSeat.GetSeatPoint().position; // 이거는 나중에 길찾기 알고리즘 써서 이동하도록 만들기 A*
-        StartCoroutine(MoveToSeat(currentSeat));
+        StartCoroutine(MoveToSeat());
     }
 
-    private IEnumerator MoveToSeat(Seat seat)
+    // 배치도의 길을 따라 자리까지 헤엄친다. 가는 도중에 웨이팅 줄이 당겨져 자리가 바뀌면 새 자리로 다시 간다.
+    private IEnumerator MoveToSeat()
     {
-        Vector3 target = seat.GetSeatPoint().position;
-        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
-
-        if (startNode == null || endNode == null)
-        {
-            Debug.LogWarning("MoveToSeat: 시작 또는 도착 노드가 그리드 밖입니다. 다른 자리를 탐색합니다.");
-            failedSeats.Add(seat);
-            gm.seatManager.ReleaseSeat(this, seat, !indoor);
-            currentSeat = null;
-            TrySeat();
-            yield break;
-        }
-
-        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
-
-        if (path == null)
-        {
-            Debug.LogWarning("MoveToSeat: 경로를 찾을 수 없습니다. 다른 자리를 탐색합니다.");
-            failedSeats.Add(seat);
-            gm.seatManager.ReleaseSeat(this, seat, !indoor);
-            currentSeat = null;
-            TrySeat();
-            yield break;
-        }
-
         nm.SetMoving(true);
-
-        foreach (Vector3 waypoint in path)
+        Seat goal = null;
+        while (goal != currentSeat && currentSeat != null)
         {
-            while (Vector2.Distance(transform.position, waypoint) > 0.05f)
-            {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
-                Vector2 dir = (waypoint - transform.position).normalized;
-                nm.SetDirection(dir);
-                yield return null;
-            }
+            goal = currentSeat;
+            yield return Swim(goal.GetSeatPoint().position);
         }
-
-        // A* 경로는 타일 중심까지만 안내하므로, 테이블 크기에 비례해 옮겨진 실제 좌석 좌표까지 마지막으로 미세 이동
-        while (Vector2.Distance(transform.position, target) > 0.05f)
-        {
-            transform.position = Vector2.MoveTowards(transform.position, target, MoveSpeed * Time.deltaTime);
-            Vector2 dir = (target - transform.position).normalized;
-            nm.SetDirection(dir);
-            yield return null;
-        }
-
         nm.SetMoving(false);
-        nm.ArriveDirection(currentSeat.GetFacingDirection());
-        // 도착 후 해당 타일을 장애물로 전환
-        seat.OnCustomerSeated();
+        if (goal == null) { yield break; }
+
+        nm.ArriveDirection(goal.GetFacingDirection());
+        goal.OnCustomerSeated();
         // 좌석별로 인스펙터에서 조절 가능한 정렬 순서 적용 (테이블과 겹침 방지)
-        nm.ApplySeatSortingOrder(seat.GetSeatedSortingOrderOffset());
+        nm.ApplySeatSortingOrder(goal.GetSeatedSortingOrderOffset());
 
         if (indoor) { cpc.ChangeState(); cbc.SetCanBoost(true); StartCoroutine(WaitStateChange(CustomerState.WaitingForOrder)); }
         else { isWaiting = true; cuc.ShowBubble(1); StartCoroutine(WaitStateChange(CustomerState.WaitingRoom)); }
+    }
+
+    private IEnumerator Swim(Vector2 target)
+    {
+        yield return RestaurantNav.Swim(transform, RestaurantNav.Route(transform.position, target), () => MoveSpeed, nm.SetDirection);
     }
 
     public void PromoteToSeat(Seat newSeat)
@@ -248,25 +209,37 @@ public class CustomerAgent : MonoBehaviour
         isWaiting = false;
         cpc.SetIsWaiting(false);
         nm.SetMoving(false);
+        nm.ResetSortingOrder();
         cuc.CloseBubble();
         StopAllCoroutines();
+        shiftRoutine = null;
         TaskLogger.Instance.LogServing("현재 손님이 좌석에 앉았습니다.");
-        StartCoroutine(MoveToSeat(newSeat));
+        StartCoroutine(MoveToSeat());
     }
 
+    // 웨이팅 줄이 당겨질 때 SeatManager가 부른다. 이미 앉아 있으면 옆 의자로 헤엄쳐 옮겨 앉는다.
     public void MoveWaitingSeat(Seat newSeat)
     {
         Seat oldSeat = currentSeat;
         if (oldSeat == newSeat) { return; } // 대기열 앞당김으로 위치가 바뀌지 않은 손님은 처리할 필요 없음
 
-        // 대기 벤치 슬롯 이동도 착석/퇴장과 동일하게 타일 walkable을 갱신해야 한다.
-        // (그렇지 않으면 옮겨간 벤치는 통행 가능으로, 비워둔 벤치는 통행 불가로 남는 버그가 생긴다)
         if (oldSeat != null) { oldSeat.Vacate(); }
-        newSeat.OnCustomerSeated();
-
         currentSeat = newSeat;
-        transform.position = newSeat.GetSeatPoint().position;
-        nm.ApplySeatSortingOrder(newSeat.GetSeatedSortingOrderOffset());
+        if (!isWaiting) { return; } // 아직 웨이팅석으로 가는 중이면 MoveToSeat이 새 자리로 이어서 간다.
+
+        newSeat.OnCustomerSeated();
+        if (shiftRoutine != null) { StopCoroutine(shiftRoutine); }
+        shiftRoutine = StartCoroutine(ShiftToSeat(newSeat));
+    }
+
+    private IEnumerator ShiftToSeat(Seat seat)
+    {
+        nm.SetMoving(true);
+        yield return RestaurantNav.Swim(transform, new List<Vector3> { seat.GetSeatPoint().position }, () => MoveSpeed, nm.SetDirection);
+        nm.SetMoving(false);
+        nm.ArriveDirection(seat.GetFacingDirection());
+        nm.ApplySeatSortingOrder(seat.GetSeatedSortingOrderOffset());
+        shiftRoutine = null;
     }
 
     // CustomerState.WaitingForOrder
@@ -418,45 +391,11 @@ public class CustomerAgent : MonoBehaviour
 
     private IEnumerator MoveToExit()
     {
-        Vector3 target = gm.exitPoint.position;
-
-        PathNode startNode = PathfindingGrid.Instance.GetNodeFromWorld(transform.position);
-        PathNode endNode = PathfindingGrid.Instance.GetNodeFromWorld(target);
-
-        if (startNode == null || endNode == null)
-        {
-            transform.position = target;
-            OnExited?.Invoke(this);
-            Destroy(gameObject);
-            yield break;
-        }
-
-        List<Vector3> path = Pathfinder.Instance.FindPath(startNode.gridPos, endNode.gridPos);
-
-        if (path == null)
-        {
-            transform.position = target;
-            OnExited?.Invoke(this);
-            Destroy(gameObject);
-            yield break;
-        }
-
         nm.SetMoving(true);
-
-        foreach (Vector3 waypoint in path)
-        {
-            while (Vector2.Distance(transform.position, waypoint) > 0.05f)
-            {
-                transform.position = Vector2.MoveTowards(transform.position, waypoint, MoveSpeed * Time.deltaTime);
-                Vector2 dir = (waypoint - transform.position).normalized;
-                nm.SetDirection(dir);
-                yield return null;
-            }
-        }
-
+        yield return Swim(gm.exitPoint.position);
         nm.SetMoving(false);
-        OnExited?.Invoke(this); // ← OnCustomerSeated() 대신 퇴장 이벤트
-        Destroy(gameObject);    // ← 상태 전환 대신 오브젝트 제거
+        OnExited?.Invoke(this);
+        Destroy(gameObject);
     }
 
 

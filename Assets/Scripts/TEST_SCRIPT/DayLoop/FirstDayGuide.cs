@@ -21,6 +21,7 @@ public class FirstDayGuide : MonoBehaviour
 
     private DayCycleController _day;
     private Canvas _canvas;
+    private GameObject _prepBackdrop;
 
     // 준비 카드
     private RectTransform _prepCard;
@@ -107,13 +108,32 @@ public class FirstDayGuide : MonoBehaviour
         _guideBar.gameObject.SetActive(_guideActive || _sleepGuideActive);
     }
 
+    // 영업 중 안내 카드는 오른쪽, 직원 카드 바로 위에 둔다. (가운데 식탁·웨이팅석을 가리지 않게)
+    // 영업 HUD가 없을 때(준비·결산)는 예전처럼 왼쪽 띠 옆 아래에 둔다.
+    private void PlaceGuideBar()
+    {
+        RestaurantHud hud = RestaurantHud.Current;
+        if (hud != null && hud.IsShowing)
+            DayLoopUI.Place(_guideBar, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, Mathf.Max(32f, hud.StaffTrayTop + 16f)), new Vector2(620, 248));
+        else
+            DayLoopUI.Place(_guideBar, new Vector2(0, 0), Vector2.zero, new Vector2(454, 32), new Vector2(620, 248));
+    }
+
+    private static bool Placing => TablePlacementManager.Instance != null && TablePlacementManager.Instance.PlacementUI != null && TablePlacementManager.Instance.PlacementUI.activeInHierarchy;
+
     private void Update()
     {
+        // 영업 직전(준비) 화면 배경. 자리 배치 중에는 식당이 보여야 하므로 끈다.
+        bool backdrop = _day.Phase == DayLoopPhase.Preparation && !Placing;
+        if (_prepBackdrop.activeSelf != backdrop) _prepBackdrop.SetActive(backdrop);
+
         if (_prepCard.gameObject.activeSelf && Time.unscaledTime >= _nextPrepRefresh)
         {
             _nextPrepRefresh = Time.unscaledTime + 0.5f;
             RefreshPrep();
         }
+
+        if (_guideBar.gameObject.activeSelf) PlaceGuideBar();
 
         if (_guideActive)
             UpdateGuide();
@@ -126,7 +146,7 @@ public class FirstDayGuide : MonoBehaviour
     private void RefreshPrep()
     {
         // 테이블 배치 모드(카메라가 식당 구역)에서는 화면을 가리지 않게 숨긴다.
-        bool placing = TablePlacementManager.Instance != null && TablePlacementManager.Instance.PlacementUI != null && TablePlacementManager.Instance.PlacementUI.activeInHierarchy;
+        bool placing = Placing;
         _prepRail.gameObject.SetActive(!placing);
         _prepDay.text = _day.Day + "일차  준비 중";
         _prepGold.text = DayLoopUI.Gold(Mathf.Max(0, _day.CurrentGold));
@@ -430,6 +450,17 @@ public class FirstDayGuide : MonoBehaviour
         _canvas = DayLoopUI.CreateCanvas("[DayLoop] Guide", 60, gameObject.scene);
         _canvas.transform.SetParent(transform, false);
 
+        // 준비 화면 배경 그림: 다른 UI(관리 버튼·안내 띠·토스트)보다 뒤, 월드보다 앞에 화면을 꽉 채운다.
+        Canvas backdropCanvas = DayLoopUI.CreateCanvas("[DayLoop] Prep backdrop", 5, gameObject.scene);
+        backdropCanvas.transform.SetParent(transform, false);
+        _prepBackdrop = backdropCanvas.gameObject;
+        Image backdrop = ReferenceTitleView.Picture(backdropCanvas.transform, "RestaurantPrepBackground");
+        DayLoopUI.Place(backdrop.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, Vector2.zero);
+        AspectRatioFitter cover = backdrop.gameObject.AddComponent<AspectRatioFitter>();
+        cover.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        cover.aspectRatio = backdrop.sprite != null ? backdrop.sprite.rect.width / backdrop.sprite.rect.height : 16f / 9f;
+        _prepBackdrop.SetActive(false);
+
         // 기존 준비 화면은 상태 제어만 유지하고 표시와 입력을 새 UI로 옮긴다.
         var legacy = PreOperationUIManager.Instance != null ? PreOperationUIManager.Instance.UIRoot : null;
         if (legacy != null)
@@ -494,7 +525,7 @@ public class FirstDayGuide : MonoBehaviour
 
         Image bar = DayLoopUI.Card(_canvas.transform, DayLoopUI.Kit.Sail, "GuideBar", 3, 7);
         _guideBar = bar.rectTransform;
-        DayLoopUI.Place(_guideBar, new Vector2(0, 0), Vector2.zero, new Vector2(454, 32), new Vector2(620, 248));
+        PlaceGuideBar();
         DayLoopUI.Vertical(bar, 22, 8);
         _guideStep = DayLoopUI.Text(bar.transform, "", 28, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
         DayLoopUI.Layout(_guideStep, preferredHeight: 36);

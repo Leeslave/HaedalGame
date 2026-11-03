@@ -137,7 +137,7 @@ public class ChefAgent : PartTimerAgent
         }
 
         MoveResult moveResult = new MoveResult();
-        yield return MoveToWithRetry(stationTransform.position, status.serving, moveResult);
+        yield return MoveToWithRetry(ChefManager.Instance.GetStationPosition(curType), status.serving, moveResult);
 
         if (curTask.Customer == null || !moveResult.Success)
         {

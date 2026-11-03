@@ -265,6 +265,8 @@ public static class DayLoopUI
     {
         Image image = Panel(parent, background, name);
         Button button = image.gameObject.AddComponent<Button>();
+        // 꺼진 부모 아래에서 만들면 Awake가 미뤄져 targetGraphic(= button.image)이 비어 있으므로 직접 연결한다.
+        button.targetGraphic = image;
         ColorBlock colors = button.colors;
         colors.highlightedColor = new Color(0.94f, 0.94f, 0.94f);
         colors.pressedColor = new Color(0.82f, 0.82f, 0.82f);
