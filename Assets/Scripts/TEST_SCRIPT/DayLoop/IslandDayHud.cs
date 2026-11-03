@@ -10,7 +10,7 @@ using UnityEngine.UI;
 ///  - 왼쪽 위 하루 명판: 일차, 하루 흐름(아침 → 영업 → 밤) 중 지금 단계, 보유 골드·식당 평점·레벨, 미션 진행
 ///  - 섬 건물 버튼(레스토랑·실험실·집)에 들를 이유가 있을 때만 작은 배지를 붙인다. (버튼 자체는 그대로)
 ///  - 레스토랑을 누르면 오늘의 메뉴·직원·재료 부족을 보여 주는 식당 카드를 띄운다.
-///  - 첫날 할 일은 FirstDayTutorial이 이 화면의 [관리]·[영업 준비]·[집] 버튼을 짚어 안내한다.
+///  - 첫날 할 일은 GameTutorial이 이 화면의 [관리]·[영업 준비]·[집] 버튼을 짚어 안내한다.
 ///  - 결산을 확정한 뒤 결산 화면을 닫기 전에 종료했다면, 이어하기 때 저장된 결산을 한 번 더 보여 준다.
 ///    (값은 저장된 스냅샷 그대로이며 매출을 다시 지급하지 않는다)
 /// </summary>
@@ -22,6 +22,7 @@ public partial class IslandDayHud : MonoBehaviour
     private Button _prepareAction;
     private TMP_Text _day, _stats, _mission;
     private Image _missionBar;
+    private Button _missionClaim;
     private readonly Image[] _stepDots = new Image[3];
     private readonly TMP_Text[] _stepLabels = new TMP_Text[3];
     private readonly Dictionary<string, TMP_Text> _badges = new Dictionary<string, TMP_Text>();
@@ -101,6 +102,15 @@ public partial class IslandDayHud : MonoBehaviour
         _stats = DayLoopUI.Text(status.transform, "", 23, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
         DayLoopUI.Layout(_stats, preferredHeight: 32);
         var mission = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Mission");
+        // 미션을 채우면 카드를 눌러 바로 보상을 받는다.
+        _missionClaim = mission.gameObject.AddComponent<Button>();
+        _missionClaim.targetGraphic = mission;
+        ColorBlock claimColors = _missionClaim.colors;
+        claimColors.highlightedColor = new Color(0.94f, 0.94f, 0.94f);
+        claimColors.pressedColor = new Color(0.82f, 0.82f, 0.82f);
+        claimColors.disabledColor = Color.white;   // 진행 중일 때는 평범한 카드로 보인다
+        _missionClaim.colors = claimColors;
+        _missionClaim.onClick.AddListener(ClaimMission);
         DayLoopUI.Layout(mission, preferredHeight: 130.5f);
         DayLoopUI.Vertical(mission, 16, 10);
         _mission = DayLoopUI.Text(mission.transform, "", 21, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
@@ -176,10 +186,15 @@ public partial class IslandDayHud : MonoBehaviour
                 stats += $" <color={DayLoopUI.Hex(DayLoopUI.Kit.SeaDeep)}>→ {GameSession.Current.progression.pendingRestaurantLevel} 공사 중</color>";
 
             RestaurantManagementUI.Mission(GameSession.Current, out string missionName, out int target);
-            int progress = GameSession.Current.progression.missionProgress;
-            _mission.text = $"오늘의 할 일\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>";
+            int progress = RestaurantManagementUI.MissionProgress(GameSession.Current);
+            bool done = progress >= target;
+            int reward = 200 + GameSession.Current.progression.missionIndex * 100;
+            _mission.text = done
+                ? $"미션 완료! <color={DayLoopUI.Hex(DayLoopUI.Kit.GoldInk)}>눌러서 {DayLoopUI.Gold(reward)} 받기</color>\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>"
+                : $"미션\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>";
             DayLoopUI.SetBar(_missionBar, target > 0 ? (float)progress / target : 0f);
-            _missionBar.color = progress >= target ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea;
+            _missionBar.color = done ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea;
+            _missionClaim.interactable = done;
         }
         _mission.transform.parent.gameObject.SetActive(GameSession.IsActive);
         _stats.text = stats;
@@ -187,6 +202,12 @@ public partial class IslandDayHud : MonoBehaviour
         if (GameSession.IsActive && _prepareAction != null)
             DayLoopUI.SetButtonLabel(_prepareAction, $"영업 준비\n<size=65%>메뉴 {GameSession.Current.menuSlots.Count(x => x >= 0)}개 · 직원 {GameSession.Current.employees.Count}명 · {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석</size>");
         RefreshBadges();
+    }
+
+    private void ClaimMission()
+    {
+        if (!RestaurantProgress.TryClaimMission(out string error)) { _mission.text = error; return; }
+        Refresh();
     }
 
     // ───── 건물 배지 ─────

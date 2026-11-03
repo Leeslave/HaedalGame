@@ -64,7 +64,7 @@ public class RestaurantRatingManager : MonoBehaviour, ISaveParticipant
         UpdateRestaurantStatsStub();
     }
 
-    // 현재 식당 레벨의 RecipeGradeMax를 기준으로 한 기대치. (기대치 = 상한 등급 - 1)
+    // 현재 식당 레벨의 RecipeGradeMax를 기준으로 한 기대치. (기대치 = 상한 등급 - 2, RestaurantRules.Expectation과 같다)
     public int CurrentExpectation
     {
         get
@@ -77,7 +77,7 @@ public class RestaurantRatingManager : MonoBehaviour, ISaveParticipant
 
             if (_levelTable != null && _levelTable.TryGetEntry(level, out RestaurantLevelEntry entry))
             {
-                return Mathf.Max(0, RatingSystem.GradeToInt(entry.RecipeGradeMax) - 1);
+                return Mathf.Max(0, RatingSystem.GradeToInt(entry.RecipeGradeMax) - 2);
             }
 
             return 0;

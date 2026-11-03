@@ -25,6 +25,9 @@ public class TitleMenuController : MonoBehaviour
     [Tooltip("비우면 인트로 없이 바로 첫 체크포인트를 저장한다 (테스트용)")]
     [SerializeField] private IntroController _intro;
 
+    /// <summary>다음에 타이틀이 열리면 새로하기를 바로 누른 것처럼 시작한다. (폐업 화면의 새 게임 시작)</summary>
+    public static bool OpenNewGameOnStart;
+
     private bool _busy;
     private ReferenceTitleView _designView;
 
@@ -91,6 +94,12 @@ public class TitleMenuController : MonoBehaviour
         }
         _designView = ReferenceTitleView.Create(gameObject.scene, OnClickContinue, OnClickNewGame, OnClickSettings, OnClickQuit);
         _designView.RefreshSave();
+
+        if (OpenNewGameOnStart)
+        {
+            OpenNewGameOnStart = false;
+            OnClickNewGame();
+        }
     }
 
     private void RefreshContinue() => _designView?.RefreshSave();

@@ -90,6 +90,7 @@ public static partial class RestaurantProgress
         return TrySetMenus(ids, out error);
     }
     public static bool TryBuyTool(int id, out string error) => Change(s => {
+        if (!s.progression.firstToolChosen && id != FirstToolPicker.StartingToolId) return "첫 조리도구는 프라이팬을 무료로 받아요.";
         if (id < 201 || id > 204 || s.progression.tools.Contains(id)) return "이미 보유한 도구예요.";
         if (s.progression.tools.Count >= Mathf.Min(4, s.restaurantLevel)) return "식당 레벨이 오르면 다음 도구를 선택할 수 있어요.";
         // 첫 도구는 기본 메뉴가 있어야 첫날 영업을 할 수 있다. (튀김기는 기본 메뉴가 없어 연구가 필요)
@@ -149,6 +150,9 @@ public static partial class RestaurantProgress
         var p = GameSession.Current.progression;
         if (p.missionIndex % 3 == 0) p.missionProgress++;
         if (p.missionIndex % 3 == 1) p.missionProgress += amount;
+        // 목표를 채우면 보상을 받을 때까지 더 쌓지 않는다.
+        RestaurantManagementUI.Mission(GameSession.Current, out _, out int target);
+        p.missionProgress = Mathf.Min(p.missionProgress, target);
     }
     public static bool TryClaimMission(out string error) => Change(s => {
         int type = s.progression.missionIndex % 3;
@@ -210,6 +214,28 @@ public static partial class RestaurantProgress
         s.progression.blueprints.Add(id); return null;
     }, out error);
     public static bool CanResearch => CanManage && GameSession.Current.progression.freeTime;
+    public const int TutorialResearchRecipeId = 7; // 고등어 구이 · 프라이팬
+    public const string ResearchGiftId = "Tutorial.FreeTime.ResearchGift";
+
+    /// <summary>첫 연구 안내용 설계도와 부족한 연구 재료를 한 번만 지급한다. 해금은 실습 성공으로 처리한다.</summary>
+    public static bool TryPrepareTutorialResearch(out string error) => Change(s => {
+        if (!s.progression.freeTime) return "연구실은 영업을 마친 자유시간에 이용할 수 있어요.";
+        if (!GameDatabase.TryGetRecipe(TutorialResearchRecipeId, out var recipe) || RecipeResearchPlan.Find(recipe.RecipeId) == null)
+            return "튜토리얼 요리의 연구 과정이 준비되지 않았어요.";
+        if (s.HasTutorialCompleted(ResearchGiftId) || s.unlockedRecipeIds.Contains(recipe.RecipeId)) return null;
+        if (!s.progression.blueprints.Contains(recipe.RecipeId)) s.progression.blueprints.Add(recipe.RecipeId);
+        EnsureGrades(s);
+        if (!s.progression.research.Any(x => x.recipeId == recipe.RecipeId))
+            foreach (var group in RecipeResearchPlan.Requirements(recipe).GroupBy(x => x.IngredientId))
+            {
+                int owned = s.progression.ingredientGrades.Where(x => x.ingredientId == group.Key).Sum(x => x.amount);
+                int missing = group.Sum(x => x.Amount) - owned;
+                if (missing > 0) AddIngredient(s, group.Key, 0, missing);
+            }
+        GameSaveData.AddUnique(s.completedTutorialIds, ResearchGiftId);
+        return null;
+    }, out error);
+
     public static bool TryStartResearch(int id, out string error) => Change(s => {
         if (!s.progression.freeTime) return "연구실은 영업을 마친 자유시간에 이용할 수 있어요.";
         if (!GameDatabase.TryGetRecipe(id, out var r) || !s.progression.blueprints.Contains(id)) return "먼저 레시피 설계도를 구매하세요.";

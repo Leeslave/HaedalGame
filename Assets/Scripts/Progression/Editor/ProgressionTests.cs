@@ -22,6 +22,45 @@ public class ProgressionTests
         GameSession.End(); GameSession.Unregister(inventory); Object.DestroyImmediate(inventoryObject);
     }
     private static RecipeData Recipe(params RecipeIngredientRequirement[] requirements) => new RecipeData(999, "Test", 101, 201, 1, "", new List<RecipeIngredientRequirement>(requirements), null);
+    [TestCase(202)]
+    [TestCase(203)]
+    [TestCase(204)]
+    public void FirstTool_IsAlwaysFreeFryingPan(int otherTool)
+    {
+        string before = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        Assert.IsFalse(RestaurantProgress.TryBuyTool(otherTool, out _));
+        Assert.AreEqual(before, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+        int gold = RestaurantProgress.Gold(GameSession.Current);
+        Assert.IsTrue(RestaurantProgress.TryBuyTool(201, out string error), error);
+        CollectionAssert.AreEqual(new[] { 201 }, GameSession.Current.progression.tools);
+        Assert.AreEqual(gold, RestaurantProgress.Gold(GameSession.Current));
+        Assert.IsFalse(RestaurantProgress.TryBuyTool(otherTool, out _)); // 다음 도구는 여전히 레벨 제한을 따른다.
+    }
+
+    [Test] public void TutorialResearch_GiftIsOnce_AndRequiresSuccessfulPracticeToUnlock()
+    {
+        int id = RestaurantProgress.TutorialResearchRecipeId;
+        Assert.IsTrue(GameDatabase.TryGetRecipe(id, out var recipe));
+        Assert.AreEqual(201, recipe.ClassId);
+        Assert.IsFalse(recipe.DefaultUnlock);
+        Assert.IsTrue(RestaurantProgress.TryBuyTool(201, out _));
+        foreach (var req in RecipeResearchPlan.Requirements(recipe))
+            if (!IngredientInventoryService.IsUnlimited(req.IngredientId)) inventory.SetCount(req.IngredientId, 0);
+        Assert.IsTrue(RestaurantProgress.TryPrepareTutorialResearch(out string error), error);
+        Assert.Contains(id, GameSession.Current.progression.blueprints);
+        Assert.IsFalse(GameSession.Current.unlockedRecipeIds.Contains(id));
+        string gifted = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        Assert.IsTrue(RestaurantProgress.TryPrepareTutorialResearch(out error), error);
+        Assert.AreEqual(gifted, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+        Assert.IsTrue(RestaurantProgress.TryStartResearch(id, out error), error);
+        string reserved = JsonUtility.ToJson(GameSession.CaptureSnapshot());
+        Assert.IsFalse(RestaurantProgress.TryCompleteResearch(id, 3.99f, out _));
+        Assert.AreEqual(reserved, JsonUtility.ToJson(GameSession.CaptureSnapshot()));
+        Assert.IsTrue(RestaurantProgress.TryCompleteResearch(id, 4f, out error), error);
+        Assert.Contains(id, GameSession.Current.unlockedRecipeIds);
+        Assert.IsFalse(GameSession.Current.progression.research.Any(x => x.recipeId == id));
+    }
+
     [Test] public void RepeatedIngredientRequirements_CannotPartiallyConsume()
     {
         inventory.SetCount(1, 3);

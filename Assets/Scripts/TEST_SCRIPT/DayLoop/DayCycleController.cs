@@ -44,6 +44,7 @@ public class DayCycleController : MonoBehaviour
     private RestaurantGameManager _rgm;
     private RestaurantHud _hud;
     private SettlementPanel _settlement;
+    private ClosurePanel _closure;
     private readonly List<ServerAgent> _servers = new List<ServerAgent>();
     private bool _settling;
     private bool _committed;
@@ -75,6 +76,7 @@ public class DayCycleController : MonoBehaviour
         Instance = this;
         _hud = gameObject.AddComponent<RestaurantHud>();
         _settlement = gameObject.AddComponent<SettlementPanel>();
+        _closure = gameObject.AddComponent<ClosurePanel>();
         gameObject.AddComponent<RestaurantCameraFramer>();
         // 바다 식당 배치도는 씬 오브젝트들의 Start(테이블 불러오기·웨이팅 등록·직원 배치)보다 먼저 깔려야 한다.
         _layout = gameObject.AddComponent<SeaRestaurantLayout>();
@@ -338,7 +340,9 @@ public class DayCycleController : MonoBehaviour
         GameFlow.SetPhase(GamePhase.ClosingReport);
         SetPhase(DayLoopPhase.Settlement);
 
-        _settlement.Show(_record, "섬에서 쉬기", GoToNextDay, CommitSettlement);
+        // 확정된 식당 평점이 폐업 기준보다 낮으면 결산 다음에 섬 대신 폐업 카드로 넘어간다.
+        bool closing = rating != null && ClosurePanel.IsClosure(_record.totalRating, ClosureThreshold);
+        _settlement.Show(_record, closing ? "결과 보기" : "섬에서 쉬기", closing ? ShowClosure : GoToNextDay, CommitSettlement);
         CommitSettlement();
 
         // 당일 집계와 작업 배정만 초기화한다. (골드·가구·직원·해금은 그대로)
@@ -359,6 +363,22 @@ public class DayCycleController : MonoBehaviour
         {
             _settlement.SetSaveState(SettlementPanel.SaveState.Failed, error);
         }
+    }
+
+    private float ClosureThreshold => RatingWarningUI.Threshold(GameSession.IsActive ? GameSession.Current.restaurantLevel : 1);
+
+    private void ShowClosure()
+    {
+        if (!_committed) return;
+        _settlement.Hide();
+        _closure.Show(_record.day, _record.totalRating, ClosureThreshold, _record.goldAtClose, GameFlow.ReturnToTitle, StartOver);
+    }
+
+    // 타이틀로 돌아가 새 게임 확인 창을 바로 연다.
+    private static void StartOver()
+    {
+        TitleMenuController.OpenNewGameOnStart = true;
+        GameFlow.ReturnToTitle();
     }
 
     private void GoToNextDay()

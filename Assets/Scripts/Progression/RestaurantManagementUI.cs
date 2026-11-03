@@ -566,9 +566,10 @@ public partial class RestaurantManagementUI : MonoBehaviour
         DayLoopUI.Horizontal(progressRow, 0, 10);
         DayLoopUI.Layout(progressRow, preferredHeight: 30);
         DayLoopUI.Layout(DayLoopUI.Text(progressRow, "진행", 21, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), flexibleWidth: 1);
-        bool done = s.progression.missionProgress >= target;
-        DayLoopUI.Layout(DayLoopUI.Text(progressRow, $"{s.progression.missionProgress:N0} / {target:N0}", 22, done ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 220);
-        var bar = DayLoopUI.Bar(mission, target > 0 ? (float)s.progression.missionProgress / target : 0f, done ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea);
+        int progress = MissionProgress(s);
+        bool done = progress >= target;
+        DayLoopUI.Layout(DayLoopUI.Text(progressRow, $"{progress:N0} / {target:N0}", 22, done ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 220);
+        var bar = DayLoopUI.Bar(mission, target > 0 ? (float)progress / target : 0f, done ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea);
         DayLoopUI.Layout(bar.transform.parent, preferredHeight: 16);
         DayLoopUI.Spacer(mission);
         var claim = DayLoopUI.KitButton(mission, $"보상 받기 · {200 + s.progression.missionIndex * 100:N0}G", done ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand, done ? Color.white : DayLoopUI.Kit.InkSoft, 23, () => Run(RestaurantProgress.TryClaimMission), "Claim");
@@ -629,6 +630,13 @@ public partial class RestaurantManagementUI : MonoBehaviour
         int type = s.progression.missionIndex % 3;
         name = new[] { "손님 대접", "매출 달성", "새 요리 연구" }[type];
         target = type == 1 ? RestaurantProgress.MissionTarget * 100 : type == 2 ? 1 : RestaurantProgress.MissionTarget;
+    }
+
+    /// <summary>표시용 미션 진행도. 목표를 넘겨 쌓인 이전 세이브도 목표에서 멈춰 보인다.</summary>
+    public static int MissionProgress(GameSaveData s)
+    {
+        Mission(s, out _, out int target);
+        return Mathf.Min(s.progression.missionProgress, target);
     }
 
     private static RectTransform HouseCard(Transform parent, string heading)
