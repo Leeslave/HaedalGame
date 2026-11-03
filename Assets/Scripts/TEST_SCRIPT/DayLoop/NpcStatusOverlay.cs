@@ -67,7 +67,8 @@ public class NpcStatusOverlay : MonoBehaviour
 
         // 월드용 둥근 칩: 같은 텍스처를 작은 유닛 크기로 다시 자른다.
         Sprite ui = DayLoopUI.Rounded;
-        _chipSprite = Sprite.Create(ui.texture, ui.rect, new Vector2(0.5f, 0.5f), 160f, 0, SpriteMeshType.FullRect, ui.border);
+        // 예전 48px 텍스처를 PPU 160으로 쓰던 크기를 유지한다.
+        _chipSprite = Sprite.Create(ui.texture, ui.rect, new Vector2(0.5f, 0.5f), 160f * ui.rect.width / 48f, 0, SpriteMeshType.FullRect, ui.border);
 
         CustomerAgent.OnAnySpawned += HandleSpawned;
         _day.Ledger.OnPayment += HandlePayment;
