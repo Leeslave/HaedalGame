@@ -142,11 +142,12 @@ public static class FirstToolPicker
             if (selected) { var outline = tile.GetComponent<Outline>(); outline.effectColor = DayLoopUI.Kit.Sea; outline.effectDistance = new Vector2(4, -4); }
             DayLoopUI.Layout(tile, flexibleWidth: 1, preferredHeight: 170);
 
-            var icon = ReferenceTitleView.Picture(tile.transform, "Icon" + Icons[i]);
-            icon.color = available ? DayLoopUI.Kit.Line : DayLoopUI.Kit.InkSoft; icon.preserveAspect = true;
-            DayLoopUI.Place(icon.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -20), new Vector2(92, 92));
+            // 도구 그림(Docs/build_tool_illustrations.py). 고를 수 없는 도구는 흐리게 둔다.
+            var icon = ReferenceTitleView.Picture(tile.transform, "Tool" + Icons[i]);
+            icon.color = available ? Color.white : new Color(1f, 1f, 1f, .45f); icon.preserveAspect = true;
+            DayLoopUI.Place(icon.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -12), new Vector2(112, 112));
             var label = DayLoopUI.Text(tile.transform, Names[i], 25, available ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
-            DayLoopUI.Place(label.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 14), new Vector2(170, 36));
+            DayLoopUI.Place(label.rectTransform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(0, 10), new Vector2(170, 36));
 
             if (selected) CornerBadge(tile.transform, "IconCheck", DayLoopUI.Kit.Sea);
             else if (!available)
@@ -174,9 +175,10 @@ public static class FirstToolPicker
         var plate = DayLoopUI.Panel(panel.transform, DayLoopUI.Kit.Sand, "Plate");
         plate.sprite = DayLoopUI.Circle; plate.type = Image.Type.Simple; plate.raycastTarget = false;
         DayLoopUI.Layout(plate, preferredWidth: 148, preferredHeight: 148);
-        var art = ReferenceTitleView.Picture(plate.transform, "Icon" + Icons[index]);
-        art.color = DayLoopUI.Kit.Line; art.preserveAspect = true;
-        DayLoopUI.Place(art.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(104, 104));
+        // 그림이 접시보다 살짝 크게 걸치도록 둔다.
+        var art = ReferenceTitleView.Picture(plate.transform, "Tool" + Icons[index]);
+        art.preserveAspect = true;
+        DayLoopUI.Place(art.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(168, 168));
 
         var texts = DayLoopUI.Rect("Texts", panel.transform);
         DayLoopUI.Layout(texts, flexibleWidth: 1, preferredHeight: 152);

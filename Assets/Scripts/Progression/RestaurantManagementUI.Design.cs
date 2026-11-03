@@ -662,7 +662,7 @@ public partial class RestaurantManagementUI
         Copy(card.transform, heading, 48, 33); return card.rectTransform;
     }
 
-    private static readonly string[] ToolIcons = { "IconPan", "IconBoard", "IconFryer", "IconPot" };
+    private static readonly string[] ToolIcons = { "ToolPan", "ToolBoard", "ToolFryer", "ToolPot" };
 
     private void DesignedTools(GameSaveData s)
     {

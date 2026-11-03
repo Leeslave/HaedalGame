@@ -237,6 +237,8 @@ public static class DayLoopUI
             image.type = Image.Type.Sliced;
             // 모서리 반지름이 캔버스 기준 18이 되도록 맞춘다(48 * 100 / (128 * 100/48) = 18).
             image.pixelsPerUnitMultiplier = 100f / 48f;
+            // 얇은 게이지·작은 칩은 반지름을 짧은 변의 절반으로 줄여 끝이 반원이 되게 한다.
+            rt.gameObject.AddComponent<RoundedCorner>();
         }
         return image;
     }
