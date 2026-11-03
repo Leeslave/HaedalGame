@@ -23,7 +23,7 @@ using UnityEngine.UI;
 ///  미션 보상 (2일차~, 미션을 채우고 아직 보상을 받지 않았을 때) 섬 화면 미션 카드를 눌러 받기
 ///  주급 날 (5일차~, 직원이 있고 주급날이 이틀 안으로 다가왔을 때) 7일마다 잠들 때 주급이 나간다는 안내
 ///  평점과 폐업 (2일차~ 결산) 식당 평점이 무엇이고 폐업 기준이 얼마인지
-///  자유시간 (2일차~, 영업을 마친 뒤 섬) 지도 [연구소] → 새 요리 배우는 순서 → 선착장(주민·탐험)
+///  자유시간 (2일차~, 영업을 마친 뒤 섬) 지도 [연구소] → 고등어 구이 설계도·재료 받기 → 연구·실습 성공 → 해금 확인 → 선착장
 ///  식당 키우기 (3일차~, 영업 전 섬) 관리 > 직원(고용·배치) → 관리 > 가구 배치(테이블 사서 놓기)
 ///  식당 증축 (8일차~, 섬) 지도 [대장간] → 식당 레벨과 조리도구 강화
 /// 짚는 곳이 지도 표식인데 관리 창이 열려 있거나 식당에 있으면, 창 안에서 바로 열 수 있게 버튼으로 묻는다.
@@ -47,7 +47,7 @@ public class GameTutorial : MonoBehaviour
         MissionClaim,
         PayrollNotice,
         RatingExplain,
-        FreeLab, FreeResearch, FreeDock,
+        FreeLab, FreeResearch, FreeResearchDone, FreeDock,
         GrowthStaff, GrowthFurniture,
         ExpandForge, ExpandLevel,
     }
@@ -84,6 +84,7 @@ public class GameTutorial : MonoBehaviour
     private Button _watchedStart;
     private float _startCheckAt;
     private bool _startRefused;
+    private string _researchError;
 
     // ───── 설치 ─────
 
@@ -165,7 +166,7 @@ public class GameTutorial : MonoBehaviour
         Step.MissionClaim => Lesson.Mission,
         Step.PayrollNotice => Lesson.Payroll,
         Step.RatingExplain => Lesson.Rating,
-        Step.FreeLab or Step.FreeResearch or Step.FreeDock => Lesson.FreeTime,
+        Step.FreeLab or Step.FreeResearch or Step.FreeResearchDone or Step.FreeDock => Lesson.FreeTime,
         Step.GrowthStaff or Step.GrowthFurniture => Lesson.Growth,
         Step.ExpandForge or Step.ExpandLevel => Lesson.Expansion,
         _ => Lesson.None,
@@ -249,7 +250,9 @@ public class GameTutorial : MonoBehaviour
     private Step FreeTimeStep()
     {
         if (!OnIsland || !GameSession.OperationCompletedToday) return Step.None;
-        if (!_read.Contains(Step.FreeResearch)) return RestaurantManagementUI.OpenTab == "연구" ? Step.FreeResearch : Step.FreeLab;
+        if (!GameSession.Current.unlockedRecipeIds.Contains(RestaurantProgress.TutorialResearchRecipeId))
+            return RestaurantManagementUI.OpenTab == "연구" || Find("Restaurant management", "ResearchPractice") != null ? Step.FreeResearch : Step.FreeLab;
+        if (!_read.Contains(Step.FreeResearchDone)) return Step.FreeResearchDone;
         return Step.FreeDock;
     }
 
@@ -280,9 +283,10 @@ public class GameTutorial : MonoBehaviour
         Step.RestockShop => (1, 3),
         Step.RestockBuy => (2, 3),
         Step.RestockDone => (3, 3),
-        Step.FreeLab => (1, 3),
-        Step.FreeResearch => (2, 3),
-        Step.FreeDock => (3, 3),
+        Step.FreeLab => (1, 4),
+        Step.FreeResearch => (2, 4),
+        Step.FreeResearchDone => (3, 4),
+        Step.FreeDock => (4, 4),
         Step.GrowthStaff => (1, 2),
         Step.GrowthFurniture => (2, 2),
         Step.ExpandForge => (1, 2),
@@ -301,9 +305,9 @@ public class GameTutorial : MonoBehaviour
 
             case Step.ReceiveTool:
                 if (FirstToolPicker.IsOpen)
-                    return Target("첫 조리도구 받기", "처음 도구 하나는 무료예요. 마음에 드는 도구를 고르고 아래 [무료로 받기]를 눌러요.\n그 도구로 만드는 기본 메뉴가 함께 생겨요.",
+                    return Target("첫 조리도구 받기", "프라이팬으로 첫 영업을 시작해요. 아래 [프라이팬 무료로 받기]를 눌러요.\n기본 구이 메뉴가 함께 생기고, 연구소에서 새 프라이팬 요리도 개발할 수 있어요.",
                         Find("[FirstTool] Picker", "Card"), "picker");
-                return Ask("첫 조리도구 받기", "아직 첫 조리도구를 받지 않았어요. 도구가 있어야 요리를 팔 수 있어요.", "도구 고르기",
+                return Ask("첫 조리도구 받기", "아직 프라이팬을 받지 않았어요. 도구가 있어야 요리를 팔 수 있어요.", "프라이팬 받기",
                     () => FirstToolPicker.Show(_scene, OpenMenu));
 
             case Step.ChooseMenu:
@@ -398,11 +402,29 @@ public class GameTutorial : MonoBehaviour
             }
 
             case Step.FreeLab:
-                return MapOrAsk("자유시간", "영업을 마치면 잠들기 전까지 자유시간이에요.\n연구소에서 새 요리를 배울 수 있어요.", "연구소", "연구소 열기", "연구");
+                return MapOrAsk("자유시간", "영업을 마치면 잠들기 전까지 자유시간이에요.\n연구소에서 프라이팬으로 만드는 '고등어 구이'를 직접 개발해 봐요.", "연구소", "연구소 열기", "연구");
 
             case Step.FreeResearch:
-                return Explain("새 요리 배우기", "새 요리는 설계도 → 재료 예약 → 며칠 뒤 실습 순서로 배워요. 실습 평균이 4점 이상이면 메뉴에 올릴 수 있어요.\n설계도는 여기서 사거나, 주민의 음식 부탁을 들어주면 받아요.",
-                    "다음", () => _read.Add(Step.FreeResearch));
+                // 실습 중에는 안내가 조작 영역을 가리지 않도록 숨긴다. 성공 전에는 다음 단계로 넘어가지 않는다.
+                if (Find("Restaurant management", "ResearchPractice") != null) return null;
+                if (!GameSession.Current.HasTutorialCompleted(RestaurantProgress.ResearchGiftId) &&
+                    !GameSession.Current.progression.research.Any(x => x.recipeId == RestaurantProgress.TutorialResearchRecipeId))
+                    return Ask("첫 프라이팬 요리 연구", "'고등어 구이'를 개발해 봐요.\n설계도와 부족한 연구 재료를 한 번 제공해요. 재료를 예약한 뒤 바로 실습할 수 있어요." + (string.IsNullOrEmpty(_researchError) ? "" : "\n" + _researchError),
+                        "설계도 · 재료 받기", PrepareResearch);
+                if (RestaurantManagementUI.SelectedResearchRecipeId != RestaurantProgress.TutorialResearchRecipeId)
+                    return Ask("고등어 구이 연구", "프라이팬으로 만드는 '고등어 구이'를 선택해요.", "고등어 구이 열기",
+                        () => RestaurantManagementUI.OpenResearch(RestaurantProgress.TutorialResearchRecipeId));
+                if (!GameSession.Current.progression.blueprints.Contains(RestaurantProgress.TutorialResearchRecipeId))
+                    return Target("설계도 받기", "연구를 취소하면 설계도도 반납돼요. 다시 설계도를 사서 연구를 이어가요.", FindButton("Restaurant management", "설계도 사기"), "blueprint");
+                bool reserved = GameSession.Current.progression.research.Any(x => x.recipeId == RestaurantProgress.TutorialResearchRecipeId);
+                return Target(reserved ? "고등어 구이 실습" : "연구 재료 예약",
+                    reserved ? "[실습 시작]을 눌러 소금으로 염지하고 프라이팬에 구워 봐요.\n평균 4점 이상이면 메뉴가 해금돼요. 실패해도 예약한 재료로 다시 도전할 수 있어요."
+                        : "[재료 예약 · 연구 시작]을 눌러 고등어 구이의 연구 재료를 예약해요.",
+                    FindButton("Restaurant management", reserved ? "실습 시작" : "재료 예약 · 연구 시작"), reserved ? "practice" : "reserve");
+
+            case Step.FreeResearchDone:
+                return Ask("고등어 구이 개발 완료!", "실습에 성공해 프라이팬 메뉴 '고등어 구이'가 해금됐어요!\n관리 > 메뉴에서 오늘의 메뉴에 등록하면 다음 영업부터 팔 수 있어요.",
+                    "다음", () => _read.Add(Step.FreeResearchDone));
 
             case Step.FreeDock:
                 if (ManagementOpen)
@@ -466,6 +488,13 @@ public class GameTutorial : MonoBehaviour
         => new Hint { key = title + "?", title = title, body = body, action = action, run = run };
 
     private static void OpenMenu() => RestaurantManagementUI.OpenSection("메뉴");
+
+    private void PrepareResearch()
+    {
+        if (RestaurantProgress.TryPrepareTutorialResearch(out string error))
+            RestaurantManagementUI.OpenResearch(RestaurantProgress.TutorialResearchRecipeId);
+        else { _researchError = error; _shownKey = null; }
+    }
 
     /// <summary>오늘 메뉴 중 재료가 가장 적게 남은 메뉴. 메뉴가 없으면 null.</summary>
     private static RecipeData LowestMenu(out int portions)

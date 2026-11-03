@@ -21,6 +21,24 @@ public partial class RestaurantManagementUI
         if (ui != null) ui.Open(section);
     }
 
+    public static void OpenResearch(int recipeId)
+    {
+        var ui = FindFirstObjectByType<RestaurantManagementUI>();
+        if (ui == null) return;
+        ui.Open("연구");
+        ui.selectedId = recipeId;
+        ui.Refresh();
+    }
+
+    public static int SelectedResearchRecipeId
+    {
+        get
+        {
+            var ui = FindFirstObjectByType<RestaurantManagementUI>();
+            return OpenTab == "연구" && ui != null ? ui.selectedId : -1;
+        }
+    }
+
     /// <summary>지금 열려 있는 관리 탭. 창이 닫혀 있으면 null.</summary>
     public static string OpenTab
     {
@@ -478,8 +496,9 @@ public partial class RestaurantManagementUI
         if (selected == null) { Copy(detail, "이 분류에 연구가 없어요.", 80); return; }
         selectedId = selected.RecipeId; int recipeId = selectedId;
         DetailIcon(detail, selected); Copy(detail, selected.RecipeName, 48, 30);
-        Copy(detail, "실습 6단계", 34, 23);
-        Copy(detail, "1 씻기  2 손질  3 재료 섞기\n4 성형  5 가열  6 담기", 68, 22);
+        var plan = RecipeResearchPlan.Find(selected.RecipeId);
+        Copy(detail, plan != null ? $"실습 {plan.steps.Length}단계" : "연구 과정 준비 중", 34, 23);
+        if (plan != null) Copy(detail, string.Join("\n", plan.steps.Select((step, index) => $"{index + 1} {step.text}")), Mathf.Max(68, plan.steps.Length * 30), 22);
         Copy(detail, "실습 평균 4점 이상이면 메뉴가 해금돼요.", 70, 22, DayLoopUI.Kit.InkSoft);
         RecipeRequirements(detail, selected);
         DayLoopUI.Spacer(detail);
@@ -693,7 +712,7 @@ public partial class RestaurantManagementUI
         {
             int id = i;
             var definition = CookwareRules.Definition(id);
-            string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? "미보유 · 500G" : "첫 도구 무료";
+            string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? "미보유 · 500G" : id == FirstToolPicker.StartingToolId ? "첫 도구 무료" : "프라이팬을 먼저 받아요";
             SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load(ToolIcons[id - 201]));
         }
         selectedId = Mathf.Clamp(selectedId, 201, 204); int toolId = selectedId;
@@ -717,7 +736,8 @@ public partial class RestaurantManagementUI
             }
         }
         DayLoopUI.Spacer(detail);
-        if (!owned) DetailAction(detail, s.progression.firstToolChosen ? "도구 구매 · 500G" : "첫 도구 선택 · 무료", () => Run((out string error) => RestaurantProgress.TryBuyTool(toolId, out error)), true);
+        if (!owned) DetailAction(detail, s.progression.firstToolChosen ? "도구 구매 · 500G" : toolId == FirstToolPicker.StartingToolId ? "프라이팬 무료로 받기" : "프라이팬을 먼저 받아요",
+            () => Run((out string error) => RestaurantProgress.TryBuyTool(toolId, out error)), true, s.progression.firstToolChosen || toolId == FirstToolPicker.StartingToolId);
         else DetailAction(detail, "강화하기", () => Run((out string error) => RestaurantProgress.TryUpgradeTool(toolId, out error)), true, tool != null && currentLevel < tool.MaxLevel);
         DetailAction(detail, "식당 증축 보기", () => Open("대장간"));
     }

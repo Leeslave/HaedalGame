@@ -6,21 +6,18 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 첫 조리도구 선택 창. (첫 플레이 UI 개선안 03)
-/// 설명은 위(안내 띠), 선택은 가운데(도구 4칸 + 상세), 실행은 아래(받기 버튼 하나)에 둔다.
+/// 첫 조리도구 지급 창. 프라이팬으로 시작해 연구실 안내까지 이어진다.
 /// 관리 창을 자동으로 여는 대신 이 창 하나만 띄워 첫 행동을 안내한다.
 /// </summary>
 public static class FirstToolPicker
 {
-    private static readonly int[] ToolIds = { 201, 202, 203, 204 };
-    private static readonly string[] Names = { "프라이팬", "도마", "튀김기", "냄비" };
-    private static readonly string[] Icons = { "Pan", "Board", "Fryer", "Pot" };
+    public const int StartingToolId = 201;
+    private static readonly int[] ToolIds = { StartingToolId };
+    private static readonly string[] Names = { "프라이팬" };
+    private static readonly string[] Icons = { "Pan" };
     private static readonly string[] Uses =
     {
         "굽고 볶는 요리를 만들 때 사용해요.",
-        "회처럼 썰어 내는 요리를 만들 때 사용해요.",
-        "바삭한 튀김 요리를 만들 때 사용해요.",
-        "찜이나 탕처럼 끓이는 요리를 만들 때 사용해요.",
     };
 
     private static Canvas _canvas;
@@ -107,7 +104,7 @@ public static class FirstToolPicker
         var header = DayLoopUI.Rect("Header", card);
         DayLoopUI.Layout(header, preferredHeight: 66);
         DayLoopUI.Horizontal(header, 0, 12);
-        var title = DayLoopUI.Text(header, "첫 조리도구 선택", 45, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        var title = DayLoopUI.Text(header, "첫 조리도구 · 프라이팬", 45, DayLoopUI.Kit.Line, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         DayLoopUI.Layout(title, flexibleWidth: 1, preferredHeight: 64);
         IconButton(header, "Close", Close);
     }
@@ -122,7 +119,7 @@ public static class FirstToolPicker
         var bulb = ReferenceTitleView.Picture(notice.transform, "IconIdea");
         bulb.color = DayLoopUI.Kit.SeaDeep; bulb.preserveAspect = true;
         DayLoopUI.Layout(bulb, preferredWidth: 54, preferredHeight: 54);
-        var text = DayLoopUI.Text(notice.transform, "처음에는 도구 1개를 무료로 받아요.\n받은 도구의 기본 메뉴가 오늘의 메뉴에 자동으로 올라가요.", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft);
+        var text = DayLoopUI.Text(notice.transform, "처음에는 프라이팬을 무료로 받아요.\n기본 구이 메뉴로 영업하고, 연구소에서 새 프라이팬 요리도 개발해 봐요.", 24, DayLoopUI.Kit.Ink, TextAlignmentOptions.MidlineLeft);
         text.lineSpacing = 12f;
         DayLoopUI.Layout(text, flexibleWidth: 1, preferredHeight: 80);
     }
