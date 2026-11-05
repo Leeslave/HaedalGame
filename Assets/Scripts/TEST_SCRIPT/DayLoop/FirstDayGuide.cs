@@ -108,13 +108,13 @@ public class FirstDayGuide : MonoBehaviour
         _guideBar.gameObject.SetActive(_guideActive || _sleepGuideActive);
     }
 
-    // 영업 중 안내 카드는 오른쪽, 직원 카드 바로 위에 둔다. (가운데 식탁·웨이팅석을 가리지 않게)
+    // 영업 중 안내 카드는 오른쪽 위 알약 줄 바로 아래에 둔다. (가운데 식탁·밧줄·웨이팅석을 가리지 않게)
     // 영업 HUD가 없을 때(준비·결산)는 예전처럼 왼쪽 띠 옆 아래에 둔다.
     private void PlaceGuideBar()
     {
         RestaurantHud hud = RestaurantHud.Current;
         if (hud != null && hud.IsShowing)
-            DayLoopUI.Place(_guideBar, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, Mathf.Max(32f, hud.StaffTrayTop + 16f)), new Vector2(620, 248));
+            DayLoopUI.Place(_guideBar, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -(hud.TopRightBottom + 16f)), new Vector2(620, 248));
         else
             DayLoopUI.Place(_guideBar, new Vector2(0, 0), Vector2.zero, new Vector2(454, 32), new Vector2(620, 248));
     }
