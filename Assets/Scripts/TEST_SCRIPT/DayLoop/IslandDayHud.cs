@@ -133,7 +133,7 @@ public partial class IslandDayHud : MonoBehaviour
     {
         string[] labels = { "식당", "집", "상점", "대장간", "연구소", "선착장 · 탐험" };
         string[] sections = { "", "집", "상점", "대장간", "연구", "주민" };
-        Vector2[] positions = { new Vector2(350, 470), new Vector2(692, 318), new Vector2(652, 178), new Vector2(1005, 96), new Vector2(1140, 104), new Vector2(1190, 336) };
+        Vector2[] positions = { new Vector2(350, 470), new Vector2(692, 318), new Vector2(652, 178), new Vector2(332, 150), new Vector2(1005, 96), new Vector2(1190, 336) };
         string[] icons = { "Shop", "House", "Bag", "Hammer", "Research", "Explore" };
         for (int i = 0; i < labels.Length; i++)
         {
