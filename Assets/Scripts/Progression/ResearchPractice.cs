@@ -271,7 +271,7 @@ public class ResearchPractice : MonoBehaviour
         if (transitioning || fill == null) return;
         if (Mode == 4)
         {
-            if (Kind == "Grill" || Kind == "Simmer") value = Mathf.Clamp01((Time.unscaledTime - started) * .1f);
+            if (Kind == "Grill" || Kind == "Simmer") value = Mathf.Clamp01((Time.unscaledTime - started) * (Kind == "Grill" ? .25f : .1f));
             else if (Kind == "Stir") value = Mathf.PingPong((Time.unscaledTime - lastHit) * .7f, 1);
             else
             {

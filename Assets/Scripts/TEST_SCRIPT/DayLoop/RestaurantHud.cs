@@ -23,8 +23,9 @@ public class RestaurantHud : MonoBehaviour
     private const float MenuSizeCompact = 64f;          // 메뉴가 두 줄일 때의 음식 크기 (카드가 손님 길에 닿지 않게)
     private const int MenuCollapsedCount = 2;           // 메뉴 카드를 접었을 때 남기는 메뉴 수 (슬롯 앞에서부터)
 
-    // 메뉴 카드 펼침 여부는 하루가 바뀌어도 유지한다.
-    private static bool s_menuExpanded = true;
+    // 대기석이 두 줄이면 메뉴 카드를 접어 통로를 더 보여 준다. 직접 펼치거나 접은 선택은 다음 날에도 유지한다.
+    private static bool? s_menuExpanded;
+    private static bool MenuExpanded => s_menuExpanded ?? (SeaRestaurantLayout.Instance?.HasSecondWaitingRow != true);
 
     // 캐주얼 시안 색 (Kit 색보다 밝은 파스텔)
     private static readonly Color Sky = new Color32(0x7C, 0xC8, 0xEE, 0xFF);
@@ -207,7 +208,7 @@ public class RestaurantHud : MonoBehaviour
             _menuRecipes.Clear();
             foreach (int id in slots)
                 if (GameDatabase.TryGetRecipe(id, out RecipeData recipe)) _menuRecipes.Add(recipe);
-            int shown = s_menuExpanded ? _menuRecipes.Count : Mathf.Min(MenuCollapsedCount, _menuRecipes.Count);
+            int shown = MenuExpanded ? _menuRecipes.Count : Mathf.Min(MenuCollapsedCount, _menuRecipes.Count);
             bool twoRows = shown > MenuPerRow;
             float size = twoRows ? MenuSizeCompact : MenuSize;
             _menuGrid.cellSize = new Vector2(size, size);
@@ -253,7 +254,7 @@ public class RestaurantHud : MonoBehaviour
 
     private void ToggleMenu()
     {
-        s_menuExpanded = !s_menuExpanded;
+        s_menuExpanded = !MenuExpanded;
         _menuIds.Clear();   // 메뉴 구성이 바뀐 것으로 쳐서 칸을 다시 만든다
         RefreshMenu();
     }

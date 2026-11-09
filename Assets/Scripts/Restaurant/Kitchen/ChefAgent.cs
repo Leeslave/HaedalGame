@@ -26,6 +26,13 @@ public class ChefAgent : PartTimerAgent
     // 화면 표시용: 지금 조리 중인 메뉴 (조리 중이 아니면 null)
     public RecipeData CookingRecipe => state == ChefState.Cooking && curTask != null ? curTask.Recipe : null;
 
+    // 화면 표시용: 맡아서 만들고 있는 주문의 손님 (도구 대기부터 수령대에 내놓기 전까지. 손님이 떠났으면 null)
+    public CustomerAgent CookingFor => curTask != null && curTask.Customer != null ? curTask.Customer : null;
+
+    // 화면 표시용: 맡은 요리의 진행도. 조리대로 가는 중이면 0, 다 만들고 수령대로 가는 중이면 1
+    public float CookProgress => state == ChefState.Cooking ? WorkProgress
+        : state == ChefState.ApproachingDropoff || state == ChefState.DroppingOffFood ? 1f : 0f;
+
     // 화면 표시용 현재 상태 이름
     public string StateLabel
     {

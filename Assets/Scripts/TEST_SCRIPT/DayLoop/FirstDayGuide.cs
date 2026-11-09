@@ -355,7 +355,7 @@ public class FirstDayGuide : MonoBehaviour
                 SetGuide("6. 식사", "음식이 식탁에 놓이고 손님이 식사 중이에요.", "");
                 break;
             case Step.Paid:
-                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "왼쪽 배속 버튼(x1·x2·x3)으로 빠르게, [일시정지]로 일시정지할 수 있어요.");
+                SetGuide("7. 계산 완료!", $"첫 수익 +{_paidAmount}G를 벌었어요. 나머지 손님도 같은 순서로 자동 응대돼요.", "오른쪽 위에서 배속(x1·x2·x3)을 바꾸거나 잠시 멈출 수 있어요.");
                 WaitForContinue(() => EndGuide(true));
                 return;
         }

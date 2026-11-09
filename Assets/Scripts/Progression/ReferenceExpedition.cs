@@ -55,7 +55,9 @@ public static partial class RestaurantProgress
 
     public static int FurnitureCount(GameSaveData s, int seats) => s.progression.furniture?.FirstOrDefault(x => x.seats == seats)?.amount ?? 0;
     public static bool TryBuyFurniture(int seats, out string error) => Change(s => {
-        if (seats != 1 && seats != 2 && seats != 4) return "이 테이블은 아직 구매할 수 없어요.";
+        if (seats != 1 && seats != 2 && seats != 4 && seats != 6) return "이 테이블은 아직 구매할 수 없어요.";
+        if (seats == 6 && s.restaurantLevel < RestaurantRules.SixSeatUnlockLevel)
+            return $"6인석은 식당 Lv.{RestaurantRules.SixSeatUnlockLevel}에 열려요.";
         if (!Spend(s, seats * 40)) return $"{seats * 40}G가 필요해요.";
         if (s.progression.furniture == null) s.progression.furniture = new List<FurnitureStock>();
         var stock = s.progression.furniture.FirstOrDefault(x => x.seats == seats);

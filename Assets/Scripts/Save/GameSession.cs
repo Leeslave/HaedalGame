@@ -36,6 +36,9 @@ public static class GameSession
     /// <summary>현재 세션 시작(또는 마지막 체크포인트 적용) 이후 흐른 실제 플레이 시간.</summary>
     public static double UnsavedPlayTime { get; private set; }
 
+    // 메뉴 편집 중에는 연속 변경을 허용하고, 화면을 나갈 때 대기 시간을 시작한다.
+    internal static bool MenuChangesPending { get; set; }
+
     /// <summary>세션 데이터가 통째로 교체되어 모든 참여자가 복원된 뒤 발행. UI 갱신용.</summary>
     public static event Action OnSessionRestored;
 
@@ -70,6 +73,7 @@ public static class GameSession
         IsDevSession = isDevSession;
         OperationCompletedToday = Current.progression.freeTime;
         UnsavedPlayTime = 0;
+        MenuChangesPending = false;
         RestoreAll();
     }
 
@@ -85,6 +89,7 @@ public static class GameSession
         IsDevSession = false;
         OperationCompletedToday = false;
         UnsavedPlayTime = 0;
+        MenuChangesPending = false;
     }
 
     /// <summary>살아 있는 참여자의 상태를 세션에 모으고, 그 사본을 돌려준다. 세션 자체는 그대로다.</summary>
@@ -112,9 +117,11 @@ public static class GameSession
     public static void ApplyRuntime(GameSaveData data)
     {
         double elapsed = UnsavedPlayTime;
+        bool menuChangesPending = MenuChangesPending;
         data.playTimeSeconds = Current.playTimeSeconds;
         Begin(data, IsDevSession);
         UnsavedPlayTime = elapsed;
+        MenuChangesPending = menuChangesPending;
     }
 
     private static void RestoreAll()

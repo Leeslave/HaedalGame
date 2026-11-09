@@ -111,6 +111,37 @@ public class ProgressionTests
         Assert.AreEqual(count, inventory.GetCount(2));
         Assert.AreEqual(20, GameSession.CaptureSnapshot().playTimeSeconds);
     }
+    [Test] public void MenuEditing_AllowsRepeatedChanges_ThenCooldownStartsOnExit()
+    {
+        Assert.IsTrue(RestaurantProgress.TryBuyTool(201, out _));
+        Assert.IsTrue(RestaurantProgress.TrySetMenu(0, 1, out string error), error);
+        Assert.IsTrue(RestaurantProgress.TrySetMenu(0, -1, out error), error);
+        Assert.IsTrue(RestaurantProgress.TrySetMenu(0, 1, out error), error);
+        Assert.AreEqual(0, GameSession.Current.progression.menuCooldownUntil);
+        // 다른 관리 거래가 세션 데이터를 교체해도 미완료 편집 상태가 유지되어야 한다.
+        Assert.IsTrue(RestaurantProgress.TryScout(0, out error), error);
+        RestaurantProgress.FinishMenuEditing();
+        float until = GameSession.Current.progression.menuCooldownUntil;
+        Assert.That(until - Time.realtimeSinceStartup, Is.InRange(29f, 30f));
+        Assert.IsFalse(RestaurantProgress.TrySetMenu(0, -1, out _));
+        RestaurantProgress.FinishMenuEditing();
+        Assert.AreEqual(until, GameSession.Current.progression.menuCooldownUntil);
+        GameSession.Current.progression.menuCooldownUntil = Time.realtimeSinceStartup - 1;
+        Assert.IsTrue(RestaurantProgress.TrySetMenu(0, -1, out error), error);
+    }
+
+    [Test] public void MenuEditing_FailedEditOrNewSession_DoesNotStartCooldown()
+    {
+        Assert.IsFalse(RestaurantProgress.TrySetMenu(0, int.MaxValue, out _));
+        RestaurantProgress.FinishMenuEditing();
+        Assert.AreEqual(0, GameSession.Current.progression.menuCooldownUntil);
+        Assert.IsTrue(RestaurantProgress.TryBuyTool(201, out _));
+        Assert.IsTrue(RestaurantProgress.TrySetMenu(0, 1, out _));
+        GameSession.Begin(GameSession.Current.Clone(), true);
+        RestaurantProgress.FinishMenuEditing();
+        Assert.AreEqual(0, GameSession.Current.progression.menuCooldownUntil);
+    }
+
     [Test] public void Snapshot_RoundTripsNewProgressionAndEmployeeFields()
     {
         var data = GameSession.Current;
@@ -293,6 +324,21 @@ public class ProgressionTests
         Assert.IsFalse(RestaurantProgress.TryBuyFurniture(4, out _));
         Assert.AreEqual(40, RestaurantProgress.Gold(GameSession.Current));
         Assert.AreEqual(1, RestaurantProgress.FurnitureCount(GameSession.Current, 4));
+    }
+    [Test] public void SixSeatTable_UnlocksAtLevelThree_AndRetainsStockInSave()
+    {
+        PrepareUpgrade(4f, 300, false);
+        GameSession.Current.restaurantLevel = 2;
+        Assert.IsFalse(RestaurantProgress.TryBuyFurniture(6, out _));
+        Assert.AreEqual(300, RestaurantProgress.Gold(GameSession.Current));
+        Assert.AreEqual(0, RestaurantProgress.FurnitureCount(GameSession.Current, 6));
+
+        GameSession.Current.restaurantLevel = 3;
+        Assert.IsTrue(RestaurantProgress.TryBuyFurniture(6, out string error), error);
+        Assert.IsFalse(RestaurantProgress.TryBuyFurniture(6, out _));
+        var restored = JsonUtility.FromJson<GameSaveData>(JsonUtility.ToJson(GameSession.Current));
+        Assert.AreEqual(60, RestaurantProgress.Gold(restored));
+        Assert.AreEqual(1, RestaurantProgress.FurnitureCount(restored, 6));
     }
     [Test] public void Expedition_ReturnsRewardsOnce_AndProtectsOperatingStaff()
     {

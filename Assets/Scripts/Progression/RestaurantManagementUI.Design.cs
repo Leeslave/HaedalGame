@@ -13,6 +13,7 @@ public partial class RestaurantManagementUI
     private string selectedEmployee;
     private readonly Dictionary<int, int> cart = new Dictionary<int, int>();
     private int cartDay = -1;
+    private GameObject recruitmentDialog, quantityDialog;
     private readonly HashSet<string> expeditionStaff = new HashSet<string>();
 
     public static void OpenSection(string section)
@@ -60,8 +61,16 @@ public partial class RestaurantManagementUI
     private void CloseWindow()
     {
         if (PayrollPending) return;
+        if (tab == "메뉴") RestaurantProgress.FinishMenuEditing();
+        CloseManagementDialogs();
         window.gameObject.SetActive(false);
         StopPractice();
+    }
+
+    private void CloseManagementDialogs()
+    {
+        if (recruitmentDialog != null) { recruitmentDialog.SetActive(false); Destroy(recruitmentDialog); recruitmentDialog = null; }
+        if (quantityDialog != null) { quantityDialog.SetActive(false); Destroy(quantityDialog); quantityDialog = null; }
     }
 
     private static TMP_Text Copy(Transform parent, string text, float height = 42, float size = 23, Color? color = null)
@@ -368,8 +377,8 @@ public partial class RestaurantManagementUI
             int id = ingredient.IngredientId, available = Stock(s, id);
             cart.TryGetValue(id, out int quantity);
             var button = Tile(grid, ingredient.IngredientName + " F", $"{RestaurantProgress.RegularUnitPrice(ingredient)}G\n남은 {available}개", quantity > 0,
-                () => { cart[id] = Mathf.Min(available, quantity + 1); Refresh(); }, flag: quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
-            button.interactable = available > quantity;
+                () => OpenShopQuantity(id), flag: quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
+            button.interactable = available > 0;
         }
         Pager(list, ingredients.Count, 8);
         Copy(detail, "장바구니", 50, 32);
@@ -398,6 +407,45 @@ public partial class RestaurantManagementUI
         }, true, cart.Any(x => x.Value > 0) && total <= RestaurantProgress.Gold(s));
     }
 
+    private void OpenShopQuantity(int id)
+    {
+        CloseManagementDialogs();
+        if (!GameDatabase.Recipes.TryGetIngredientById(id, out var ingredient)) return;
+        int available = Stock(GameSession.Current, id);
+        if (available <= 0) return;
+        cart.TryGetValue(id, out int previous);
+        var dim = DayLoopUI.Panel(canvas.transform, DayLoopUI.Dim, "ShopQuantity", false); DayLoopUI.Stretch(dim.rectTransform);
+        quantityDialog = dim.gameObject;
+        var card = DayLoopUI.Card(dim.transform, DayLoopUI.Kit.Sail, "QuantityCard");
+        DayLoopUI.Place(card.rectTransform, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(720, 560));
+        DayLoopUI.Vertical(card, 30, 18);
+        Copy(card.transform, ingredient.IngredientName + " · 수량 선택", 60, 36);
+        Copy(card.transform, $"개당 {RestaurantProgress.RegularUnitPrice(ingredient):N0}G · 재고 {available}개", 42, 24);
+        var row = DayLoopUI.Rect("Quantity", card.transform); DayLoopUI.Layout(row, preferredHeight: 64); DayLoopUI.Horizontal(row, 0, 18);
+        TMP_InputField input = null;
+        ActionButton(row, "−", () => input.text = Mathf.Max(0, ReadQuantity(input.text, available) - 1).ToString(), 90, 60);
+        var inputPanel = DayLoopUI.Panel(row, Color.white, "QuantityInput"); DayLoopUI.Layout(inputPanel, flexibleWidth: 1, preferredHeight: 60);
+        var text = DayLoopUI.Text(inputPanel.transform, "", 30, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center);
+        DayLoopUI.Stretch(text.rectTransform, 12, 0, 12, 0);
+        input = inputPanel.gameObject.AddComponent<TMP_InputField>();
+        input.textViewport = inputPanel.rectTransform; input.textComponent = text;
+        input.contentType = TMP_InputField.ContentType.IntegerNumber; input.characterLimit = 6;
+        input.text = Mathf.Clamp(previous > 0 ? previous : 1, 0, available).ToString();
+        ActionButton(row, "+", () => input.text = Mathf.Min(available, ReadQuantity(input.text, available) + 1).ToString(), 90, 60);
+        var summary = Copy(card.transform, "", 60, 26);
+        Action update = () => summary.text = $"선택 {ReadQuantity(input.text, available)}개 · {RestaurantProgress.RegularUnitPrice(ingredient) * ReadQuantity(input.text, available):N0}G";
+        input.onValueChanged.AddListener(_ => update()); update();
+        Copy(card.transform, "수량을 직접 입력하거나 − / + 버튼으로 조절해요.", 42, 21, DayLoopUI.Kit.InkSoft);
+        DetailAction(card.transform, "담기", () => {
+            int quantity = ReadQuantity(input.text, Stock(GameSession.Current, id));
+            if (quantity > 0) cart[id] = quantity; else cart.Remove(id);
+            CloseManagementDialogs(); Refresh();
+        }, true);
+        DetailAction(card.transform, "취소", CloseManagementDialogs);
+    }
+
+    private static int ReadQuantity(string text, int available) => int.TryParse(text, out int value) ? Mathf.Clamp(value, 0, available) : 0;
+
     private static string IngredientGroup(IngredientData item)
     {
         if (item.IsBasicSeasoning) return "양념";
@@ -406,20 +454,36 @@ public partial class RestaurantManagementUI
 
     private void OpenRecruitment()
     {
+        CloseManagementDialogs();
         var dim = DayLoopUI.Panel(canvas.transform, DayLoopUI.Dim, "Recruitment", false); DayLoopUI.Stretch(dim.rectTransform);
+        recruitmentDialog = dim.gameObject;
         var card = DayLoopUI.Card(dim.transform, DayLoopUI.Kit.Sail, "RecruitmentCard");
-        DayLoopUI.Place(card.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(900, 440)); DayLoopUI.Vertical(card, 30, 18);
+        DayLoopUI.Place(card.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(1080, 900)); DayLoopUI.Vertical(card, 30, 18);
         Copy(card.transform, "직원 고용", 60, 42);
-        Copy(card.transform, "스카우트로 후보를 만난 뒤 계약할 직원을 선택해요.", 42, 24);
+        var notice = Copy(card.transform, "스카우트 후 이 창에서 계약해요. 고용한 직원만 직원 화면에 표시돼요.", 42, 24);
         var choices = DayLoopUI.Rect("ScoutTiers", card.transform); DayLoopUI.Layout(choices, preferredHeight: 140); DayLoopUI.Horizontal(choices, 0, 18);
         for (int tier = 0; tier < 4; tier++)
         {
             int value = tier;
-            ActionButton(choices, new[] { "일반\n100G", "고급\n500G", "특급\n2,000G", "최고\n5,000G" }[tier], () => {
-                Destroy(dim.gameObject); Run((out string error) => RestaurantProgress.TryScout(value, out error));
-            }, 192, 120);
+            var scout = ActionButton(choices, new[] { "일반\n100G", "고급\n500G", "특급\n2,000G", "최고\n5,000G" }[tier], () => {
+                if (RestaurantProgress.TryScout(value, out string error)) { Refresh(); OpenRecruitment(); }
+                else notice.text = error;
+            }, 240, 120);
+            scout.interactable = GameSession.Current.restaurantLevel >= RestaurantRules.ScoutLevel(tier) && RestaurantProgress.Gold(GameSession.Current) >= RestaurantRules.ScoutCost(tier);
         }
-        DetailAction(card.transform, "닫기", () => Destroy(dim.gameObject));
+        Copy(card.transform, $"스카우트 후보 · 보유 {RestaurantProgress.Gold(GameSession.Current):N0}G", 42, 28);
+        var candidates = ScrollList(card.transform);
+        if (GameSession.Current.progression.candidates.Count == 0) Copy(candidates, "위에서 스카우트를 선택해 후보를 만나 보세요.", 80, 24);
+        foreach (var candidate in GameSession.Current.progression.candidates)
+        {
+            string id = candidate.instanceId;
+            Copy(candidates, $"{candidate.name} · {candidate.grade}등급 · 주급 {candidate.wage:N0}G\n요리 {candidate.cooking:0} · 서빙 {candidate.serving:0} · 솜씨 {candidate.handy:0} · 체력 {candidate.hp:0}", 76, 23);
+            DetailAction(candidates, $"고용 · {candidate.wage:N0}G", () => {
+                if (RestaurantProgress.TryHire(id, out string error)) { selectedEmployee = id; Refresh(); OpenRecruitment(); }
+                else notice.text = error;
+            }, true, GameSession.Current.employees.Count < 10 && RestaurantProgress.Gold(GameSession.Current) >= candidate.wage);
+        }
+        DetailAction(card.transform, "닫기", CloseManagementDialogs);
     }
 
     private static int Stock(GameSaveData s, int id) => s.progression.regularStockDay == s.day
@@ -429,7 +493,7 @@ public partial class RestaurantManagementUI
     {
         info.text = $"홀 {s.employees.Count(e => e.role == "Serving")}명 · 주방 {s.employees.Count(e => e.role == "Kitchen")}명 · 주급 {s.employees.Sum(e => e.wage):N0}G";
         var list = Split(out var detail);
-        var employees = s.employees.Concat(s.progression.candidates).ToList();
+        var employees = s.employees.ToList();
         var items = ScrollList(list);
         var grid = CardGrid(items, 2, 409.5f, Mathf.Max(2, Mathf.CeilToInt((employees.Count + 1) / 2f)));
         foreach (var employee in employees)
@@ -555,7 +619,8 @@ public partial class RestaurantManagementUI
         Filters(content, "전체", "테이블", "대기석", "테이블 색상", "창고에 있음");
         var list = Split(out var detail);
         var grid = CardGrid(list);
-        foreach (int size in new[] { 1, 2, 4 })
+        bool sixSeatUnlocked = s.restaurantLevel >= RestaurantRules.SixSeatUnlockLevel;
+        foreach (int size in sixSeatUnlocked ? new[] { 1, 2, 4, 6 } : new[] { 1, 2, 4 })
         {
             int count = size, owned = RestaurantProgress.FurnitureCount(s, size);
             int placed = PlacedTable.Active.Count(t => t.tableData.chairTiles.Length == size);
@@ -564,9 +629,10 @@ public partial class RestaurantManagementUI
         }
         if (filter == "전체" || filter == "대기석")
             Tile(grid, "입구 대기 의자", "입구에 놓인 대기석", selectedId == 100, () => { selectedId = 100; Refresh(); }, DesignArt.Load("IconFurniture"));
-        if (filter == "전체" || filter == "테이블")
+        if (!sixSeatUnlocked && (filter == "전체" || filter == "테이블"))
         {
-            var locked = Tile(grid, "6인석 테이블", "식당 레벨 3에 열려요", false, () => { selectedId = 6; Refresh(); }, DesignArt.Load("IconFurniture"), "식당 Lv.3");
+            string level = $"식당 Lv.{RestaurantRules.SixSeatUnlockLevel}";
+            var locked = Tile(grid, "6인석 테이블", level + "에 열려요", false, () => { }, DesignArt.Load("IconFurniture"), level);
             locked.interactable = false;
         }
         if (filter == "전체" || filter == "테이블 색상")
@@ -597,7 +663,7 @@ public partial class RestaurantManagementUI
             return;
         }
         if (selectedId == 100) { Copy(detail, "입구 대기 의자", 60, 33); Copy(detail, $"현재 식당 대기열 {RestaurantRules.WaitingLimit(s.restaurantLevel)}자리", 80, 23); DetailAction(detail, "자리 배치 열기", () => OpenPlacement()); return; }
-        int chosen = selectedId == 1 || selectedId == 2 ? selectedId : 4;
+        int chosen = selectedId == 1 || selectedId == 2 || (selectedId == 6 && sixSeatUnlocked) ? selectedId : 4;
         Copy(detail, chosen + "인석 테이블", 60, 33);
         Copy(detail, $"좌석 {chosen} · 창고에 {RestaurantProgress.FurnitureCount(s, chosen)}개", 60, 23);
         Copy(detail, $"배치함   {PlacedTable.Active.Count(t => t.tableData.chairTiles.Length == chosen)}개\n창고      {RestaurantProgress.FurnitureCount(s, chosen)}개\n더 사기  {chosen * 40}G", 150, 24);

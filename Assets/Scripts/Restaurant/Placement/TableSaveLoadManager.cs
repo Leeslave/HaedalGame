@@ -116,9 +116,9 @@ public class TableSaveLoadManager : MonoBehaviour
     {
         var s = GameSession.Current;
         if (s.progression.furniture == null) s.progression.furniture = new List<FurnitureStock>();
-        foreach (int seats in new[] { 1, 2, 4 })
+        foreach (var (tableType, seats) in new[] { (TableType.OneSeat, 1), (TableType.TwoSeat, 2), (TableType.FourSeat, 4), (TableType.SixSeat, 6) })
         {
-            string type = seats == 1 ? TableType.OneSeat.ToString() : seats == 2 ? TableType.TwoSeat.ToString() : TableType.FourSeat.ToString();
+            string type = tableType.ToString();
             int delta = s.placedTables.Count(x => x.tableType == type) - target.Count(x => x.tableType == type);
             var stock = s.progression.furniture.Find(x => x.seats == seats);
             if (stock == null) s.progression.furniture.Add(new FurnitureStock { seats = seats, amount = Mathf.Max(0, delta) });

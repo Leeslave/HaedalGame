@@ -29,12 +29,18 @@ public class PartTimerAgent : MonoBehaviour
         restTimer += Time.deltaTime;
         if (restTimer >= 5) { employee.stamina = Mathf.Min(employee.hp, employee.stamina + 1); restTimer = 0; }
     }
+    // 화면 표시용: 마지막으로 시작한 작업의 진행도 (0~1)
+    public float WorkProgress { get; private set; }
+
     protected IEnumerator Work(float duration, float staminaCost = 1)
     {
+        float total = Mathf.Max(.001f, duration);
+        WorkProgress = 0f;
         while (duration > 0)
         {
             lastWork = Time.time;
             if (!IsSleeping) duration -= Time.deltaTime * RestaurantSpeedController.SpeedMultiplier * (employee != null && employee.stamina <= 0 ? .5f : 1);
+            WorkProgress = Mathf.Clamp01(1f - duration / total);
             yield return null;
         }
         if (employee != null)

@@ -95,6 +95,8 @@ public class PlacementToolbar : MonoBehaviour
         _kinds[TableType.OneSeat] = DayLoopUI.RailButton(rail, "1인석", placement.OnOneSeatButtonClicked, height: 58);
         _kinds[TableType.TwoSeat] = DayLoopUI.RailButton(rail, "2인석", placement.OnTwoSeatButtonClicked, height: 58);
         _kinds[TableType.FourSeat] = DayLoopUI.RailButton(rail, "4인석", placement.OnFourSeatButtonClicked, height: 58);
+        if (slots && GameSession.IsActive && GameSession.Current.restaurantLevel >= RestaurantRules.SixSeatUnlockLevel)
+            _kinds[TableType.SixSeat] = DayLoopUI.RailButton(rail, "6인석", () => SeaTableSlots.Instance?.SelectSixSeat(), height: 58);
         if (!slots)
         {
             DayLoopUI.RailButton(rail, "놓기", placement.OnConfirmClicked, true, 72);

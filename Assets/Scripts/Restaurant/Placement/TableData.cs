@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum TableType { TwoSeat, FourSeat, OneSeat }
+public enum TableType { TwoSeat, FourSeat, OneSeat, SixSeat }
 
 [CreateAssetMenu(fileName = "TableData", menuName = "Game Data/Restaurant/Table Data")]
 public class TableData : ScriptableObject

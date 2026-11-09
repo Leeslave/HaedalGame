@@ -45,7 +45,12 @@ public static partial class RestaurantProgress
     }
     public static bool TrySetMenus(List<int> ids, out string error)
     {
-        if (GameFlow.Phase != GamePhase.Operation) return Change(s => ValidateMenu(s, ids), out error);
+        if (GameFlow.Phase != GamePhase.Operation)
+        {
+            bool changed = Change(s => ValidateMenu(s, ids), out error);
+            if (changed) GameSession.MenuChangesPending = true;
+            return changed;
+        }
         var candidate = GameSession.Current.Clone();
         error = ValidateMenu(candidate, ids);
         if (error != null) return false;
@@ -55,14 +60,21 @@ public static partial class RestaurantProgress
         GameSession.Current.progression.menuCooldownUntil = candidate.progression.menuCooldownUntil;
         if (MenuManager.Instance != null) MenuManager.Instance.RestoreState(GameSession.Current);
         foreach (var menu in UnityEngine.Object.FindObjectsByType<MenuRecipeService>(FindObjectsSortMode.None)) menu.RestoreState(GameSession.Current);
+        GameSession.MenuChangesPending = true;
         return true;
+    }
+
+    public static void FinishMenuEditing()
+    {
+        if (!GameSession.IsActive || !GameSession.MenuChangesPending) return;
+        GameSession.Current.progression.menuCooldownUntil = Time.realtimeSinceStartup + 30;
+        GameSession.MenuChangesPending = false;
     }
     private static string ValidateMenu(GameSaveData s, List<int> ids)
     {
         if (ids.Count > RestaurantRules.MenuLimit(s.restaurantLevel)) return "메뉴 칸이 부족해요.";
         if (s.progression.menuHistoryDay != s.day) { s.progression.menuHistory.Clear(); s.progression.menuHistoryDay = s.day; }
-        bool first = !s.menuSlots.Any(i => i >= 0);
-        if (!first && Time.realtimeSinceStartup < s.progression.menuCooldownUntil) return "메뉴 변경은 30초 후 다시 할 수 있어요.";
+        if (Time.realtimeSinceStartup < s.progression.menuCooldownUntil) return "메뉴 변경은 30초 후 다시 할 수 있어요.";
         var chosen = ids.Where(i => i >= 0).ToList();
         if (chosen.Distinct().Count() != chosen.Count) return "같은 메뉴를 중복 등록할 수 없어요.";
         if (s.progression.menuHistory.Concat(s.menuSlots).Concat(chosen).Where(i => i >= 0).Distinct().Count() > RestaurantRules.MenuLimit(s.restaurantLevel) * 2)
@@ -77,7 +89,6 @@ public static partial class RestaurantProgress
             if (!s.progression.menuHistory.Contains(id)) s.progression.menuHistory.Add(id);
         s.menuSlots = new List<int>(ids);
         while (s.menuSlots.Count < RestaurantRules.MenuLimit(s.restaurantLevel)) s.menuSlots.Add(-1);
-        s.progression.menuCooldownUntil = Time.realtimeSinceStartup + 30;
         return null;
     }
     public static bool TryAutoMenu(out string error)

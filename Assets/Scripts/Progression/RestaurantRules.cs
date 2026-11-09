@@ -11,6 +11,7 @@ using UnityEngine;
 public static class RestaurantRules
 {
     public const int MaxLevel = 10;
+    public const int SixSeatUnlockLevel = 3;
     private static readonly int[] Visitors = { 10, 15, 25, 35, 50, 60, 80, 100, 135, 180 };
     private static readonly int[] Seats = { 2, 4, 6, 8, 10, 12, 15, 18, 22, 26 };
     private static readonly int[] Menus = { 3, 3, 4, 4, 5, 5, 6, 6, 7, 8 };

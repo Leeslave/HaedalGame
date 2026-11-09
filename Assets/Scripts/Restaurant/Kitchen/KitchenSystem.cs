@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -62,10 +63,14 @@ public class KitchenSystem : MonoBehaviour
         else { Debug.Log("주문한 요리가 없습니다!"); }
     }
 
+    // 화면 표시용: 완성된 요리가 수령대에 나왔을 때 (그 요리를 주문한 손님)
+    public static event Action<CustomerAgent> OnFoodCompleted;
+
     // 요리 완료. 서버에게 Task를 전달
     public void CompleteFood(CookingTask task)
     {
         HallSystem.Instance.HandleFoodReceived(task);
+        OnFoodCompleted?.Invoke(task.GetCustomerAgent());
     }
 
     public void ResetDay()

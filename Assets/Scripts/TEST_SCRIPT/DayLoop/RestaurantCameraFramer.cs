@@ -98,6 +98,7 @@ public class RestaurantCameraFramer : MonoBehaviour
         Vector3 pos = _camera.transform.position;
         _camera.transform.position = new Vector3(_content.center.x - size * _camera.aspect * HudLeftFraction, y, pos.z);
         _camera.orthographicSize = size;
+        SeaRestaurantLayout.Instance?.CoverCameraViewport(_camera);
     }
 
     private bool CollectBounds(out Bounds bounds)

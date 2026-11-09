@@ -375,9 +375,14 @@ public class CustomerAgent : MonoBehaviour
             ratingFlag = RatingFlag.Perfect; // 이건 나중에 RatingSysyem 구현 후 수정
         }
 
+        // 웨이팅 벤치는 줄 순서를 위해 바로 비우지만, 식당 좌석은 이 손님이 씬에서 완전히 나간 뒤에 비운다.
+        // (나가는 손님과 그 자리로 들어오는 다음 손님이 입구에서 엇갈리지 않게)
+        // 웨이팅석으로 가는 도중(isWaiting 전)에 나가도 벤치로 처리해야 대기줄에서 빠지므로 indoor로 구분한다.
+        Seat heldSeat = null;
         if (currentSeat != null)
         {
-            gm.seatManager.ReleaseSeat(this, currentSeat, isWaiting);
+            if (indoor) { heldSeat = currentSeat; }
+            else { gm.seatManager.ReleaseSeat(this, currentSeat, true); }
             currentSeat = null;
         }
         //Debug.Log("고객이 만족하고 퇴장하였습니다!");
@@ -386,14 +391,15 @@ public class CustomerAgent : MonoBehaviour
         cpc.OnPatienceExhausted -= PatienceExhausted;
         cpc.OnWaitingProgress -= cuc.ChangeEmotion;
         StopAllCoroutines();
-        StartCoroutine(MoveToExit());
+        StartCoroutine(MoveToExit(heldSeat));
     }
 
-    private IEnumerator MoveToExit()
+    private IEnumerator MoveToExit(Seat heldSeat)
     {
         nm.SetMoving(true);
         yield return Swim(gm.exitPoint.position);
         nm.SetMoving(false);
+        if (heldSeat != null) { gm.seatManager.ReleaseSeat(this, heldSeat, false); }
         OnExited?.Invoke(this);
         Destroy(gameObject);
     }

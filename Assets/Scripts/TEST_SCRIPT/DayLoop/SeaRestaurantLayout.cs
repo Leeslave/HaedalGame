@@ -33,6 +33,8 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
 
     private const float RopeY = -3.1f;                           // 밧줄이 묶인 높이 = 넘을 수 없는 선
     private const float GateHalf = 1.5f;                         // 가운데 입구 틈 (반폭)
+    private const float GateInset = 0.6f;                        // 입구 양쪽 길목: 입구 끝에서 이만큼 안쪽
+    private const float CornerGap = 0.3f;                        // 테이블 몸통 모서리 길목을 몸통에서 띄우는 거리
     private const float PostBase = -4.25f;
     private const float PostHeight = 1.5f;
     private const float RopeAttach = 0.77f;                      // 기둥 아래에서 밧줄 묶인 곳까지 (그림 기준 23% 아래)
@@ -69,12 +71,12 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
     };
 
     // 웨이팅석: 한 줄 최대 11자리, 두 줄까지
-    private static readonly float[] WaitingRows = { -6.1f, -7.8f };
+    private static readonly float[] WaitingRows = { -6.1f, -8.0f };   // 둘째 줄 해달 머리가 첫째 줄 발에 걸리지 않게 띄운다
     private const int WaitingPerRow = 11;
     private const float WaitingSpan = 17.5f;
     private const float WaitingMaxGap = 2.6f;
     private const float StoneWidth = 0.95f;
-    private const float SitLift = 0.5f;                          // 돌 위에 앉은 것처럼 보이도록 좌석점을 살짝 올린다
+    private const float SitLift = 0.85f;                         // 앉은 해달(Sit_Front)의 엉덩이가 돌 윗면에, 발이 돌 앞에 오도록 좌석점을 올린다
     private const float StaffScale = 0.14f;                      // 손님(0.15)과 비슷한 크기
 
     private const int RaftOrder = 1;
@@ -90,6 +92,10 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
 
     private DayCycleController _day;
     private Transform _root;
+    private SpriteRenderer _background;
+    private Vector3 _backgroundScale;
+    private Vector3 _backgroundPosition;
+    private Bounds _backgroundBounds;
     private Material _lineMaterial;
     private SeaTableSlots _slots;
     private Transform _sign;
@@ -99,6 +105,7 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
     private bool _shownClosing;
 
     public SeaTableSlots Slots => _slots;
+    public bool HasSecondWaitingRow { get; private set; }
 
     // 씬 오브젝트의 Awake 뒤, Start 앞에 불려야 한다. (테이블 불러오기·웨이팅 등록보다 먼저 배치도가 있어야 함)
     private void Awake()
@@ -195,8 +202,69 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
     {
         Vector2 a = from - Origin, b = to - Origin;
         if ((OnDeck(a) && OnDeck(b)) || Clear(a, b)) return new List<Vector3> { to };
+        return ShortestRoute(a, b) ?? LaneRoute(a, b);
+    }
 
-        // 막혀 있으면 물길로: 지금 높이의 물길 → 통로로 물길을 옮겨 가며 → 목적지 높이의 물길 → 목적지
+    // 막혀 있으면 길목(물길·통로가 만나는 곳, 입구 양쪽, 테이블 몸통 모서리)을 잇는 가장 짧은 길로 돌아간다.
+    // 예전에는 목적지를 가장 가까운 물길 높이로 붙였는데, 입구 바로 위 테이블의 좌석(아랫줄 의자)이 윗물길에 붙어
+    // 손님이 테이블 위로 올라갔다가 의자로 다시 내려오는 길이 나왔다. 길목 사이 최단 거리를 고르면 그런 되돌아가기가 없다.
+    private List<Vector3> ShortestRoute(Vector2 a, Vector2 b)
+    {
+        var nodes = new List<Vector2> { a, b };
+        for (int i = 0; i < Channels.Length; i++)
+            foreach (float x in Channels[i])
+            {
+                nodes.Add(new Vector2(x, Lanes[i]));
+                nodes.Add(new Vector2(x, Lanes[i + 1]));
+            }
+        nodes.Add(new Vector2(-GateHalf + GateInset, RopeY));
+        nodes.Add(new Vector2(GateHalf - GateInset, RopeY));
+        AddCorners(nodes, Deck);
+        if (_slots != null) foreach (Rect body in _slots.Bodies()) AddCorners(nodes, body);
+
+        // 다익스트라 (길목이 수십 개라 단순 배열로 충분하다)
+        int n = nodes.Count;
+        var dist = new float[n];
+        var prev = new int[n];
+        var done = new bool[n];
+        for (int i = 0; i < n; i++) { dist[i] = float.MaxValue; prev[i] = -1; }
+        dist[0] = 0f;
+        while (true)
+        {
+            int u = -1;
+            for (int i = 0; i < n; i++)
+                if (!done[i] && dist[i] < float.MaxValue && (u < 0 || dist[i] < dist[u])) u = i;
+            if (u < 0) return null;
+            if (u == 1) break;
+            done[u] = true;
+            for (int v = 0; v < n; v++)
+            {
+                if (done[v]) continue;
+                float d = dist[u] + Vector2.Distance(nodes[u], nodes[v]);
+                if (d >= dist[v] || !Clear(nodes[u], nodes[v])) continue;
+                dist[v] = d;
+                prev[v] = u;
+            }
+        }
+
+        var route = new List<Vector3>();
+        for (int i = 1; i != 0; i = prev[i]) route.Add(Origin + nodes[i]);
+        route.Reverse();
+        return route;
+    }
+
+    private static void AddCorners(List<Vector2> nodes, Rect r)
+    {
+        nodes.Add(new Vector2(r.xMin - CornerGap, r.yMin - CornerGap));
+        nodes.Add(new Vector2(r.xMax + CornerGap, r.yMin - CornerGap));
+        nodes.Add(new Vector2(r.xMin - CornerGap, r.yMax + CornerGap));
+        nodes.Add(new Vector2(r.xMax + CornerGap, r.yMax + CornerGap));
+    }
+
+    // 출발점이 테이블 몸통 안에 있는 등 길목으로 이을 수 없을 때만 쓰는 예전 길:
+    // 지금 높이의 물길 → 통로로 물길을 옮겨 가며 → 목적지 높이의 물길 → 목적지
+    private List<Vector3> LaneRoute(Vector2 a, Vector2 b)
+    {
         var points = new List<Vector2> { a };
         int lane = LaneOf(a), goal = LaneOf(b);
         float x = a.x;
@@ -246,7 +314,8 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
     // 두 점 사이를 곧장 헤엄칠 수 있는지: 입구 밖에서 밧줄을 넘거나, 테이블 몸통·주방 뗏목을 가로지르면 안 된다.
     private bool Clear(Vector2 p, Vector2 q)
     {
-        if ((p.y - RopeY) * (q.y - RopeY) < 0f)
+        // 밧줄 높이에 딱 닿는 점도 넘는 것으로 본다. (입구 양쪽 길목이 밧줄 높이에 있다)
+        if ((p.y - RopeY) * (q.y - RopeY) <= 0f && !Mathf.Approximately(p.y, q.y))
         {
             float t = (RopeY - p.y) / (q.y - p.y);
             if (Mathf.Abs(p.x + t * (q.x - p.x)) > GateHalf) return false;
@@ -311,13 +380,39 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
             group.gameObject.SetActive(false);
     }
 
-    private static void FitBackground(SpriteRenderer sr)
+    private void FitBackground(SpriteRenderer sr)
     {
         if (sr.sprite == null) return;
         Vector2 size = sr.sprite.bounds.size;
         float scale = DesignSize.x * BackgroundCover / size.x;
         sr.transform.localScale = new Vector3(scale, scale, 1f);
         sr.transform.position = new Vector3(Origin.x, Origin.y + BackgroundTop - size.y * scale * 0.5f, sr.transform.position.z);
+        _background = sr;
+        _backgroundScale = sr.transform.localScale;
+        _backgroundPosition = sr.transform.position;
+        _backgroundBounds = sr.bounds;
+    }
+
+    public void CoverCameraViewport(Camera camera)
+    {
+        if (_background == null) return;
+
+        // 월드 구도는 그대로 두고, 카메라가 시안보다 넓거나 높게 보일 때 배경만 빈 곳까지 채운다.
+        Vector2 view = camera.transform.position;
+        Vector2 viewHalf = new Vector2(camera.orthographicSize * camera.aspect, camera.orthographicSize);
+        Vector2 baseHalf = _backgroundBounds.extents;
+        float scale = Mathf.Max(1f, Mathf.Max(viewHalf.x / baseHalf.x, viewHalf.y / baseHalf.y));
+        Vector2 slack = Vector2.Max(Vector2.zero, baseHalf * scale - viewHalf);
+        Vector3 center = _backgroundBounds.center;
+        center.x = Mathf.Clamp(center.x, view.x - slack.x, view.x + slack.x);
+        center.y = Mathf.Clamp(center.y, view.y - slack.y, view.y + slack.y);
+
+        Transform background = _background.transform;
+        Vector3 localScale = new Vector3(_backgroundScale.x * scale, _backgroundScale.y * scale, _backgroundScale.z);
+        Vector3 position = center - (_backgroundBounds.center - _backgroundPosition) * scale;
+        position.z = _backgroundPosition.z;
+        if (background.localScale != localScale) background.localScale = localScale;
+        if (background.position != position) background.position = position;
     }
 
     // 입구(테이블 번호를 매기는 기준)·출구·손님 스폰 위치를 배치도로 옮긴다.
@@ -425,10 +520,11 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
 
     // ───── 웨이팅석 ─────
 
-    // 오늘 식당 레벨의 대기열 수만큼 돌 의자를 놓는다. 줄 맨 앞(0번)은 입구 바로 아래 가운데 자리다.
+    // 오늘 식당 레벨의 대기열 수만큼 돌 의자를 놓는다. 줄 맨 앞(0번)은 첫째 줄 왼쪽 끝이고 왼쪽에서 오른쪽으로 채운다.
     private void BuildWaitingSeats()
     {
         int count = GameSession.IsActive ? RestaurantRules.WaitingLimit(GameSession.Current.restaurantLevel) : 4;
+        HasSecondWaitingRow = count > WaitingPerRow;
         count = Mathf.Clamp(count, 1, WaitingPerRow * WaitingRows.Length);
         int rows = Mathf.CeilToInt(count / (float)WaitingPerRow);
         int perRow = Mathf.CeilToInt(count / (float)rows);
@@ -439,9 +535,7 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
         {
             int n = Mathf.Min(perRow, left);
             left -= n;
-            var row = new List<Vector2>();
-            for (int i = 0; i < n; i++) row.Add(new Vector2((i - (n - 1) * 0.5f) * gap, WaitingRows[r]));
-            spots.AddRange(row.OrderBy(p => Mathf.Abs(p.x)).ThenBy(p => p.x));
+            for (int i = 0; i < n; i++) spots.Add(new Vector2((i - (n - 1) * 0.5f) * gap, WaitingRows[r]));
         }
 
         // WaitingGroup은 Awake에서 자식 좌석을 모으므로, 꺼 둔 채 좌석을 다 붙인 뒤 켠다.
@@ -462,6 +556,7 @@ public class SeaRestaurantLayout : MonoBehaviour, IRestaurantFloor
             seat.transform.SetParent(group.transform, false);
             seat.transform.position = at + Vector2.up * SitLift;
             seat.SetFacingDirection(Vector2.down);
+            seat.SetSeatedSortingOrderOffset(spots[i].y < WaitingRows[0] ? 1 : 0);   // 아래(앞) 줄이 위에 그려지게
         }
         group.AddComponent<WaitingGroup>();
         group.SetActive(true);

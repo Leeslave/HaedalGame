@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// [TEST 하루 루프] 바다 식당의 테이블 자리(슬롯). 칸 위에 자유롭게 놓던 배치 대신, 시안의 두 줄 자리에 놓는다.
-///  - 윗줄 4자리, 아랫줄 5자리. 어느 자리에나 1·2·4인 테이블을 놓을 수 있다.
+///  - 윗줄 4자리, 아랫줄 5자리. 어느 자리에나 1·2·4·6인 테이블을 놓을 수 있다.
 ///  - 배치 모드에서 왼쪽 띠로 테이블을 고르고 빈 자리(+)를 누르면 놓인다. 놓인 테이블을 누르면 편집 메뉴가 뜬다.
 ///  - 저장은 기존 배치 저장(PlacedTableEntry)을 그대로 쓰고, anchor를 (슬롯 번호, PlacedTable.SlotAnchorY)로 남긴다.
 ///    예전 칸 좌표로 저장된 테이블은 불러올 때 앞쪽 자리부터 채워 옮긴다.
@@ -37,12 +37,23 @@ public class SeaTableSlots : MonoBehaviour
         public Vector2 SpriteOffset;
         public Vector2[] Seats;
         public Vector2 BodyCenter, BodyHalf;          // 손님이 가로지르지 못하는 몸통 (의자 사이)
-        public Vector2? Stool;                        // 그림에 의자가 없는 1인석은 돌 의자를 따로 놓는다
+        public Vector2[] Stools;                     // 테이블 그림에 없는 의자만 돌 의자로 따로 놓는다
     }
 
     // 좌석 위치는 테이블 그림의 의자 자리 비율로 잡았다. (4인 600×330, 2인 560×213)
     private static readonly Dictionary<TableType, Spec> Specs = new Dictionary<TableType, Spec>
     {
+        [TableType.SixSeat] = new Spec
+        {
+            Name = "6인 테이블", Art = "SeaTable4", Width = 5.6f,
+            Seats = new[]
+            {
+                new Vector2(-2.28f, 0.99f), new Vector2(-2.28f, 0.05f), new Vector2(-2.28f, -0.89f),
+                new Vector2(2.24f, 0.99f), new Vector2(2.24f, 0.05f), new Vector2(2.24f, -0.89f),
+            },
+            Stools = new[] { new Vector2(-2.28f, -0.05f), new Vector2(2.24f, -0.05f) },
+            BodyHalf = new Vector2(1.75f, 1.25f),
+        },
         [TableType.FourSeat] = new Spec
         {
             Name = "4인 테이블", Art = "SeaTable4", Width = 5.6f,
@@ -58,7 +69,7 @@ public class SeaTableSlots : MonoBehaviour
         [TableType.OneSeat] = new Spec
         {
             Name = "1인 테이블", Art = "SeaTable1", Width = 1.9f, SpriteOffset = new Vector2(0.45f, 0f),
-            Seats = new[] { new Vector2(-1.05f, 0f) }, Stool = new Vector2(-1.05f, -0.1f),
+            Seats = new[] { new Vector2(-1.05f, 0f) }, Stools = new[] { new Vector2(-1.05f, -0.1f) },
             BodyCenter = new Vector2(0.45f, 0f), BodyHalf = new Vector2(0.85f, 0.75f),
         },
     };
@@ -192,16 +203,19 @@ public class SeaTableSlots : MonoBehaviour
             visual.transform.localScale = new Vector3(scale, scale, 1f);
             artSize = art.bounds.size * scale;
         }
-        if (spec.Stool.HasValue)
+        if (spec.Stools != null)
         {
             Sprite stone = DesignArt.Load("StoneSeat");
             if (stone != null)
             {
-                SpriteRenderer stool = Child<SpriteRenderer>(go.transform, "Stool", spec.Stool.Value);
-                stool.sprite = stone;
-                stool.sortingOrder = TableOrder;
                 float scale = 0.85f / stone.bounds.size.x;
-                stool.transform.localScale = new Vector3(scale, scale, 1f);
+                foreach (Vector2 position in spec.Stools)
+                {
+                    SpriteRenderer stool = Child<SpriteRenderer>(go.transform, "Stool", position);
+                    stool.sprite = stone;
+                    stool.sortingOrder = TableOrder;
+                    stool.transform.localScale = new Vector3(scale, scale, 1f);
+                }
             }
         }
 
@@ -226,6 +240,15 @@ public class SeaTableSlots : MonoBehaviour
 
         PlacedTable placed = go.AddComponent<PlacedTable>();   // TableGroup도 함께 붙는다
         go.SetActive(true);
+        if (type == TableType.SixSeat)
+        {
+            // TableGroup.Awake가 공통 정렬값을 적용한 뒤, 가까운 쪽 손님을 위에 그린다.
+            foreach (Seat seat in go.GetComponentsInChildren<Seat>())
+            {
+                float height = seat.transform.localPosition.y - SitLift;
+                seat.SetSeatedSortingOrderOffset(height > 0.5f ? 0 : height < -0.5f ? 2 : 1);
+            }
+        }
         placed.InitializeSlot(data, slot);
         placed.SetSkin(skin);
         _tables[slot] = placed;
@@ -248,6 +271,17 @@ public class SeaTableSlots : MonoBehaviour
         _selected = type;
         if (type == null) _pendingSkin = 0;
         RefreshMarkers();
+    }
+
+    public void SelectSixSeat()
+    {
+        if (!RestaurantProgress.CanManage || GameSession.Current.restaurantLevel < RestaurantRules.SixSeatUnlockLevel) return;
+        if (RestaurantProgress.FurnitureCount(GameSession.Current, 6) <= 0)
+        {
+            DayCycleController.Instance?.Toast("창고에 테이블이 없어요. 관리 > 가구에서 구매해 주세요.");
+            return;
+        }
+        Select(TableType.SixSeat);
     }
 
     // 놓인 테이블을 집어 든다: 창고로 돌려놓고 같은 종류를 골라 둔다. 빈 자리를 누르면 그 자리로 옮겨진다.

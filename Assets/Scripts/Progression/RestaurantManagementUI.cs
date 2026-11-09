@@ -277,7 +277,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         return image;
     }
 
-    private void OnDestroy() { if (canvas != null) Destroy(canvas.gameObject); }
+    private void OnDestroy() { if (tab == "메뉴") RestaurantProgress.FinishMenuEditing(); if (canvas != null) Destroy(canvas.gameObject); }
     private bool PayrollPending => GameSession.IsActive && GameSession.Current.progression.unpaidEmployeeIds.Count > 0;
     private void Update()
     {
@@ -288,13 +288,15 @@ public partial class RestaurantManagementUI : MonoBehaviour
         bool usable = RestaurantProgress.CanManage || GameFlow.Phase == GamePhase.Operation;
         bool besideHud = RestaurantHud.Current != null && RestaurantHud.Current.IsShowing;
         foreach (var opener in openers) { opener.interactable = usable; PlaceOpener(opener, besideHud); }
-        if (!RestaurantProgress.CanManage && GameFlow.Phase != GamePhase.Operation && window.gameObject.activeSelf) { window.gameObject.SetActive(false); StopPractice(); }
+        if (!RestaurantProgress.CanManage && GameFlow.Phase != GamePhase.Operation && window.gameObject.activeSelf) { CloseWindow(); }
     }
 
     public void Open(string section)
     {
         if (window == null || (!RestaurantProgress.CanManage && !(GameFlow.Phase == GamePhase.Operation && section == "메뉴"))) return;
         if (PayrollPending) section = "임금 정산";
+        if (tab == "메뉴" && section != tab && window.gameObject.activeSelf) RestaurantProgress.FinishMenuEditing();
+        CloseManagementDialogs();
         string group = GroupOf(section);
         if (group != null) expandedGroup = group;
         tab = section; page = 0; selectedId = -1; selectedEmployee = null; filter = "전체"; StopPractice(); message.text = "";
@@ -665,6 +667,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         placement.EnterPlacementMode();
         if (seats == 1) placement.OnOneSeatButtonClicked();
         else if (seats == 2) placement.OnTwoSeatButtonClicked();
+        else if (seats == 6) SeaTableSlots.Instance?.SelectSixSeat();
         else placement.OnFourSeatButtonClicked();
     }
     private System.Collections.IEnumerator PlaceAfterStart(int seats) { yield return null; PlaceTable(seats); }
