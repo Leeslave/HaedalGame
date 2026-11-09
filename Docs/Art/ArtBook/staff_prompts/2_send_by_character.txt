@@ -1,0 +1,69 @@
+﻿==================== K1 (10칸) ====================
+[첨부] pose_guide_kitchen.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 4:3, 고를 수 있는 가장 큰 크기
+[칸 순서] K1_portrait, K1_front_idle, K1_front_walk1, K1_front_walk2, K1_back_idle, K1_back_walk1, K1_back_walk2, K1_right_idle, K1_right_walk1, K1_right_walk2
+
+[PROMPT]
+One single sprite sheet of one sea otter restaurant worker: a stout elderly otter chef with dark chocolate fur, a gray forelock, bushy gray eyebrows, a gray mustache, half-lidded eyes, a tall white chef hat, a white double-breasted jacket, a red neckerchief and a white waist apron. Item: a black frying pan. Plain flat mint green background, no shadow, no water. Four equal columns and three rows, read left to right, top to bottom; the last two cells of the third row stay empty. One full-body otter per cell.
+Cells: 1. front view holding its item; 2. front view standing still; 3. front view walking, the foot on the viewer's right forward; 4. front view walking, the foot on the viewer's left forward; 5. back view standing still; 6. back view walking, the foot on the viewer's left lifted; 7. back view walking, the foot on the viewer's right lifted; 8. facing right standing still; 9. facing right walking, tail low; 10. facing right walking, other foot forward, tail raised.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character design. Keep the same face, fur and outfit in every cell. Each figure stays fully inside its own cell with clear space around it. Only cell 1 holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. The otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters
+
+==================== K2 (10칸) ====================
+[첨부] pose_guide_kitchen.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 4:3, 고를 수 있는 가장 큰 크기
+[칸 순서] K2_portrait, K2_front_idle, K2_front_walk1, K2_front_walk2, K2_back_idle, K2_back_walk1, K2_back_walk2, K2_right_idle, K2_right_walk1, K2_right_walk2
+
+[PROMPT]
+One single sprite sheet of one sea otter restaurant worker: a slim otter cook with cream fur, a blond side-swept fringe, round glasses, half-lidded eyes, a navy bandana with white hibiscus flowers, a white short-sleeved shirt and a long navy apron. Item: a wooden cutting board. Plain flat mint green background, no shadow, no water. Four equal columns and three rows, read left to right, top to bottom; the last two cells of the third row stay empty. One full-body otter per cell.
+Cells: 1. front view holding its item; 2. front view standing still; 3. front view walking, the foot on the viewer's right forward; 4. front view walking, the foot on the viewer's left forward; 5. back view standing still; 6. back view walking, the foot on the viewer's left lifted; 7. back view walking, the foot on the viewer's right lifted; 8. facing right standing still; 9. facing right walking, tail low; 10. facing right walking, other foot forward, tail raised.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character design. Keep the same face, fur and outfit in every cell. Each figure stays fully inside its own cell with clear space around it. Only cell 1 holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. The otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters
+
+==================== K3 (10칸) ====================
+[첨부] pose_guide_kitchen.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 4:3, 고를 수 있는 가장 큰 크기
+[칸 순서] K3_portrait, K3_front_idle, K3_front_walk1, K3_front_walk2, K3_back_idle, K3_back_walk1, K3_back_walk2, K3_right_idle, K3_right_walk1, K3_right_walk2
+
+[PROMPT]
+One single sprite sheet of one sea otter restaurant worker: a small young otter cook with reddish brown fur, an auburn forelock, big round shiny eyes, a happy open smile, a puffy white chef hat with a teal band, a white jacket and a teal apron. Item: a steaming silver pot in both paws. Plain flat mint green background, no shadow, no water. Four equal columns and three rows, read left to right, top to bottom; the last two cells of the third row stay empty. One full-body otter per cell.
+Cells: 1. front view holding its item; 2. front view standing still; 3. front view walking, the foot on the viewer's right forward; 4. front view walking, the foot on the viewer's left forward; 5. back view standing still; 6. back view walking, the foot on the viewer's left lifted; 7. back view walking, the foot on the viewer's right lifted; 8. facing right standing still; 9. facing right walking, tail low; 10. facing right walking, other foot forward, tail raised.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character design. Keep the same face, fur and outfit in every cell. Each figure stays fully inside its own cell with clear space around it. Only cell 1 holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. The otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters
+
+==================== H1 (8칸) ====================
+[첨부] pose_guide_hall.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 2:1, 고를 수 있는 가장 큰 크기
+[칸 순서] H1_portrait, H1_front_idle, H1_front_swim1, H1_front_swim2, H1_back_swim1, H1_back_swim2, H1_right_swim1, H1_right_swim2
+
+[PROMPT]
+One single sprite sheet of one sea otter restaurant worker: an elegant otter waiter with silver gray fur, a neat swept gray fringe, half-lidded eyes, a black vest, a white shirt, a black bow tie and a short black waist apron. Item: a covered silver tray, with a white towel over one arm. Plain flat mint green background, no shadow, no water. Four equal columns and two rows, read left to right, top to bottom. One full-body otter per cell.
+Cells: 1. front view holding its item; 2. front view standing still; 3. front view swimming, arms spread out, the foot on the viewer's right kicking; 4. front view swimming, arms spread out, the foot on the viewer's left kicking; 5. back view swimming, arms spread out, the foot on the viewer's left kicking; 6. back view swimming, arms spread out, the foot on the viewer's right kicking; 7. facing right swimming, body slanted, tail raised up; 8. facing right swimming, body slanted, tail stretched straight back.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character design. Keep the same face, fur and outfit in every cell. Each figure stays fully inside its own cell with clear space around it. Only cell 1 holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. The otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters
+
+==================== H2 (8칸) ====================
+[첨부] pose_guide_hall.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 2:1, 고를 수 있는 가장 큰 크기
+[칸 순서] H2_portrait, H2_front_idle, H2_front_swim1, H2_front_swim2, H2_back_swim1, H2_back_swim2, H2_right_swim1, H2_right_swim2
+
+[PROMPT]
+One single sprite sheet of one sea otter restaurant worker: a tiny fluffy otter pup with pale honey fur, a small messy forelock, big round shiny eyes, a happy open smile, a white sailor cap with navy stripes and a white sailor top with a navy collar and neckerchief. Item: a plate with a grilled fish in both paws. Plain flat mint green background, no shadow, no water. Four equal columns and two rows, read left to right, top to bottom. One full-body otter per cell.
+Cells: 1. front view holding its item; 2. front view standing still; 3. front view swimming, arms spread out, the foot on the viewer's right kicking; 4. front view swimming, arms spread out, the foot on the viewer's left kicking; 5. back view swimming, arms spread out, the foot on the viewer's left kicking; 6. back view swimming, arms spread out, the foot on the viewer's right kicking; 7. facing right swimming, body slanted, tail raised up; 8. facing right swimming, body slanted, tail stretched straight back.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character design. Keep the same face, fur and outfit in every cell. Each figure stays fully inside its own cell with clear space around it. Only cell 1 holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. The otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters

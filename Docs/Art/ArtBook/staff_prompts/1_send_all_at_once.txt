@@ -1,0 +1,17 @@
+﻿[첨부] pose_guide_all.png, 처음 받은 해달 시안(라인업) 이미지
+[비율] 가로 2:1, 고를 수 있는 가장 큰 크기
+
+[PROMPT]
+One single large sprite sheet of five sea otter restaurant staff, plain flat mint green background, no shadow, no water. Five rows and ten equal columns, one full-body otter per cell.
+Row 1: a stout elderly otter chef with dark chocolate fur, a gray forelock, bushy gray eyebrows, a gray mustache, half-lidded eyes, a tall white chef hat, a white double-breasted jacket, a red neckerchief and a white waist apron. Item: a black frying pan.
+Row 2: a slim otter cook with cream fur, a blond side-swept fringe, round glasses, half-lidded eyes, a navy bandana with white hibiscus flowers, a white short-sleeved shirt and a long navy apron. Item: a wooden cutting board.
+Row 3: a small young otter cook with reddish brown fur, an auburn forelock, big round shiny eyes, a happy open smile, a puffy white chef hat with a teal band, a white jacket and a teal apron. Item: a steaming silver pot in both paws.
+Row 4: an elegant otter waiter with silver gray fur, a neat swept gray fringe, half-lidded eyes, a black vest, a white shirt, a black bow tie and a short black waist apron. Item: a covered silver tray, with a white towel over one arm.
+Row 5: a tiny fluffy otter pup with pale honey fur, a small messy forelock, big round shiny eyes, a happy open smile, a white sailor cap with navy stripes and a white sailor top with a navy collar and neckerchief. Item: a plate with a grilled fish in both paws.
+Columns in rows 1 to 3: 1. front view holding its item; 2. front view standing still; 3. front view walking, the foot on the viewer's right forward; 4. front view walking, the foot on the viewer's left forward; 5. back view standing still; 6. back view walking, the foot on the viewer's left lifted; 7. back view walking, the foot on the viewer's right lifted; 8. facing right standing still; 9. facing right walking, tail low; 10. facing right walking, other foot forward, tail raised.
+Columns in rows 4 and 5: 1. front view holding its item; 2. front view standing still; 3. front view swimming, arms spread out, the foot on the viewer's right kicking; 4. front view swimming, arms spread out, the foot on the viewer's left kicking; 5. back view swimming, arms spread out, the foot on the viewer's left kicking; 6. back view swimming, arms spread out, the foot on the viewer's right kicking; 7. facing right swimming, body slanted, tail raised up; 8. facing right swimming, body slanted, tail stretched straight back. Columns 9 and 10 stay empty.
+Use the attached pose guide for pose and position only, not for face, fur or outfit. Use the attached lineup for the character designs. Keep the same face, fur and outfit in every cell of a character. Each figure stays fully inside its own cell with clear space around it. Only the first cell of a character holds an item. All other cells have empty hands. Back views show no face.
+Style: cute sticker-like game art, thick uniform dark-brown outline, flat colors, minimal shading. Every otter is about two heads tall with the head as tall as the body, a very short body, a big round head, round ears and a flat paddle tail.
+
+[NEGATIVE]
+different outfit between poses, changed face, long body, tall proportions, thin outline, black outline, realistic, 3D render, pixel art, heavy gradient shading, text, letters, numbers, labels, grid lines, watermark, frame, checkerboard pattern, extra limbs, extra tail, overlapping characters, cropped characters
