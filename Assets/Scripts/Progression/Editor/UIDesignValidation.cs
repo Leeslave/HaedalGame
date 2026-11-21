@@ -124,7 +124,7 @@ public static class UIDesignValidation
             settlement.SetSaveState(SettlementPanel.SaveState.Saved);
             CaptureOwnerCanvas(dayOwner, camera, target, "06-Settlement");
             UnityEngine.Object.DestroyImmediate(dayOwner);
-            foreach (string section in new[] { "메뉴", "재료", "직원", "연구", "상점", "식당", "가구", "주민", "집", "엘프", "대장간" })
+            foreach (string section in new[] { "메뉴", "재료", "직원", "연구", "상점", "식당", "가구", "주민", "소식", "집", "엘프", "대장간" })
             {
                 var owner = new GameObject("UI preview", typeof(RestaurantManagementUI));
                 SceneManager.MoveGameObjectToScene(owner, preview);

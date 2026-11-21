@@ -37,7 +37,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         ("영업 준비", "메뉴 · 재료 · 직원", "Menu", new[] { "메뉴", "재료", "직원" }),
         ("식당 꾸미기", "가구 · 조리도구 · 식당 증축", "Furniture", new[] { "가구", "식당", "대장간" }),
-        ("섬 생활", "상점 · 연구 · 탐험 · 집", "Explore", new[] { "상점", "엘프", "연구", "주민", "집" }),
+        ("섬 생활", "상점 · 연구 · 탐험 · 섬 소식", "Explore", new[] { "상점", "엘프", "연구", "주민", "소식", "집" }),
     };
 
     private static string GroupOf(string section) => Groups.FirstOrDefault(g => g.sections.Contains(section)).name;
@@ -46,6 +46,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         "엘프" => "엘프 상점",
         "주민" => "탐험",
+        "소식" => "섬 소식",
         "식당" => "조리도구",
         "가구" => "가구 배치",
         "대장간" => "식당 증축",
@@ -64,6 +65,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         "엘프" => "특별 재료 · 설계도",
         "연구" => "새 요리 배우기",
         "주민" => "직원 파견 · 수확",
+        "소식" => "주민 부탁 · 배 수리",
         "집" => "할 일 · 주급 · 취침",
         _ => "",
     };
@@ -80,6 +82,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         "엘프" => "Elf",
         "연구" => "Research",
         "주민" => "Explore",
+        "소식" => "Explore",
         "집" => "House",
         _ => "Play",
     };
@@ -386,6 +389,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
                 break;
             case "주민":
                 DesignedExplore(s); break;
+            case "소식":
+                DesignedIslandNews(s); break;
             case "가구":
                 DesignedFurniture(s); break;
             case "집":

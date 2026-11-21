@@ -684,6 +684,7 @@ public partial class RestaurantManagementUI
         var trip = s.progression.expedition ?? new ExpeditionState();
         int away = s.employees.Count(e => ReferenceExpedition.IsAway(s, e.instanceId));
         info.text = $"선착장 · 배 1척 · 나간 직원 {away}명";
+        if (HasIslandNews(s)) Row("다른 섬에서 주민이 찾아왔어요.", ("섬 소식", () => Open("소식")));
         if (trip.destination >= 0)
         {
             bool ready = ReferenceExpedition.Returned(s);
