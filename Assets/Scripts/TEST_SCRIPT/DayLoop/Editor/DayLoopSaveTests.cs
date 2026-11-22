@@ -58,10 +58,12 @@ public class DayLoopSaveTests
         Assert.IsFalse(loaded.settlementPendingReview);
         Assert.AreEqual(12, loaded.playTimeSeconds);
     }
-    [Test] public void FailedSleep_DoesNotDeductWagesOrAdvanceResearch_AndCanRetry()
+    // 연구는 대기 일수 없이 재료를 예약하면 바로 실습한다 (5176ab1부터, GameSession.Begin이 대기 일수를 0으로 맞춘다).
+    // 예전 테스트는 잠들 때마다 대기 일수가 1씩 줄어드는지 봤는데, 지금은 실패한 취침이 연구 예약을 건드리지 않는지만 본다.
+    [Test] public void FailedSleep_DoesNotDeductWagesOrChangeResearch_AndCanRetry()
     {
         Begin(7);
-        GameSession.Current.progression.research.Add(new ResearchEntry { recipeId = 5, remainingDays = 2 });
+        GameSession.Current.progression.research.Add(new ResearchEntry { recipeId = 5, remainingDays = 0 });
         DayLoopSave.TryCommitDay(Record(7), out _);
         int gold = RestaurantProgress.Gold(GameSession.Current);
         string blocker = Path.Combine(directory, "blocker"); File.WriteAllText(blocker, "x");
@@ -69,13 +71,16 @@ public class DayLoopSaveTests
         Assert.IsFalse(RestaurantProgress.TrySleep(out string error));
         Assert.IsNotEmpty(error);
         Assert.AreEqual(7, GameSession.Current.day);
+        Assert.IsTrue(GameSession.Current.progression.freeTime, "저장에 실패하면 그날 밤(자유시간)에 그대로 머문다");
         Assert.AreEqual(gold, RestaurantProgress.Gold(GameSession.Current));
-        Assert.AreEqual(2, GameSession.Current.progression.research[0].remainingDays);
+        Assert.AreEqual(1, GameSession.Current.progression.research.Count);
+        Assert.AreEqual(5, GameSession.Current.progression.research[0].recipeId);
         SaveService.DirectoryOverride = directory;
         Assert.IsTrue(RestaurantProgress.TrySleep(out error), error);
         Assert.AreEqual(8, GameSession.Current.day);
         Assert.AreEqual(gold - 700, RestaurantProgress.Gold(GameSession.Current));
-        Assert.AreEqual(1, GameSession.Current.progression.research[0].remainingDays);
+        Assert.AreEqual(1, GameSession.Current.progression.research.Count, "잠들어도 연구 예약은 남는다");
+        Assert.AreEqual(0, GameSession.Current.progression.research[0].remainingDays, "연구는 대기 없이 바로 실습할 수 있다");
         Assert.IsFalse(RestaurantProgress.TrySleep(out _), "이미 저장한 아침에는 다시 잘 수 없다");
     }
     [Test] public void IntroAndAcknowledgement_DoNotReplacePreviousSave()
