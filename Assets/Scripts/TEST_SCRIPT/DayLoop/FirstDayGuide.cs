@@ -176,7 +176,9 @@ public class FirstDayGuide : MonoBehaviour
         string block = _day.GetStartBlockReason();
         if (string.IsNullOrEmpty(block))
         {
-            _prepStatus.text = "준비 완료 — 왼쪽 [운영 시작]을 누르면 손님이 들어와요.";
+            var soldOut = _day.SoldOutMenus();
+            _prepStatus.text = soldOut.Count == 0 ? "준비 완료 — 왼쪽 [운영 시작]을 누르면 손님이 들어와요."
+                : $"준비 완료 — 재료가 없어 오늘 품절: {string.Join(", ", soldOut)}";
             _prepStatus.color = DayLoopUI.Kit.GoodInk;
             _prepStatusPanel.color = DayLoopUI.Kit.GoodTint;
         }
