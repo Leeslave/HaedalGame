@@ -352,7 +352,7 @@ public class NpcStatusOverlay : MonoBehaviour
         icon.gameObject.SetActive(hasIcon);
         if (hasIcon)
         {
-            SetIcon(icon, food.Icon);
+            SetIcon(icon, designIcon);
             icon.transform.position = position;
         }
 

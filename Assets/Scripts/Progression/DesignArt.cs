@@ -15,12 +15,29 @@ public static class DesignArt
         sprite.name = "Design " + name; sprite.hideFlags = HideFlags.DontSave;
         sprites[name] = sprite; return sprite;
     }
-    public static Sprite Food(RecipeData recipe)
+    // 요리·재료 그림 (Resources/UIDesign/Art/Food, Ingredient). 이름은 띄어쓰기를 뺀 한글 이름으로 찾는다.
+    // 그림이 없는 요리·재료는 null을 돌려주고, 화면은 첫 글자 동그라미로 대신 보여 준다.
+    private static readonly Dictionary<string, string> FoodArt = new Dictionary<string, string>
     {
-        if (recipe == null) return null;
-        string name = recipe.RecipeName.Replace(" ", "");
-        return name.Contains("고등어구이") ? Load("FoodGrilledFish") : name.Contains("광어회") ? Load("FoodSashimi") : name.Contains("조개찜") ? Load("FoodClams") : null;
-    }
+        { "가리비구이", "ScallopGrill" }, { "고등어구이", "MackerelGrill" }, { "고등어된장조림", "MackerelDoenjang" },
+        { "광어회", "FlounderSashimi" }, { "문어숙회", "OctopusSukhoe" }, { "새우구이", "ShrimpGrill" },
+        { "새우완자탕", "ShrimpBallSoup" }, { "새우튀김", "ShrimpTempura" }, { "생선가스", "FishCutlet" },
+        { "연어간장구이", "SalmonSoyGrill" }, { "오징어숙회", "SquidSukhoe" }, { "조개찜", "ClamSteam" },
+    };
+    private static readonly Dictionary<string, string> IngredientArt = new Dictionary<string, string>
+    {
+        { "새우", "Shrimp" }, { "가리비", "Scallop" }, { "오징어", "Squid" }, { "조개", "Clam" }, { "광어", "Flounder" },
+        { "문어", "Octopus" }, { "고등어", "Mackerel" }, { "연어", "Salmon" }, { "바지락", "ManilaClam" }, { "흰살생선", "WhiteFish" },
+        { "소금", "Salt" }, { "설탕", "Sugar" }, { "식용유", "Oil" }, { "전분", "Starch" }, { "후추", "Pepper" }, { "밀가루", "Flour" },
+        { "식초", "Vinegar" }, { "와사비", "Wasabi" }, { "간장", "SoySauce" }, { "미림", "Mirin" }, { "레몬", "Lemon" }, { "마늘", "Garlic" },
+        { "된장", "Doenjang" }, { "생강", "Ginger" }, { "계란", "Egg" }, { "꿀", "Honey" }, { "겨자", "Gyeoja" },
+    };
+    public static Sprite Food(RecipeData recipe) =>
+        recipe != null && FoodArt.TryGetValue(recipe.RecipeName.Replace(" ", ""), out var file) ? Load("Food/" + file) : null;
+    public static Sprite Ingredient(IngredientData ingredient) =>
+        ingredient != null && IngredientArt.TryGetValue(ingredient.IngredientName.Replace(" ", ""), out var file) ? Load("Ingredient/" + file) : null;
+    public static Sprite Ingredient(int ingredientId) =>
+        GameDatabase.Recipes != null && GameDatabase.Recipes.TryGetIngredientById(ingredientId, out var item) ? Ingredient(item) : null;
 
     public static void ButtonIcon(UnityEngine.UI.Button button, string label, float scale = 1.5f)
     {

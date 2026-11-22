@@ -344,9 +344,10 @@ public partial class RestaurantManagementUI
                 DayLoopUI.Kit.Ink, 21, () => { selectedId = id; Refresh(); }, ingredient.IngredientName);
             button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false); DayLoopUI.Layout(button, preferredHeight: 84);
             var row = DayLoopUI.Rect("Columns", button.transform); DayLoopUI.Stretch(row, 12, 6, 12, 6); DayLoopUI.Horizontal(row, 0, 15);
-            var avatar = DayLoopUI.Panel(row, DayLoopUI.Kit.Sand, "Initial"); avatar.sprite = DayLoopUI.Circle; avatar.type = Image.Type.Simple;
+            var art = DesignArt.Ingredient(ingredient);
+            var avatar = DayLoopUI.Panel(row, art != null ? Color.white : DayLoopUI.Kit.Sand, "Initial"); avatar.sprite = art != null ? art : DayLoopUI.Circle; avatar.type = Image.Type.Simple; avatar.preserveAspect = true;
             DayLoopUI.Layout(avatar, preferredWidth: 60, preferredHeight: 60);
-            var initial = DayLoopUI.Text(avatar.transform, ingredient.IngredientName.Substring(0, 1), 27, DayLoopUI.Kit.Wood, TextAlignmentOptions.Center); DayLoopUI.Stretch(initial.rectTransform);
+            if (art == null) { var initial = DayLoopUI.Text(avatar.transform, ingredient.IngredientName.Substring(0, 1), 27, DayLoopUI.Kit.Wood, TextAlignmentOptions.Center); DayLoopUI.Stretch(initial.rectTransform); }
             DayLoopUI.Layout(Copy(row, ingredient.IngredientName, 64, 21), flexibleWidth: 1);
             DayLoopUI.Layout(Copy(row, GradeInventory(id), 64, 18), preferredWidth: 192);
             DayLoopUI.Layout(Copy(row, ingredient.IsBasicSeasoning ? "∞" : total.ToString(), 64, 27), preferredWidth: 72);
@@ -393,7 +394,7 @@ public partial class RestaurantManagementUI
             int key = RestaurantProgress.ShopKey(ingredient.IngredientId, grade), available = Stock(s, key);
             cart.TryGetValue(key, out int quantity);
             var button = Tile(grid, $"{ingredient.IngredientName} {RestaurantRules.GradeLetter(grade)}", $"{RestaurantProgress.ShopUnitPrice(ingredient, grade)}G\n남은 {available}개", quantity > 0,
-                () => OpenShopQuantity(key), flag: quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
+                () => OpenShopQuantity(key), DesignArt.Ingredient(ingredient), quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
             button.interactable = available > 0;
         }
         if (offers.Count == 0 && filter == "섬 직송")
@@ -635,7 +636,7 @@ public partial class RestaurantManagementUI
             int index = stocks.IndexOf(stock);
             string name = stock.IngredientID.ToString(); Sprite icon = null;
             if (stock.ItemType == ElfShopItemType.Recipe && GameDatabase.TryGetRecipe(stock.IngredientID, out var recipe)) { name = recipe.RecipeName + " 설계도"; icon = DesignArt.Food(recipe); }
-            else if (GameDatabase.Recipes.TryGetIngredientById(stock.IngredientID, out var ingredient)) { name = ingredient.IngredientName; }
+            else if (GameDatabase.Recipes.TryGetIngredientById(stock.IngredientID, out var ingredient)) { name = ingredient.IngredientName; icon = DesignArt.Ingredient(ingredient); }
             SelectCard(items, name, $"{elf.GetElfUnitPrice(stock):N0}G · " + (stock.CurrentStock > 0 ? $"재고 {stock.CurrentStock}" : "팔림"), selectedId == index, () => { selectedId = index; Refresh(); }, icon);
         }
         if (stocks.Count == 0) { Copy(detail, "오늘 판매 중인 물건이 없어요.", 90); return; }
