@@ -76,21 +76,20 @@ public static class DayLoopSave
         float foodWait = r.foodWaitSamples > 0 ? r.foodWaitSum / r.foodWaitSamples : -1f;
         float orderTake = r.orderTakeSamples > 0 ? r.orderTakeSum / r.orderTakeSamples : -1f;
 
-        if (r.notServedCount > 0)
-        {
-            if (seatWait >= 15f)
-                return $"기다리다 돌아간 손님이 {r.notServedCount}명 있어요. 자리 대기가 평균 {seatWait:0}초였어요. 테이블 배치를 확인해 보세요.";
-            if (foodWait >= 25f)
-                return $"기다리다 돌아간 손님이 {r.notServedCount}명 있어요. 음식이 도착하기까지 평균 {foodWait:0}초 걸렸어요. 주방·홀 직원 배치를 확인해 보세요.";
-            return $"대접하지 못한 손님이 {r.notServedCount}명 있어요. 오늘의 메뉴와 직원 배치를 확인해 보세요.";
-        }
-
-        if (seatWait >= 15f)
-            return $"자리 대기가 평균 {seatWait:0}초였어요. 테이블 배치를 확인해 보세요.";
-        if (foodWait >= 25f)
-            return $"음식이 도착하기까지 평균 {foodWait:0}초 걸렸어요. 주방·홀 직원 배치를 확인해 보세요.";
+        // QA #19: 예전에는 자리 대기를 먼저 봐서 원인과 상관없이 "테이블 배치"를 권했다. 주문·음식이 늦으면 손님이
+        // 자리를 오래 차지해 자리 대기도 함께 길어지므로, 홀·주방 병목을 먼저 짚고 자리 대기는 마지막에 본다.
+        string lead = r.notServedCount > 0 ? $"기다리다 돌아간 손님이 {r.notServedCount}명 있어요. " : "";
         if (orderTake >= 10f)
-            return $"주문을 받기까지 평균 {orderTake:0}초 걸렸어요. 홀 직원 배치를 확인해 보세요.";
+            return lead + $"주문을 받기까지 평균 {orderTake:0}초 걸렸어요. 홀 직원이 모자라요. 서빙(걷는 속도)이 높은 홀 직원을 써 보세요.";
+        if (foodWait >= 25f)
+            return lead + $"음식이 도착하기까지 평균 {foodWait:0}초 걸렸어요. 픽업대에 요리가 쌓이면 홀, 비어 있으면 주방 직원을 보강해 보세요.";
+        if (seatWait >= 15f)
+            return lead + $"자리 대기가 평균 {seatWait:0}초였어요. 주문과 음식은 빨랐으니 테이블을 더 놓아 보세요.";
+        if (r.notServedCount > 0)
+            return $"대접하지 못한 손님이 {r.notServedCount}명 있어요. 오늘의 메뉴와 직원 배치를 확인해 보세요.";
+        // QA #16: 레벨이 오르면 손님 기대 등급이 오르는데, 요리 등급을 올리는 방법을 알려 주는 곳이 없었다.
+        if (r.ratingCount > 0 && r.todayRating < 3.5f && GameSession.IsActive)
+            return $"손님은 Lv.{GameSession.Current.restaurantLevel}에서 {RestaurantRules.GradeLetter(RestaurantRules.Expectation(GameSession.Current.restaurantLevel))}등급 이상 요리를 기대해요. 재료 합성·섬 직송 재료·솜씨 좋은 요리사로 등급을 올려 보세요.";
 
         return r.day == 1
             ? "첫 영업에서 모든 손님을 대접했어요! 내일은 섬의 메뉴판에서 메뉴 구성을 바꿔 보세요."

@@ -383,6 +383,20 @@ public class ProgressionTests
         foreach (var item in rewards) Assert.AreEqual(before[item.Key] + item.Value, inventory.GetCount(item.Key));
         Assert.IsFalse(RestaurantProgress.TryClaimExpedition(out _));
     }
+    [Test] public void Expedition_HalfDaySentInMorning_ReturnsAfterOperation()
+    {
+        var s = GameSession.Current;
+        string employee = s.employees[0].instanceId;
+        s.progression.freeTime = false;
+        Assert.IsTrue(ReferenceExpedition.ReturnsTonight(s, 0));
+        Assert.IsFalse(ReferenceExpedition.ReturnsTonight(s, 1));
+        s.progression.expedition = new ExpeditionState { destination = 0, departureDay = s.day, returnDay = s.day, returnsTonight = true, employeeIds = new List<string> { employee } };
+        Assert.IsTrue(ReferenceExpedition.IsAway(s, employee));
+        Assert.IsFalse(ReferenceExpedition.Returned(s));
+        s.progression.freeTime = true;
+        Assert.IsFalse(ReferenceExpedition.IsAway(s, employee));
+        Assert.IsTrue(ReferenceExpedition.Returned(s));
+    }
     [Test] public void RestaurantLevel_FollowsLevelTable()
     {
         Assert.AreEqual(180, RestaurantRules.DailyVisitors(10));

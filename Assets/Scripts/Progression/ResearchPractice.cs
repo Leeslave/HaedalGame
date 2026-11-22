@@ -19,6 +19,9 @@ public class ResearchPractice : MonoBehaviour
     private int phase, hits, mistakes, expected;
     private float total, started, lastHit, value;
     private bool transitioning;
+    // QA #6·#24: 게이지 단계는 [시작]을 누르기 전까지 멈춰 있다. 안내를 읽는 동안 게이지가 지나가 버리지 않게 한다.
+    private bool waiting;
+    private GameObject startButton;
     private Image fill;
     private ResearchStep[] steps;
     private string Kind => steps[phase].kind;
@@ -46,7 +49,7 @@ public class ResearchPractice : MonoBehaviour
     }
     private Button Button(string text, Vector2 position, Action action)
     {
-        var button = DayLoopUI.KitButton(surface, text, DayLoopUI.Kit.Sea, Color.white, 26, () => { if (!transitioning) action(); });
+        var button = DayLoopUI.KitButton(surface, text, DayLoopUI.Kit.Sea, Color.white, 26, () => { if (!transitioning && !waiting) action(); });
         position.x *= .72f;
         DayLoopUI.Place((RectTransform)button.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), position, new Vector2(173, 70));
         return button;
@@ -54,7 +57,7 @@ public class ResearchPractice : MonoBehaviour
     private void ShowPhase()
     {
         foreach (Transform child in surface) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
-        hits = mistakes = expected = 0; transitioning = false; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
+        hits = mistakes = expected = 0; transitioning = waiting = false; startButton = null; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
         Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
@@ -114,10 +117,17 @@ public class ResearchPractice : MonoBehaviour
                 break;
             case 4:
                 instruction.text = Kind == "Grill" ? "앞면과 뒷면을 각각 초록 구간에서 뒤집고 꺼내세요." :
-                    Kind == "Fry" ? "기름 온도를 초록 구간에 유지하고 8초 이상 튀기세요." :
+                    Kind == "Fry" ? "기름 온도를 초록 구간에 유지하고 8초 이상 튀기세요. 초록 구간에 머문 시간 비율이 점수예요." :
                     Kind == "Simmer" ? "소스 농도가 초록 구간에 도달하면 꺼내세요." :
-                    Kind == "Stir" ? "젓기 버튼을 일정한 간격으로 눌러 8번 저으세요." : "물의 양을 맞추고 끓는 온도를 8초 이상 유지하세요.";
+                    Kind == "Stir" ? "젓기 버튼을 일정한 간격으로 눌러 8번 저으세요." : "물의 양을 맞추고 끓는 온도를 8초 이상 유지하세요. 초록 구간에 머문 시간 비율이 점수예요.";
                 Gauge();
+                waiting = true;
+                var start = DayLoopUI.KitButton(surface, "준비됐으면 시작", DayLoopUI.Kit.Awning, Color.white, 26, () => {
+                    waiting = false; started = lastHit = Time.unscaledTime;
+                    if (startButton != null) { startButton.SetActive(false); Destroy(startButton); }
+                });
+                DayLoopUI.Place((RectTransform)start.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(300, 76));
+                startButton = start.gameObject;
                 if (Kind == "Stir")
                 {
                     Button("젓기", new Vector2(0, -90), () => {
@@ -143,7 +153,11 @@ public class ResearchPractice : MonoBehaviour
                     Button("불 높이기", new Vector2(0, -90), () => heat = Mathf.Clamp01(heat + .15f));
                     Button("꺼내기", new Vector2(280, -90), () => FinishPhase(heatElapsed < 8 ? 0 : 5 * heatScore / Mathf.Max(1, heatElapsed)));
                     if (Kind == "Boil" || Kind == "Add")
-                        Button("물 맞추기", new Vector2(0, 0), () => { temperature = .5f; heat = .5f; });
+                    {
+                        // QA #24: 예전에는 누를 때마다 온도·화력이 정답으로 돌아가 버튼만 연타해도 5점이었다. 한 번만 쓸 수 있고 물 온도만 맞춘다.
+                        Button water = null;
+                        water = Button("물 맞추기", new Vector2(0, -175), () => { temperature = .5f; water.interactable = false; });
+                    }
                 }
                 break;
             case 5:
@@ -176,7 +190,7 @@ public class ResearchPractice : MonoBehaviour
     }
 
     // 단계 종류를 진행 표시용 짧은 이름으로 바꾼다.
-    private static string StepLabel(string kind)
+    public static string StepLabel(string kind)
     {
         switch (kind)
         {
@@ -214,7 +228,7 @@ public class ResearchPractice : MonoBehaviour
             {
                 foreach (Transform child in scorePanel) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
                 ScoreLabel("지금까지 평균", 30, 40);
-                ScoreLabel(scores.Count > 0 ? scores.Average().ToString("0.0") + " / 5" : "— / 5", 72, 90);
+                ScoreLabel(scores.Count > 0 ? scores.Average().ToString("0.00") + " / 5" : "— / 5", 72, 90);
                 var gauge = DayLoopUI.Bar(scorePanel, scores.Count > 0 ? scores.Average() / 5 : 0, DayLoopUI.Kit.Kelp);
                 DayLoopUI.Layout(gauge.transform.parent, preferredHeight: 21);
                 ScoreLabel("평균 4점 이상이면 메뉴가 해금돼요.", 19.5f, 42);
@@ -253,7 +267,7 @@ public class ResearchPractice : MonoBehaviour
             }
         }
         if (scores.Count == 0) return;
-        var summary = DayLoopUI.Chip(surface, $"지금까지 평균 {average:0.0} / 5 · 4점 이상 해금", average >= 4f ? DayLoopUI.Kit.GoodTint : DayLoopUI.Kit.Sand, average >= 4f ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, 17, "Average");
+        var summary = DayLoopUI.Chip(surface, $"지금까지 평균 {average:0.00} / 5 · 4점 이상 해금", average >= 4f ? DayLoopUI.Kit.GoodTint : DayLoopUI.Kit.Sand, average >= 4f ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, 17, "Average");
         var summaryRect = (RectTransform)summary.transform.parent;
         var fit = summaryRect.gameObject.AddComponent<ContentSizeFitter>();
         fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -268,7 +282,7 @@ public class ResearchPractice : MonoBehaviour
     public static float TimingScore(float position) => Mathf.Clamp(5 - Mathf.Max(0, Mathf.Abs(position - .5f) - .1f) * 12.5f, 0, 5);
     private void Update()
     {
-        if (transitioning || fill == null) return;
+        if (transitioning || waiting || fill == null) return;
         if (Mode == 4)
         {
             if (Kind == "Grill" || Kind == "Simmer") value = Mathf.Clamp01((Time.unscaledTime - started) * (Kind == "Grill" ? .25f : .1f));

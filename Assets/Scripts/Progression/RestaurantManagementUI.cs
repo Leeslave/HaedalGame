@@ -639,6 +639,10 @@ public partial class RestaurantManagementUI : MonoBehaviour
         target = type == 1 ? RestaurantProgress.MissionTarget * 100 : type == 2 ? 1 : RestaurantProgress.MissionTarget;
     }
 
+    /// <summary>미션 진행도 숫자 위에 붙는 설명. QA #9: 미션 종류와 상관없이 "대접한 손님"으로 고정돼 있었다.</summary>
+    public static string MissionCaption(GameSaveData s) =>
+        new[] { "미션을 받은 뒤 대접한 손님", "미션을 받은 뒤 올린 매출 (G)", "미션을 받은 뒤 새로 배운 요리" }[s.progression.missionIndex % 3];
+
     /// <summary>표시용 미션 진행도. 목표를 넘겨 쌓인 이전 세이브도 목표에서 멈춰 보인다.</summary>
     public static int MissionProgress(GameSaveData s)
     {
@@ -657,12 +661,15 @@ public partial class RestaurantManagementUI : MonoBehaviour
 
     private static string RoleLabel(string role) => role == nameof(PartTimerRole.Serving) ? "홀" : role == nameof(PartTimerRole.Kitchen) ? "주방" : "대기";
 
+    // QA #25: 자유시간에 [놓으러 가기]를 누르면 이유 없이 막혔다. 가구는 다음 날 아침 영업 준비 때 놓는다고 알려 준다.
+    private const string PlacementBlockedText = "지금은 식당에 들어갈 수 없어요. 테이블은 다음 영업일 아침 [영업 준비]에서 놓을 수 있어요.";
+
     private void PlaceTable(int seats)
     {
         if (TablePlacementManager.Instance == null)
         {
             pendingPlacement = seats;
-            if (!GameFlow.TryEnterRestaurant()) { pendingPlacement = 0; message.text = "오늘은 식당에 들어갈 수 없어요."; }
+            if (!GameFlow.TryEnterRestaurant()) { pendingPlacement = 0; message.text = PlacementBlockedText; }
             return;
         }
         window.gameObject.SetActive(false);
@@ -736,7 +743,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         practice.Begin(stage, recipe, average => {
             bool ok = RestaurantProgress.TryCompleteResearch(id, average, out string error);
             window.gameObject.SetActive(true); Refresh();
-            message.text = $"실습 평균 {average:0.0}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
+            message.text = $"실습 평균 {average:0.00}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
         }, steps, score.transform);
     }
 }

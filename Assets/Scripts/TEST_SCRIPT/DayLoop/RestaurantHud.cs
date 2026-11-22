@@ -290,7 +290,7 @@ public class RestaurantHud : MonoBehaviour
             int ra = a is ChefAgent ? 0 : 1, rb = b is ChefAgent ? 0 : 1;
             return ra != rb ? ra.CompareTo(rb) : string.CompareOrdinal(a.name, b.name);
         });
-        if (agents.Count > 4) agents.RemoveRange(4, agents.Count - 4);
+        // QA #20: 예전에는 4명까지만 보여 Lv.5(주방 3 + 홀 2)부터 직원이 빠졌다. 모두 보여 주고, 한 줄에 5명씩 놓는다.
 
         bool same = agents.Count == _staff.Count;
         for (int i = 0; same && i < agents.Count; i++) same = agents[i] == _staff[i].agent;
@@ -300,6 +300,7 @@ public class RestaurantHud : MonoBehaviour
         _staff.Clear();
         // 카드를 먼저 켜 두고 만든다. (꺼진 채로 만들면 버튼 등의 Awake가 미뤄진다)
         _staffRow.parent.gameObject.SetActive(agents.Count > 0);
+        _staffRow.GetComponent<GridLayoutGroup>().constraintCount = Mathf.Clamp(agents.Count, 1, StaffPerRow);
         foreach (PartTimerAgent agent in agents) _staff.Add(CreateStaffSlot(agent));
     }
 
@@ -629,6 +630,7 @@ public class RestaurantHud : MonoBehaviour
     }
 
     // 왼쪽 위 일차 카드 오른쪽: 직원
+    private const int StaffPerRow = 5;
     private void BuildStaffTray(Transform parent)
     {
         Image tray = DayLoopUI.Card(parent, DayLoopUI.Kit.Sail, "Staff", 3f, 5f);
@@ -636,7 +638,12 @@ public class RestaurantHud : MonoBehaviour
         DayLoopUI.Vertical(tray, 0, 2).padding = new RectOffset(14, 14, 6, 8);
         DayLoopUI.Layout(Jua(DayLoopUI.Text(tray.transform, "직원", 16, DayLoopUI.Kit.InkSoft)), preferredHeight: 20);
         _staffRow = DayLoopUI.Rect("Faces", tray.transform);
-        DayLoopUI.Horizontal(_staffRow, 0, 10, TextAnchor.UpperLeft);
+        GridLayoutGroup faces = _staffRow.gameObject.AddComponent<GridLayoutGroup>();
+        faces.cellSize = new Vector2(72, 96);
+        faces.spacing = new Vector2(10, 4);
+        faces.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        faces.constraintCount = StaffPerRow;
+        faces.childAlignment = TextAnchor.UpperLeft;
         tray.gameObject.SetActive(false);
     }
 

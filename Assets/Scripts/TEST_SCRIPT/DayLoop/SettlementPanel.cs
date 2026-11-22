@@ -118,14 +118,16 @@ public class SettlementPanel : MonoBehaviour
             DayLoopUI.Layout(empty, preferredHeight: 44);
         }
 
-        int totalCount = 0;
+        // QA #10: 매출 열에는 팁이 들어 있어 판매×단가와 맞지 않았다. 팁을 따로 세어 합계 줄에 밝힌다.
+        int totalCount = 0, tips = 0;
         foreach (DaySaleEntry sale in r.sales)
         {
             totalCount += sale.count;
+            tips += Mathf.Max(0, sale.revenue - sale.count * sale.unitPrice);
             AddSaleRow(sale.recipeId, sale.recipeName, $"{sale.count}개", DayLoopUI.Gold(sale.unitPrice), DayLoopUI.Gold(sale.revenue));
         }
 
-        string totals = $"매출 <b>{DayLoopUI.Gold(r.revenue)}</b>  ({totalCount}개)";
+        string totals = $"매출 <b>{DayLoopUI.Gold(r.revenue)}</b>  ({totalCount}개" + (tips > 0 ? $" · 팁 {DayLoopUI.Gold(tips)} 포함)" : ")");
         if (r.otherIncome > 0) totals += $"   기타 수입 <b>{DayLoopUI.Gold(r.otherIncome)}</b>";
         totals += $"   지출 <b>{DayLoopUI.Gold(r.expense)}</b>   순이익 <b>{DayLoopUI.SignedGold(r.netProfit)}</b>";
         int goldDelta = r.goldAtClose - r.goldAtOpen;
@@ -222,7 +224,7 @@ public class SettlementPanel : MonoBehaviour
         DayLoopUI.Layout(DayLoopUI.Text(columns, "판매 내역", 22, headColor, TextAlignmentOptions.MidlineLeft, FontStyles.Bold), flexibleWidth: 1);
         DayLoopUI.Layout(DayLoopUI.Text(columns, "판매", 22, headColor, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 120);
         DayLoopUI.Layout(DayLoopUI.Text(columns, "단가", 22, headColor, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 140);
-        DayLoopUI.Layout(DayLoopUI.Text(columns, "매출", 22, headColor, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 160);
+        DayLoopUI.Layout(DayLoopUI.Text(columns, "매출·팁", 22, headColor, TextAlignmentOptions.MidlineRight, FontStyles.Bold), preferredWidth: 160);
         Image rule = DayLoopUI.Panel(sales.transform, DayLoopUI.Kit.Divider, "Rule", false);
         DayLoopUI.Layout(rule, preferredHeight: 2);
 
@@ -267,7 +269,8 @@ public class SettlementPanel : MonoBehaviour
         _metrics = DayLoopUI.Text(insightBody, "", 19, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.TopLeft, FontStyles.Bold);
         DayLoopUI.Layout(_metrics, preferredHeight: 40);
         _suggestion = DayLoopUI.Text(insightBody, "", 23, DayLoopUI.Kit.Ink, TextAlignmentOptions.TopLeft, FontStyles.Bold);
-        DayLoopUI.Layout(_suggestion, preferredHeight: 40);
+        DayLoopUI.Layout(_suggestion, preferredHeight: 44);
+        _suggestion.enableAutoSizing = true; _suggestion.fontSizeMin = 15; _suggestion.fontSizeMax = 23;
 
         Hide();
     }

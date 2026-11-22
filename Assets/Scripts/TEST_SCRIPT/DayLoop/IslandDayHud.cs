@@ -20,6 +20,7 @@ public partial class IslandDayHud : MonoBehaviour
 
     private Canvas _canvas;
     private Button _prepareAction;
+    private float _noticeUntil;
     private TMP_Text _day, _stats, _mission;
     private Image _missionBar;
     private Button _missionClaim;
@@ -100,6 +101,7 @@ public partial class IslandDayHud : MonoBehaviour
             DayLoopUI.Layout(_stepLabels[i], preferredWidth: 54, preferredHeight: 24);
         }
         _stats = DayLoopUI.Text(status.transform, "", 23, DayLoopUI.Kit.Ink, style: FontStyles.Bold);
+        _stats.enableAutoSizing = true; _stats.fontSizeMin = 15; _stats.fontSizeMax = 23;
         DayLoopUI.Layout(_stats, preferredHeight: 32);
         var mission = DayLoopUI.Card(rail, DayLoopUI.Kit.Sail, "Mission");
         // 미션을 채우면 카드를 눌러 바로 보상을 받는다.
@@ -118,7 +120,7 @@ public partial class IslandDayHud : MonoBehaviour
         _missionBar = DayLoopUI.Bar(mission.transform, 0, DayLoopUI.Kit.Sea);
         DayLoopUI.Layout(_missionBar.transform.parent, preferredHeight: 14);
         _prepareAction = DayLoopUI.RailButton(rail, "영업 준비", () => {
-            if (!GameFlow.TryEnterRestaurant()) _mission.text = "오늘은 영업을 시작할 수 없어요.\n집에서 다음 날을 준비해요.";
+            if (!GameFlow.TryEnterRestaurant()) Notice(EntryBlockReason() ?? "오늘은 영업을 시작할 수 없어요.\n집에서 다음 날을 준비해요.");
         }, true, 99);
         // 건물(상점·연구소·대장간·선착장·집)은 지도 위 표식으로 들어간다. 같은 버튼을 띠에 한 번 더 두지 않는다.
         var hint = DayLoopUI.Text(rail, "건물은 지도에서 눌러 들어가요.", 20, new Color32(0xF1, 0xDC, 0xBE, 0xFF), TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -139,7 +141,7 @@ public partial class IslandDayHud : MonoBehaviour
         {
             int index = i;
             var button = DayLoopUI.Button(_canvas.transform, "", Color.clear, Color.white, 25.5f, () => {
-                if (index == 0) { if (!GameFlow.TryEnterRestaurant()) _mission.text = "오늘 영업을 마쳤거나 공사 중이에요."; }
+                if (index == 0) { if (!GameFlow.TryEnterRestaurant()) Notice(EntryBlockReason() ?? "오늘 영업을 마쳤거나 공사 중이에요."); }
                 else if (index == 1) ReferenceHouseView.Open(gameObject.scene);
                 else RestaurantManagementUI.OpenSection(sections[index]);
             }, "Map " + labels[i]);
@@ -182,15 +184,16 @@ public partial class IslandDayHud : MonoBehaviour
             DaySettlementRecord last = GameSession.Current.lastSettlement;
             if (last != null && last.day > 0) stats += $"   {DayLoopUI.Rating(RestaurantRules.RestaurantRating(GameSession.Current))}";
             stats += $"   <color={soft}>Lv.{GameSession.Current.restaurantLevel}</color>";
+            // QA #11: "Lv.1 → 2 공사 중"이 카드 폭을 넘어 잘렸다. 짧게 쓰고, 그래도 길면 글자를 줄인다.
             if (GameSession.Current.progression.pendingRestaurantLevel > 0)
-                stats += $" <color={DayLoopUI.Hex(DayLoopUI.Kit.SeaDeep)}>→ {GameSession.Current.progression.pendingRestaurantLevel} 공사 중</color>";
+                stats += $"<color={DayLoopUI.Hex(DayLoopUI.Kit.SeaDeep)}>→{GameSession.Current.progression.pendingRestaurantLevel} 공사</color>";
 
             RestaurantManagementUI.Mission(GameSession.Current, out string missionName, out int target);
             int progress = RestaurantManagementUI.MissionProgress(GameSession.Current);
             bool done = progress >= target;
             int reward = 200 + GameSession.Current.progression.missionIndex * 100;
-            _mission.text = done
-                ? $"미션 완료! <color={DayLoopUI.Hex(DayLoopUI.Kit.GoldInk)}>눌러서 {DayLoopUI.Gold(reward)} 받기</color>\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>"
+            if (Time.unscaledTime >= _noticeUntil) _mission.text = done
+                ?$"미션 완료! <color={DayLoopUI.Hex(DayLoopUI.Kit.GoldInk)}>눌러서 {DayLoopUI.Gold(reward)} 받기</color>\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>"
                 : $"미션\n{missionName} <color={soft}>{progress:N0} / {target:N0}</color>";
             DayLoopUI.SetBar(_missionBar, target > 0 ? (float)progress / target : 0f);
             _missionBar.color = done ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Sea;
@@ -200,8 +203,36 @@ public partial class IslandDayHud : MonoBehaviour
         _stats.text = stats;
 
         if (GameSession.IsActive && _prepareAction != null)
-            DayLoopUI.SetButtonLabel(_prepareAction, $"영업 준비\n<size=65%>메뉴 {GameSession.Current.menuSlots.Count(x => x >= 0)}개 · 직원 {GameSession.Current.employees.Count}명 · {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석</size>");
+        {
+            // QA #7: 공사 휴업일·영업 후에는 눌러도 아무 일이 없는데 평소와 같은 빨간 버튼이었다. 꺼진 모양과 이유를 보여 준다.
+            // QA #25: 좌석은 레벨 한도가 아니라 실제로 배치한 좌석 수를 보여 준다.
+            var s = GameSession.Current;
+            bool closed = GameSession.OperationCompletedToday || s.progression.constructionUntilDay > s.day;
+            int seats = Mathf.Min(RestaurantManagementUI.PlacedTableSeats(s).Sum(), RestaurantRules.SeatLimit(s.restaurantLevel));
+            string label = !closed ? $"영업 준비\n<size=65%>메뉴 {s.menuSlots.Count(x => x >= 0)}개 · 직원 {s.employees.Count}명 · {seats}석</size>"
+                : GameSession.OperationCompletedToday ? "영업 마감\n<size=65%>집에서 자면 다음 날이에요</size>"
+                : "공사 휴업\n<size=65%>집에서 자면 새 식당이 열려요</size>";
+            DayLoopUI.SetButtonLabel(_prepareAction, label);
+            _prepareAction.image.color = closed ? DayLoopUI.Kit.WoodLight : DayLoopUI.Kit.Awning;
+        }
         RefreshBadges();
+    }
+
+    /// <summary>오늘 식당에 들어갈 수 없는 이유. 들어갈 수 있으면 null.</summary>
+    private static string EntryBlockReason()
+    {
+        if (!GameSession.IsActive) return null;
+        if (GameSession.OperationCompletedToday) return "오늘 영업은 마쳤어요.\n집에서 자면 다음 날 아침이 와요.";
+        var s = GameSession.Current;
+        if (s.progression.constructionUntilDay > s.day) return $"오늘은 식당 공사로 휴업해요.\n집에서 자면 Lv.{Mathf.Max(s.restaurantLevel, s.progression.pendingRestaurantLevel)} 식당이 열려요.";
+        return null;
+    }
+
+    /// <summary>미션 카드에 잠깐 안내를 띄운다. 0.5초마다 하는 새로 고침이 바로 덮어쓰지 않게 3초 동안 둔다.</summary>
+    private void Notice(string text)
+    {
+        _mission.text = text;
+        _noticeUntil = Time.unscaledTime + 3f;
     }
 
     private void ClaimMission()

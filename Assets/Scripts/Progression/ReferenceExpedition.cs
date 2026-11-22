@@ -8,9 +8,21 @@ public static class ReferenceExpedition
     public static readonly string[] Names = { "앞바다", "갯벌", "산호 숲" };
     public static int Duration(int destination) => destination == 2 ? 2 : 1;
     public static bool IsAway(GameSaveData s, string employeeId) => s.progression.expedition != null
-        && s.progression.expedition.destination >= 0 && s.day < s.progression.expedition.returnDay
+        && s.progression.expedition.destination >= 0 && !Returned(s)
         && s.progression.expedition.employeeIds.Contains(employeeId);
-    public static bool Returned(GameSaveData s) => s.progression.expedition != null && s.progression.expedition.destination >= 0 && s.day >= s.progression.expedition.returnDay;
+    public static bool Returned(GameSaveData s)
+    {
+        var trip = s.progression.expedition;
+        if (trip == null || trip.destination < 0) return false;
+        return s.day > trip.returnDay || s.day == trip.returnDay && (!trip.returnsTonight || s.progression.freeTime);
+    }
+    /// <summary>
+    /// 돌아오는 때. QA #12: 반나절(앞바다)과 하루(갯벌)가 둘 다 다음 날 아침에 돌아와 기간 표기가 의미 없었다.
+    /// 반나절 탐험은 아침에 보내면 그날 영업을 마친 밤에, 밤에 보내면 다음 날 아침에 돌아온다.
+    /// </summary>
+    public static bool ReturnsTonight(GameSaveData s, int destination) => destination == 0 && !s.progression.freeTime;
+    public static string ReturnLabel(int returnDay, bool tonight, int today) =>
+        tonight ? (returnDay == today ? "오늘 영업을 마친 밤" : $"{returnDay}일차 밤") : $"{returnDay}일차 아침";
     public static Dictionary<int, int> Rewards(GameSaveData s)
     {
         var trip = s.progression.expedition;
@@ -42,7 +54,8 @@ public static partial class RestaurantProgress
             if (!remaining.Any(e => e.role == "Serving") || !remaining.Any(e => e.role == "Kitchen"))
                 return "영업에 필요한 홀 직원과 주방 직원을 한 명씩 남겨 주세요.";
         }
-        trip.destination = destination; trip.departureDay = s.day; trip.returnDay = s.day + ReferenceExpedition.Duration(destination);
+        trip.destination = destination; trip.departureDay = s.day; trip.returnsTonight = ReferenceExpedition.ReturnsTonight(s, destination);
+        trip.returnDay = trip.returnsTonight ? s.day : s.day + ReferenceExpedition.Duration(destination);
         trip.employeeIds = employees.ToList(); return null;
     }, out error);
 

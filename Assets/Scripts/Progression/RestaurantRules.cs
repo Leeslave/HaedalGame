@@ -113,6 +113,7 @@ public class ExpeditionState
     public int destination = -1;
     public int departureDay;
     public int returnDay;
+    public bool returnsTonight;     // 아침에 보낸 반나절 탐험은 그날 영업을 마친 밤에 돌아온다
     public List<string> employeeIds = new List<string>();
 }
 

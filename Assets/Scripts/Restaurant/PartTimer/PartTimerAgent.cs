@@ -31,6 +31,7 @@ public class PartTimerAgent : MonoBehaviour
     private void Update()
     {
         if (IsSleeping) Nap(Time.deltaTime * RestaurantSpeedController.SpeedMultiplier);
+        if (sleepLook != IsSleeping) SetSleepLook(IsSleeping);
         if (employee == null || Time.time - lastWork < 5) return;
         restTimer += Time.deltaTime;
         if (restTimer >= 5) { employee.stamina = Mathf.Min(employee.hp, employee.stamina + 1); restTimer = 0; }
@@ -54,6 +55,28 @@ public class PartTimerAgent : MonoBehaviour
             employee.stamina = Mathf.Max(0, employee.stamina - staminaCost);
             IsSleeping = Random.value < .15f * (1 - employee.stamina / Mathf.Max(1, employee.hp));
             if (IsSleeping) SleepRemaining = NapSeconds;
+        }
+    }
+    // QA #14: 손님 옆(응대 자리)에서 잠들면 옆 테이블 의자의 손님 위에 겹쳐 그려졌다.
+    // 자는 동안에는 손님(정렬 순서 5~6) 바로 뒤로 그리고 살짝 흐리게 해 손님이 가려지지 않게 한다.
+    // 너무 많이 내리면 바닥(바다) 아래로 들어가 직원이 아예 안 보이므로 손님 바로 아래(4)까지만 내린다.
+    private const int SleepTopOrder = 4;
+    private bool sleepLook;
+    private int sleepOrderDrop;
+    private void SetSleepLook(bool sleeping)
+    {
+        sleepLook = sleeping;
+        var sprites = GetComponentsInChildren<SpriteRenderer>();
+        if (sleeping)
+        {
+            int top = int.MinValue;
+            foreach (var sprite in sprites) top = Mathf.Max(top, sprite.sortingOrder);
+            sleepOrderDrop = sprites.Length == 0 ? 0 : Mathf.Max(0, top - SleepTopOrder);
+        }
+        foreach (var sprite in sprites)
+        {
+            sprite.sortingOrder += sleeping ? -sleepOrderDrop : sleepOrderDrop;
+            var color = sprite.color; color.a = sleeping ? .6f : 1f; sprite.color = color;
         }
     }
     /// <summary>낮잠 시간을 줄이고, 다 자면 체력을 조금 회복한 채 스스로 깬다.</summary>

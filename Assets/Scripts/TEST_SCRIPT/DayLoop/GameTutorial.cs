@@ -370,7 +370,7 @@ public class GameTutorial : MonoBehaviour
                 return MapOrAsk("재료 채우기", need, "상점", "상점 열기", "상점");
 
             case Step.RestockBuy:
-                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누를 때마다 1개씩 장바구니에 담겨요. 하나만 담아도 돼요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
+                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누르면 수량 창이 떠요. 개수를 정해 담고, 하나만 담아도 돼요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
                     Find("Restaurant management", "ContentFrame"), "shop");
 
             case Step.RestockDone:
