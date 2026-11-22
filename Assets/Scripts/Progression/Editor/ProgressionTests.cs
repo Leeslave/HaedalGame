@@ -68,13 +68,19 @@ public class ProgressionTests
         Assert.IsFalse(inventory.TryConsumeRecipe(recipe, out _));
         Assert.AreEqual(3, inventory.GetCount(1));
     }
-    [Test] public void OperationFreezesGrade_WithoutFallingBackToLowerGrade()
+    [Test] public void MixedGrades_UseHighestFirst_ThenFallBackToLowerGrade()
     {
-        inventory.SetCount(1, 10); inventory.AddGrade(1, 2, 1); inventory.BeginOperation();
+        // QA #18: F 10 + D 1이면 D를 먼저 쓰고, 떨어지면 F로 넘어간다. (예전에는 D 1개만 쓸 수 있었다)
+        inventory.SetCount(1, 10); inventory.AddGrade(1, 2, 1);
         var recipe = Recipe(new RecipeIngredientRequirement(1, 1001, "새우", 1));
+        Assert.AreEqual(11, inventory.CraftableCount(recipe));
         Assert.IsTrue(inventory.TryConsumeRecipe(recipe, out int quality)); Assert.AreEqual(2, quality);
-        Assert.IsFalse(inventory.TryConsumeRecipe(recipe, out _)); Assert.AreEqual(10, inventory.GetCount(1));
-        inventory.EndOperation(); Assert.IsTrue(inventory.TryConsumeRecipe(recipe, out quality)); Assert.AreEqual(0, quality);
+        Assert.IsTrue(inventory.TryConsumeRecipe(recipe, out quality)); Assert.AreEqual(0, quality);
+        Assert.AreEqual(9, inventory.GetCount(1));
+        // 한 접시에 두 등급이 섞이면 평균을 내림한다: (D + F) / 2 = E
+        inventory.AddGrade(1, 2, 1);
+        Assert.IsTrue(inventory.TryConsumeRecipe(Recipe(new RecipeIngredientRequirement(1, 1001, "새우", 2)), out quality));
+        Assert.AreEqual(1, quality); Assert.AreEqual(8, inventory.GetCount(1));
     }
     [Test] public void BasicSeasoning_IsUnlimitedAndDoesNotReduceQuality()
     {
