@@ -13,10 +13,12 @@ public static class RestaurantRules
     public const int MaxLevel = 10;
     public const int SixSeatUnlockLevel = 3;
     private static readonly int[] Visitors = { 10, 15, 25, 35, 50, 60, 80, 100, 135, 180 };
-    private static readonly int[] Seats = { 2, 4, 6, 8, 10, 12, 15, 18, 22, 26 };
+    // 1레벨부터 4석(2인 테이블 둘)까지 놓을 수 있다. 처음 2석이면 3일차 '식당 키우기' 안내에서 테이블을 사도 놓을 자리가 없었다.
+    private static readonly int[] Seats = { 4, 6, 8, 10, 12, 14, 16, 18, 22, 26 };
     private static readonly int[] Menus = { 3, 3, 4, 4, 5, 5, 6, 6, 7, 8 };
     private static readonly int[] Chefs = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 };   // 요리 공간 = 주방 직원 배치 한도
-    private static readonly int[] Servers = { 1, 1, 1, 2, 2, 3, 3, 4, 4, 5 };
+    // Lv.3은 하루 손님이 25명으로 늘어서, 홀 직원 1명으로는 하루 12~17명이 기다리다 돌아갔다(QA 10일차 영상). 그래서 Lv.3부터 2명.
+    private static readonly int[] Servers = { 1, 1, 2, 2, 2, 3, 3, 4, 4, 5 };
     private static readonly int[] Waiting = { 2, 3, 4, 6, 8, 10, 12, 15, 18, 22 };
     private static readonly int[] Costs = { 0, 500, 1200, 3000, 6500, 12000, 25000, 45000, 80000, 150000 };
     private static readonly float[] Ratings = { 0, 2.5f, 3, 3, 3, 3.5f, 3.5f, 3.5f, 4, 4 };
@@ -27,6 +29,10 @@ public static class RestaurantRules
     private static int Index(int level) => Mathf.Clamp(level, 1, MaxLevel) - 1;
     public static int DailyVisitors(int level) => Visitors[Index(level)];
     public static int SeatLimit(int level) => Seats[Index(level)];
+    /// <summary>좌석 한도를 늘리는 방법. 배치 화면의 (i) 안내와 한도 초과 알림에 쓴다.</summary>
+    public static string SeatLimitHelp(int level) => level >= MaxLevel
+        ? $"지금 최대 {SeatLimit(level)}석이에요. 식당 레벨이 가장 높아요."
+        : $"최대 좌석은 식당 레벨로 정해져요.\n대장간에서 Lv.{level + 1}로 올리면 {SeatLimit(level + 1)}석이 돼요.";
     public static int MenuLimit(int level) => Menus[Index(level)];
     public static int StaffLimit(int level, PartTimerRole role) => role == PartTimerRole.Kitchen ? Chefs[Index(level)] : Servers[Index(level)];
     public static int CookingSpace(int level) => Chefs[Index(level)];

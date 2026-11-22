@@ -393,7 +393,7 @@ public partial class RestaurantManagementUI
         {
             int key = RestaurantProgress.ShopKey(ingredient.IngredientId, grade), available = Stock(s, key);
             cart.TryGetValue(key, out int quantity);
-            var button = Tile(grid, $"{ingredient.IngredientName} {RestaurantRules.GradeLetter(grade)}", $"{RestaurantProgress.ShopUnitPrice(ingredient, grade)}G\n남은 {available}개", quantity > 0,
+            var button = Tile(grid, $"{ingredient.IngredientName} {RestaurantRules.GradeLetter(grade)}", $"{RestaurantProgress.ShopUnitPrice(ingredient, grade)}G · 보유 {IngredientInventoryService.Instance.GetCount(ingredient.IngredientId)}\n가게 재고 {available}", quantity > 0,
                 () => OpenShopQuantity(key), DesignArt.Ingredient(ingredient), quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
             button.interactable = available > 0;
         }
@@ -586,7 +586,8 @@ public partial class RestaurantManagementUI
         {
             int id = recipe.RecipeId;
             var pending = s.progression.research.Find(x => x.recipeId == id);
-            string status = s.unlockedRecipeIds.Contains(id) ? "메뉴 해금" : pending != null ? pending.remainingDays > 0 ? $"연구 중 · {pending.remainingDays}일 남음" : "실습 준비 완료" : s.progression.blueprints.Contains(id) ? "재료 예약 가능" : $"설계도 필요 · {Mathf.RoundToInt(recipe.Price * 1.2f):N0}G";
+            string status = s.unlockedRecipeIds.Contains(id) ? "메뉴 해금" : pending != null ? pending.remainingDays > 0 ? $"연구 중 · {pending.remainingDays}일 남음" : "실습 준비 완료"
+                : s.progression.blueprints.Contains(id) ? (RestaurantProgress.MissingResearchIngredients(s, recipe).Count > 0 ? "재료 부족" : "재료 예약 가능") : $"설계도 필요 · {Mathf.RoundToInt(recipe.Price * 1.2f):N0}G";
             SelectCard(items, recipe.RecipeName, $"★{recipe.RecipeGrade} · {status}", selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Food(recipe));
         }
         var selected = recipes.FirstOrDefault(r => r.RecipeId == selectedId) ?? recipes.FirstOrDefault();
@@ -606,8 +607,10 @@ public partial class RestaurantManagementUI
         Copy(detail, ToolRequirement(s, selected), 34, 21, RestaurantProgress.HasTool(s, selected) ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.WarnInk);
         // 재료가 많은 요리도 버튼이 패널 밖으로 밀리지 않게 행동 버튼을 재료 목록보다 먼저 둔다.
         ResearchActions(detail, s, selected, recipeId);
-        RecipeRequirements(detail, selected, true);
+        if (unlocked || plan == null) RecipeRequirements(detail, selected, true);
+        else ResearchCosts(detail, s, selected);
         if (!RestaurantProgress.CanResearch) message.text = "연구 실습은 영업을 마친 자유시간에 이용할 수 있어요.";
+        else if (cartDay == s.day && cart.Any(x => x.Value > 0)) message.text = "장바구니에 담은 재료가 있어요. 상점에서 [사기]를 눌러야 창고에 들어와요.";
     }
 
     private void ResearchActions(Transform detail, GameSaveData s, RecipeData selected, int recipeId)
@@ -619,8 +622,54 @@ public partial class RestaurantManagementUI
             DetailAction(detail, research.remainingDays > 0 ? $"{research.remainingDays}일 뒤 실습" : "실습 시작", () => BeginChallenge(recipeId), true, research.remainingDays <= 0 && RestaurantProgress.CanResearch);
             DetailAction(detail, "연구 취소 · 재료 환불", () => ConfirmCancelResearch(recipeId));
         }
-        else if (s.progression.blueprints.Contains(recipeId)) DetailAction(detail, "재료 예약 · 연구 시작", () => Run((out string error) => RestaurantProgress.TryStartResearch(recipeId, out error)), true, RestaurantProgress.CanResearch);
+        else if (s.progression.blueprints.Contains(recipeId))
+        {
+            var missing = RestaurantProgress.MissingResearchIngredients(s, selected);
+            if (missing.Count > 0) DetailAction(detail, "부족한 재료 담고 상점 가기", () => BuyMissingResearch(missing), true);
+            else DetailAction(detail, "재료 예약 · 연구 시작", () => Run((out string error) => RestaurantProgress.TryStartResearch(recipeId, out error)), true, RestaurantProgress.CanResearch);
+        }
         else DetailAction(detail, $"설계도 사기 · {Mathf.RoundToInt(selected.Price * 1.2f):N0}G", () => Run((out string error) => RestaurantProgress.TryBuyBlueprint(recipeId, out error)), true);
+    }
+
+    /// <summary>연구에 쓰는 재료와 보유 수. 요리 재료 전체가 아니라 연구 과정에 적힌 재료만 예약한다.</summary>
+    private void ResearchCosts(Transform parent, GameSaveData s, RecipeData recipe)
+    {
+        var pending = s.progression.research.Find(x => x.recipeId == recipe.RecipeId);
+        if (pending != null)
+        {
+            Copy(parent, "예약한 재료", 32, 23, DayLoopUI.Kit.InkSoft);
+            foreach (var paid in pending.paidIngredients)
+                Copy(parent, $"{(GameDatabase.Recipes.TryGetIngredientById(paid.ingredientId, out var item) ? item.IngredientName : "재료")} {RestaurantRules.GradeLetter(paid.grade)} ×{paid.amount}", 30, 21);
+            return;
+        }
+        Copy(parent, "연구에 쓰는 재료", 32, 23, DayLoopUI.Kit.InkSoft);
+        var missing = RestaurantProgress.MissingResearchIngredients(s, recipe);
+        foreach (var group in RecipeResearchPlan.Requirements(recipe).GroupBy(x => x.IngredientId))
+        {
+            int need = group.Sum(x => x.Amount);
+            string name = group.First().IngredientName;
+            if (IngredientInventoryService.IsUnlimited(group.Key)) { Copy(parent, $"{name} ×{need}  <size=80%>무제한 양념</size>", 30, 21); continue; }
+            missing.TryGetValue(group.Key, out int lack);
+            int owned = IngredientInventoryService.Instance.GetCount(group.Key);
+            Copy(parent, $"{name} ×{need}  <size=80%>보유 {owned}" + (lack > 0 ? $" · {lack}개 부족" : " · 충분") + "</size>", 30, 21, lack > 0 ? DayLoopUI.Kit.WarnInk : DayLoopUI.Kit.Ink);
+        }
+        Copy(parent, "요리할 때 · " + string.Join(", ", recipe.Requirements.Select(x => x.IngredientName).Distinct()), 30, 18, DayLoopUI.Kit.InkSoft);
+    }
+
+    /// <summary>연구에 모자란 재료를 오늘 장바구니에 담고 상점 탭을 연다. 사는 건 상점에서 [사기]로 확정한다.</summary>
+    private void BuyMissingResearch(Dictionary<int, int> missing)
+    {
+        var s = GameSession.Current;
+        if (cartDay != s.day) { cart.Clear(); cartDay = s.day; }
+        foreach (var pair in missing)
+        {
+            int key = RestaurantProgress.ShopKey(pair.Key, 0);
+            cart.TryGetValue(key, out int already);
+            int amount = Mathf.Min(Mathf.Max(already, pair.Value), Stock(s, key));
+            if (amount > 0) cart[key] = amount; else cart.Remove(key);
+        }
+        Open("상점");
+        message.text = "부족한 재료를 장바구니에 담았어요. 오른쪽 [사기]를 눌러 구매하세요.";
     }
 
     private void DesignedElf(GameSaveData s)
@@ -728,6 +777,8 @@ public partial class RestaurantManagementUI
         Copy(detail, chosen + "인석 테이블", 60, 33);
         Copy(detail, $"좌석 {chosen} · 창고에 {RestaurantProgress.FurnitureCount(s, chosen)}개", 60, 23);
         Copy(detail, $"배치함   {placedSeats.Count(n => n == chosen)}개\n창고      {RestaurantProgress.FurnitureCount(s, chosen)}개\n더 사기  {chosen * 40}G", 150, 24);
+        // 최대 좌석을 늘리는 방법. 배치 화면의 (i)와 같은 글이다.
+        Copy(detail, RestaurantRules.SeatLimitHelp(s.restaurantLevel), 64, 19, DayLoopUI.Kit.InkSoft);
         DayLoopUI.Spacer(detail);
         DetailAction(detail, $"더 사기 · {chosen * 40}G", () => Run((out string error) => RestaurantProgress.TryBuyFurniture(chosen, out error)));
         DetailAction(detail, "놓으러 가기", () => PlaceTable(chosen), true, RestaurantProgress.FurnitureCount(s, chosen) > 0);

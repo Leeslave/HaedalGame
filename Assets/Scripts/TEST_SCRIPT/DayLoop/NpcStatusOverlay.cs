@@ -291,7 +291,7 @@ public class NpcStatusOverlay : MonoBehaviour
             case CustomerState.Exit:
                 if (customer.WasServed) return new[] { "아쉬워요", "괜찮았어요", "잘 먹었어요", "맛있어요!", "최고예요!" }[Mathf.Clamp(Mathf.FloorToInt(customer.LastRating), 0, 4)] + $" {customer.LastRating:0.0}";
                 color = DayLoopUI.Warn;
-                return "그냥 돌아가요";
+                return customer.LeftAngry ? $"너무 오래 기다렸어요 {customer.LastRating:0.0}" : "그냥 돌아가요";
             default:
                 return "입장";
         }

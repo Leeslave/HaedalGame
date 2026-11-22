@@ -88,7 +88,7 @@ public class TablePlacementManager : MonoBehaviour
             int seats = 0;
             foreach (var table in PlacedTable.Active) if (table != movingTable) seats += table.tableData.chairTiles.Length;
             if (seats + activeGhost.TableData.chairTiles.Length > RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel))
-            { DayCycleController.Instance?.Toast("현재 식당의 좌석 한도를 초과했어요."); return; }
+            { DayCycleController.Instance?.Toast("좌석 한도를 넘어요. 대장간에서 식당을 증축하면 한도가 늘어요."); return; }
         }
         TableSaveLoadManager.Instance.RememberEdit();
         if (GameSession.IsActive && movingTable == null)

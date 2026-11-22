@@ -258,6 +258,13 @@ public partial class RestaurantManagementUI : MonoBehaviour
         bool selected = section == tab;
         Color ink = selected ? Color.white : DayLoopUI.Kit.Ink;
         var item = DayLoopUI.Button(parent, "", selected ? DayLoopUI.Kit.Sea : Color.white, Color.clear, 10, () => Open(section), section);
+        if (section == "연구" && RestaurantProgress.ResearchLocked)
+        {
+            // 장사 전에는 연구 항목을 흐리게 끄고, 올리면 언제 갈 수 있는지 알려 준다.
+            item.interactable = false;
+            item.gameObject.AddComponent<CanvasGroup>().alpha = .5f;
+            HoverTip.Attach(item.gameObject, () => RestaurantProgress.ResearchLocked ? RestaurantProgress.FreeTimeOnlyTip : null);
+        }
         DayLoopUI.Chunky(item.image, 2f, 0f);
         item.GetComponent<Outline>().effectColor = selected ? DayLoopUI.Kit.SeaDeep : DayLoopUI.Kit.Divider;
         item.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
@@ -298,6 +305,13 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         if (window == null || (!RestaurantProgress.CanManage && !(GameFlow.Phase == GamePhase.Operation && section == "메뉴"))) return;
         if (PayrollPending) section = "임금 정산";
+        if (section == "연구" && RestaurantProgress.ResearchLocked)
+        {
+            // 다른 화면의 [연구 살펴보기] 같은 길로 들어와도 장사 전에는 연구소를 열지 않는다.
+            if (!window.gameObject.activeSelf) Open("메뉴");
+            message.text = "연구소는 " + RestaurantProgress.FreeTimeOnlyTip;
+            return;
+        }
         if (tab == "메뉴" && section != tab && window.gameObject.activeSelf) RestaurantProgress.FinishMenuEditing();
         CloseManagementDialogs();
         string group = GroupOf(section);
@@ -455,7 +469,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         int next = Mathf.Min(level + 1, RestaurantRules.MaxLevel);
 
         var top = DayLoopUI.Rect("Restaurant level", content);
-        DayLoopUI.Layout(top, preferredHeight: 338);
+        DayLoopUI.Layout(top, preferredHeight: 378); // 레벨 혜택 6줄(홀 직원 포함)이 들어가는 높이
         var topLayout = DayLoopUI.Horizontal(top, 0, 18);
         topLayout.childForceExpandHeight = true;
         topLayout.padding = new RectOffset(0, 0, 0, 8);
@@ -504,6 +518,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
         BenefitRow(benefits, "", $"현재 Lv.{level}", hasNext ? $"다음 Lv.{target}" : "-", true);
         BenefitRow(benefits, "손님 좌석", $"{RestaurantRules.SeatLimit(level)}개", hasNext ? Delta(RestaurantRules.SeatLimit(level), RestaurantRules.SeatLimit(target), "개") : "-");
         BenefitRow(benefits, "요리 공간", $"{RestaurantRules.CookingSpace(level)}개", hasNext ? Delta(RestaurantRules.CookingSpace(level), RestaurantRules.CookingSpace(target), "개") : "-");
+        int hall = RestaurantRules.StaffLimit(level, PartTimerRole.Serving), nextHall = RestaurantRules.StaffLimit(target, PartTimerRole.Serving);
+        BenefitRow(benefits, "홀 직원", $"{hall}명", hasNext ? Delta(hall, nextHall, "명") : "-");
         BenefitRow(benefits, "대기열", $"{RestaurantRules.WaitingLimit(level)}명", hasNext ? Delta(RestaurantRules.WaitingLimit(level), RestaurantRules.WaitingLimit(target), "명") : "-");
         BenefitRow(benefits, "레시피 등급", RestaurantRules.GradeRange(level), hasNext ? RestaurantRules.GradeRange(target) : "-");
         BenefitRow(benefits, "하루 방문 손님", $"{RestaurantRules.DailyVisitors(level)}명", hasNext ? Delta(RestaurantRules.DailyVisitors(level), RestaurantRules.DailyVisitors(target), "명") : "-");

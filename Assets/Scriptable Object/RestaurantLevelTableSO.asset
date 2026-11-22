@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RestaurantLevelTableSO
   m_EditorClassIdentifier: Assembly-CSharp::RestaurantLevelTableSO
   _levels:
-  - _customerSeats: 2
+  - _customerSeats: 4
     _cookingSpace: 1
     _waitingQueue: 2
     _recipeGradeMin: F
@@ -24,7 +24,7 @@ MonoBehaviour:
     _requiredSalesAmount: 0
     _requiredSeatCount: 0
     _constructionDays: 0
-  - _customerSeats: 4
+  - _customerSeats: 6
     _cookingSpace: 1
     _waitingQueue: 3
     _recipeGradeMin: F
@@ -35,7 +35,7 @@ MonoBehaviour:
     _requiredSalesAmount: 1000
     _requiredSeatCount: 2
     _constructionDays: 1
-  - _customerSeats: 6
+  - _customerSeats: 8
     _cookingSpace: 2
     _waitingQueue: 4
     _recipeGradeMin: F
@@ -46,7 +46,7 @@ MonoBehaviour:
     _requiredSalesAmount: 2500
     _requiredSeatCount: 4
     _constructionDays: 1
-  - _customerSeats: 8
+  - _customerSeats: 10
     _cookingSpace: 2
     _waitingQueue: 6
     _recipeGradeMin: E
@@ -57,7 +57,7 @@ MonoBehaviour:
     _requiredSalesAmount: 6000
     _requiredSeatCount: 6
     _constructionDays: 1
-  - _customerSeats: 10
+  - _customerSeats: 12
     _cookingSpace: 3
     _waitingQueue: 8
     _recipeGradeMin: E
@@ -68,7 +68,7 @@ MonoBehaviour:
     _requiredSalesAmount: 13000
     _requiredSeatCount: 8
     _constructionDays: 1
-  - _customerSeats: 12
+  - _customerSeats: 14
     _cookingSpace: 3
     _waitingQueue: 10
     _recipeGradeMin: E
@@ -79,7 +79,7 @@ MonoBehaviour:
     _requiredSalesAmount: 24000
     _requiredSeatCount: 10
     _constructionDays: 1
-  - _customerSeats: 15
+  - _customerSeats: 16
     _cookingSpace: 4
     _waitingQueue: 12
     _recipeGradeMin: D
@@ -101,7 +101,7 @@ MonoBehaviour:
     _requiredSalesAmount: 90000
     _requiredSeatCount: 15
     _constructionDays: 1
-  - _customerSeats: 21
+  - _customerSeats: 22
     _cookingSpace: 5
     _waitingQueue: 18
     _recipeGradeMin: D

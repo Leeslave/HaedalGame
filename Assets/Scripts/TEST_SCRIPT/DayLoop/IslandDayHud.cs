@@ -20,6 +20,7 @@ public partial class IslandDayHud : MonoBehaviour
 
     private Canvas _canvas;
     private Button _prepareAction;
+    private Button _labMarker;
     private float _noticeUntil;
     private TMP_Text _day, _stats, _mission;
     private Image _missionBar;
@@ -146,6 +147,13 @@ public partial class IslandDayHud : MonoBehaviour
                 else RestaurantManagementUI.OpenSection(sections[index]);
             }, "Map " + labels[i]);
             button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+            if (sections[i] == "연구")
+            {
+                // 장사 전에는 연구소 표식을 흐리게 끄고, 올리면 언제 갈 수 있는지 알려 준다.
+                _labMarker = button;
+                button.gameObject.AddComponent<CanvasGroup>();
+                HoverTip.Attach(button.gameObject, () => RestaurantProgress.ResearchLocked ? RestaurantProgress.FreeTimeOnlyTip : null);
+            }
             DayLoopUI.Place((RectTransform)button.transform, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(positions[i].x * 1.5f, -positions[i].y * 1.5f), new Vector2(90, 136.5f));
             var circle = DayLoopUI.Card(button.transform, i == 0 ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sail, "Marker", 4.5f, 6);
             circle.sprite = DayLoopUI.Circle; circle.type = Image.Type.Simple; circle.raycastTarget = false;
@@ -214,6 +222,12 @@ public partial class IslandDayHud : MonoBehaviour
                 : "공사 휴업\n<size=65%>집에서 자면 새 식당이 열려요</size>";
             DayLoopUI.SetButtonLabel(_prepareAction, label);
             _prepareAction.image.color = closed ? DayLoopUI.Kit.WoodLight : DayLoopUI.Kit.Awning;
+        }
+        if (_labMarker != null)
+        {
+            bool locked = RestaurantProgress.ResearchLocked;
+            _labMarker.interactable = !locked;
+            _labMarker.GetComponent<CanvasGroup>().alpha = locked ? .5f : 1f;
         }
         RefreshBadges();
     }

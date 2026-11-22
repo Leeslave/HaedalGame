@@ -40,6 +40,13 @@ public class SaveSystemTests
     // ───── 새 게임 초기값 ─────
 
     [Test]
+    public void ComicIntro_AllCutArtIsPresent()
+    {
+        // 그림이 하나라도 빠지면 새 게임 인트로가 예전 대화 인트로로 돌아간다.
+        Assert.IsTrue(ComicIntro.HasArt, "Resources/UIDesign/Art/Intro/Cut*.png");
+    }
+
+    [Test]
     public void NewGame_CreatesPlayableDayOne()
     {
         GameSaveData data = NewGameConfig.Load().CreateSaveData();

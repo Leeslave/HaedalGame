@@ -397,9 +397,29 @@ public class ProgressionTests
         Assert.IsFalse(ReferenceExpedition.IsAway(s, employee));
         Assert.IsTrue(ReferenceExpedition.Returned(s));
     }
+    [Test] public void LevelThree_HasTwoHallStaff_AndLevelUpFillsOpenSlotsFromStandby()
+    {
+        Assert.AreEqual(1, RestaurantRules.StaffLimit(2, PartTimerRole.Serving));
+        Assert.AreEqual(2, RestaurantRules.StaffLimit(3, PartTimerRole.Serving), "Lv.3 하루 25명을 홀 직원 1명이 받지 못했다");
+        var s = GameSession.Current;
+        s.restaurantLevel = 3; s.progression.expedition = null;
+        s.employees.Clear();
+        s.employees.Add(new EmployeeEntry { instanceId = "hall", role = nameof(PartTimerRole.Serving), slotIndex = 0, serving = 3 });
+        s.employees.Add(new EmployeeEntry { instanceId = "slow", role = nameof(PartTimerRole.None), serving = 5, cooking = 1 });
+        s.employees.Add(new EmployeeEntry { instanceId = "fast", role = nameof(PartTimerRole.None), serving = 14, cooking = 2 });
+        RestaurantProgress.FillOpenStaffSlots(s);
+        var fast = s.employees.Find(e => e.instanceId == "fast");
+        Assert.AreEqual(nameof(PartTimerRole.Serving), fast.role, "서빙을 잘하는 대기 직원이 홀에 앉는다");
+        Assert.AreEqual(1, fast.slotIndex);
+        // Lv.3 주방 자리는 2개라 남은 대기 직원이 주방으로 간다.
+        Assert.AreEqual(nameof(PartTimerRole.Kitchen), s.employees.Find(e => e.instanceId == "slow").role);
+    }
     [Test] public void RestaurantLevel_FollowsLevelTable()
     {
         Assert.AreEqual(180, RestaurantRules.DailyVisitors(10));
+        Assert.AreEqual(4, RestaurantRules.SeatLimit(1), "1레벨부터 2인 테이블 둘을 놓을 수 있다");
+        StringAssert.Contains("6석", RestaurantRules.SeatLimitHelp(1));
+        StringAssert.Contains("대장간", RestaurantRules.SeatLimitHelp(1));
         Assert.AreEqual(6, RestaurantRules.StaffLimit(10, PartTimerRole.Kitchen));
         Assert.AreEqual("F~D", RestaurantRules.GradeRange(1));
         Assert.AreEqual("C~A", RestaurantRules.GradeRange(10));
@@ -408,5 +428,23 @@ public class ProgressionTests
         Assert.AreEqual(1, RestaurantRules.CapFoodQuality(1));
         GameSession.Current.restaurantLevel = 10;
         Assert.AreEqual(5, RestaurantRules.CapFoodQuality(5));
+    }
+    // 연어 간장구이(10)는 연구할 때 연어·간장만 쓴다. 간장이 없으면 무엇이 모자란지 알려 주고, 사 오면 바로 시작된다.
+    [Test] public void SalmonResearch_NamesMissingIngredient_AndStartsAfterBuying()
+    {
+        Assert.IsTrue(RestaurantProgress.TryBuyTool(201, out _));
+        Assert.IsTrue(GameDatabase.TryGetRecipe(10, out var salmon));
+        GameSession.Current.progression.blueprints.Add(10);
+        inventory.SetCount(8, 5); inventory.SetCount(20, 0);
+        var missing = RestaurantProgress.MissingResearchIngredients(GameSession.CaptureSnapshot(), salmon);
+        CollectionAssert.AreEquivalent(new[] { 20 }, missing.Keys);
+        Assert.AreEqual(1, missing[20]);
+        Assert.IsFalse(RestaurantProgress.TryStartResearch(10, out string error));
+        StringAssert.Contains("간장 1개", error);
+        Assert.IsTrue(RestaurantProgress.TryBuyIngredient(20, 1, out error), error);
+        Assert.AreEqual(0, RestaurantProgress.MissingResearchIngredients(GameSession.CaptureSnapshot(), salmon).Count);
+        Assert.IsTrue(RestaurantProgress.TryStartResearch(10, out error), error);
+        Assert.AreEqual(4, inventory.GetCount(8));
+        Assert.AreEqual(0, inventory.GetCount(20));
     }
 }

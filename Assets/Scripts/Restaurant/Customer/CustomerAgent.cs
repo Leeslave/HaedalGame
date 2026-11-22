@@ -10,6 +10,8 @@ public class CustomerAgent : MonoBehaviour
     public float ServingLuck;
     public bool LeftAngry { get; private set; }
     public float LastRating { get; private set; }
+    /// <summary>기다리다 지쳐 나간 손님이 남기는 평가. 예전에는 결제한 손님만 평가해서 평점이 거의 4.0에 머물렀다.</summary>
+    public const float AngryRating = 1f;
 
     [ReadOnly][SerializeField] private RestaurantGameManager gm;
 
@@ -410,7 +412,10 @@ public class CustomerAgent : MonoBehaviour
 
     private void PatienceExhausted()
     {
+        if (LeftAngry) return;
         LeftAngry = true;
+        LastRating = AngryRating;
+        if (RestaurantRatingManager.Instance != null) RestaurantRatingManager.Instance.AddCustomerScore(AngryRating);
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
         nm.SetMoving(false);

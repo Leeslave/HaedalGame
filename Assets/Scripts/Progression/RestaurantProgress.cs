@@ -237,6 +237,9 @@ public static partial class RestaurantProgress
         s.progression.blueprints.Add(id); return null;
     }, out error);
     public static bool CanResearch => CanManage && GameSession.Current.progression.freeTime;
+    /// <summary>연구소는 장사를 마친 자유시간에만 들어간다. 장사 전(아침)에는 버튼을 끄고 이 안내를 띄운다.</summary>
+    public static bool ResearchLocked => GameSession.IsActive && !GameSession.Current.progression.freeTime;
+    public const string FreeTimeOnlyTip = "장사 이후 자유시간에 방문할 수 있어요.";
     public const int TutorialResearchRecipeId = 7; // 고등어 구이 · 프라이팬
     public const string ResearchGiftId = "Tutorial.FreeTime.ResearchGift";
 
@@ -273,7 +276,7 @@ public static partial class RestaurantProgress
             if (IngredientInventoryService.IsUnlimited(group.Key)) continue;
             int amount = group.Sum(x => x.Amount);
             var stacks = s.progression.ingredientGrades.Where(x => x.ingredientId == group.Key && x.amount > 0).OrderByDescending(x => x.grade).ToList();
-            if (stacks.Sum(x => x.amount) < amount) return "연구 재료가 부족해요.";
+            if (stacks.Sum(x => x.amount) < amount) return MissingResearchText(MissingResearchIngredients(s, r));
             foreach (var stack in stacks)
             {
                 int used = Mathf.Min(amount, stack.amount);
@@ -284,6 +287,28 @@ public static partial class RestaurantProgress
         }
         SyncIngredients(s); s.progression.research.Add(research); return null;
     }, out error);
+    /// <summary>연구를 시작하려면 더 사야 하는 재료 (재료 id → 모자란 개수). 기본 양념은 무제한이라 빠진다.
+    /// 연구 재료는 요리 재료 전체가 아니라 연구 과정(RecipeResearchPlans)에 적힌 재료만 쓴다.</summary>
+    public static Dictionary<int, int> MissingResearchIngredients(GameSaveData s, RecipeData recipe)
+    {
+        var missing = new Dictionary<int, int>();
+        if (s == null || recipe == null) return missing;
+        foreach (var group in RecipeResearchPlan.Requirements(recipe).GroupBy(x => x.IngredientId))
+        {
+            if (IngredientInventoryService.IsUnlimited(group.Key)) continue;
+            int owned = s.progression.ingredientGrades.Count > 0
+                ? s.progression.ingredientGrades.Where(x => x.ingredientId == group.Key).Sum(x => x.amount)
+                : s.ingredients.Where(x => x.ingredientId == group.Key).Sum(x => x.amount);
+            int short_ = group.Sum(x => x.Amount) - owned;
+            if (short_ > 0) missing[group.Key] = short_;
+        }
+        return missing;
+    }
+    public static string MissingResearchText(Dictionary<int, int> missing)
+    {
+        var names = missing.Select(pair => (GameDatabase.Recipes.TryGetIngredientById(pair.Key, out var item) ? item.IngredientName : "재료") + " " + pair.Value + "개");
+        return missing.Count == 0 ? "연구 재료가 부족해요." : "연구 재료가 부족해요: " + string.Join(", ", names) + ". 상점에서 사 오세요.";
+    }
     public static bool TryCancelResearch(int id, out string error) => Change(s => {
         if (!s.progression.freeTime) return "연구 취소는 자유시간에 할 수 있어요.";
         var entry = s.progression.research.Find(x => x.recipeId == id);
@@ -330,6 +355,26 @@ public static partial class RestaurantProgress
         if (!Spend(s, c.wage)) return "계약금이 부족해요.";
         s.employees.Add(c); s.progression.candidates.Remove(c); return null;
     }, out error);
+    /// <summary>
+    /// 증축이 끝나 늘어난 홀·주방 자리에 대기 직원을 그 일을 잘하는 순서로 앉힌다.
+    /// 예전에는 자리가 늘어도 대기 직원이 그대로 있어서, 모르고 지나가면 손님이 기다리다 돌아갔다.
+    /// </summary>
+    public static void FillOpenStaffSlots(GameSaveData s)
+    {
+        foreach (var role in new[] { PartTimerRole.Serving, PartTimerRole.Kitchen })
+        {
+            string name = role.ToString();
+            var assigned = s.employees.Where(x => x.role == name).ToList();
+            var idle = s.employees.Where(x => x.role == nameof(PartTimerRole.None) && !ReferenceExpedition.IsAway(s, x.instanceId))
+                .OrderByDescending(x => role == PartTimerRole.Serving ? x.serving : x.cooking).ToList();
+            for (int i = 0; assigned.Count < RestaurantRules.StaffLimit(s.restaurantLevel, role) && i < idle.Count; i++)
+            {
+                var e = idle[i];
+                e.role = name; e.slotIndex = Enumerable.Range(0, 5).First(slot => !assigned.Any(x => x.slotIndex == slot));
+                assigned.Add(e);
+            }
+        }
+    }
     public static bool TryAssign(string id, PartTimerRole role, out string error) => Change(s => {
         var e = s.employees.Find(x => x.instanceId == id);
         if (e == null) return "직원이 없어요.";
@@ -371,7 +416,7 @@ public static partial class RestaurantProgress
         foreach (var e in s.employees) e.stamina = e.hp;
         foreach (var r in s.progression.research) r.remainingDays = Mathf.Max(0, r.remainingDays - 1);
         if (s.progression.pendingRestaurantLevel > 0 && s.day >= s.progression.constructionUntilDay)
-        { s.restaurantLevel = s.progression.pendingRestaurantLevel; s.progression.pendingRestaurantLevel = 0; }
+        { s.restaurantLevel = s.progression.pendingRestaurantLevel; s.progression.pendingRestaurantLevel = 0; FillOpenStaffSlots(s); }
         while (s.menuSlots.Count < RestaurantRules.MenuLimit(s.restaurantLevel)) s.menuSlots.Add(-1);
         GameSession.StampCheckpoint(s, GameSaveData.ReasonDayEnded);
         if (!GameSession.IsDevSession && !SaveService.TryWrite(s, out error)) return false;

@@ -83,6 +83,14 @@ public class DayLoopSaveTests
         Assert.AreEqual(0, GameSession.Current.progression.research[0].remainingDays, "연구는 대기 없이 바로 실습할 수 있다");
         Assert.IsFalse(RestaurantProgress.TrySleep(out _), "이미 저장한 아침에는 다시 잘 수 없다");
     }
+    // 기다리다 지쳐 나간 손님도 평가(1점)를 남긴다. 결산 안내는 계산한 손님을 뺀 평가 수로 몇 명이 돌아갔는지 알려 준다.
+    [Test] public void RatingNote_CountsCustomersWhoLeftAngry()
+    {
+        var record = new DaySettlementRecord { day = 2, servedCount = 3, visitedCount = 5, ratingCount = 5, todayRating = 3.2f };
+        StringAssert.Contains("2명", DayLoopSave.RatingNote(record));
+        record.ratingCount = 3;
+        StringAssert.DoesNotContain("돌아간 손님", DayLoopSave.RatingNote(record));
+    }
     [Test] public void IntroAndAcknowledgement_DoNotReplacePreviousSave()
     {
         var old = Begin(3); GameSession.StampCheckpoint(old, GameSaveData.ReasonDayEnded);
