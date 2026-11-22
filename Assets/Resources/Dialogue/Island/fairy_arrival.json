@@ -1,0 +1,44 @@
+{
+  "id": "island_fairy_arrival",
+  "backgroundStyle": "WarmInterior",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "fairy",
+      "name": "요정",
+      "color": "#9FE0A0",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "영업을 마치고 정리하던 밤, 반짝이는 날개를 단 손님이 문을 두드렸다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "해달! 정말 식당을 차렸구나? 소문 듣고 숲에서 날아왔어.",
+      "speaker": "fairy"
+    },
+    {
+      "text": "…시끄러워. 오랜만에 와서는.",
+      "speaker": "haedal"
+    },
+    {
+      "text": "이쪽이 새로 온 셰프구나. 친구 가게 요리가 어떤지 내가 직접 맛봐야겠어!",
+      "speaker": "fairy"
+    },
+    {
+      "text": "해달은 퉁명스럽게 고개를 돌렸지만, 꼬리가 살짝 흔들리고 있었다."
+    }
+  ]
+}

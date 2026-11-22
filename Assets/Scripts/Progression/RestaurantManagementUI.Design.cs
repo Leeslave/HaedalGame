@@ -366,30 +366,38 @@ public partial class RestaurantManagementUI
     {
         if (cartDay != s.day) { cart.Clear(); cartDay = s.day; }
         info.text = $"새 재고 · 오늘 재고 · 내일 아침 새로 들어와요 · {RestaurantProgress.Gold(s):N0}G";
-        Filters(content, "전체", "생선", "조개 · 해산물", "양념", "오늘 메뉴에 필요");
+        Filters(content, "전체", "생선", "조개 · 해산물", "양념", "섬 직송", "오늘 메뉴에 필요");
         var list = Split(out var detail);
         var ingredients = GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning && (filter == "전체" ||
             filter == "생선" && IngredientGroup(i) == "생선" || filter == "조개 · 해산물" && IngredientGroup(i) == "조개 · 해산물" ||
             filter == "오늘 메뉴에 필요" && GameDatabase.Recipes.Recipes.Any(r => s.menuSlots.Contains(r.RecipeId) && r.Requirements.Any(q => q.IngredientId == i.IngredientId)))).ToList();
+        // 섬 직송: 교류 중인 섬이 보내 주는 E·D등급 재료. 나머지 분류는 일반 F등급만 보여 준다.
+        var offers = filter == "섬 직송"
+            ? GameDatabase.Recipes.Ingredients.Where(i => !i.IsBasicSeasoning)
+                .SelectMany(i => Enumerable.Range(1, IslandStory.SupplyGrade(s, i.IngredientName)).Select(g => (item: i, grade: g)))
+                .OrderByDescending(x => x.grade).ToList()
+            : ingredients.Select(i => (item: i, grade: 0)).ToList();
         var grid = CardGrid(list);
-        foreach (var ingredient in ingredients.Skip(page * 8).Take(8))
+        foreach (var (ingredient, grade) in offers.Skip(page * 8).Take(8))
         {
-            int id = ingredient.IngredientId, available = Stock(s, id);
-            cart.TryGetValue(id, out int quantity);
-            var button = Tile(grid, ingredient.IngredientName + " F", $"{RestaurantProgress.RegularUnitPrice(ingredient)}G\n남은 {available}개", quantity > 0,
-                () => OpenShopQuantity(id), flag: quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
+            int key = RestaurantProgress.ShopKey(ingredient.IngredientId, grade), available = Stock(s, key);
+            cart.TryGetValue(key, out int quantity);
+            var button = Tile(grid, $"{ingredient.IngredientName} {RestaurantRules.GradeLetter(grade)}", $"{RestaurantProgress.ShopUnitPrice(ingredient, grade)}G\n남은 {available}개", quantity > 0,
+                () => OpenShopQuantity(key), flag: quantity > 0 ? $"담음 {quantity}" : available == 0 ? "다 팔림" : null);
             button.interactable = available > 0;
         }
-        Pager(list, ingredients.Count, 8);
+        if (offers.Count == 0 && filter == "섬 직송")
+            Copy(list, "섬과 교류하면 그 섬의 높은 등급 재료가 들어와요.\n섬 소식 탭에서 주민의 부탁을 들어주세요.", 90, 22, DayLoopUI.Kit.InkSoft);
+        Pager(list, offers.Count, 8);
         Copy(detail, "장바구니", 50, 32);
         var basket = ScrollList(detail);
         int total = 0;
         foreach (var pair in cart.Where(x => x.Value > 0).ToList())
         {
-            if (!GameDatabase.Recipes.TryGetIngredientById(pair.Key, out var ingredient)) continue;
-            int id = pair.Key, quantity = pair.Value;
-            int cost = RestaurantProgress.RegularUnitPrice(ingredient) * quantity; total += cost;
-            Copy(basket, $"{ingredient.IngredientName}  F · {cost:N0}G", 36, 22);
+            if (!GameDatabase.Recipes.TryGetIngredientById(RestaurantProgress.ShopKeyId(pair.Key), out var ingredient)) continue;
+            int id = pair.Key, quantity = pair.Value, grade = RestaurantProgress.ShopKeyGrade(id);
+            int cost = RestaurantProgress.ShopUnitPrice(ingredient, grade) * quantity; total += cost;
+            Copy(basket, $"{ingredient.IngredientName}  {RestaurantRules.GradeLetter(grade)} · {cost:N0}G", 36, 22);
             var row = DayLoopUI.Rect("Quantity", basket);
             DayLoopUI.Layout(row, preferredHeight: 46); DayLoopUI.Horizontal(row, 0, 12);
             ActionButton(row, "−", () => { if (quantity <= 1) cart.Remove(id); else cart[id]--; Refresh(); }, 56, 42);
@@ -410,7 +418,9 @@ public partial class RestaurantManagementUI
     private void OpenShopQuantity(int id)
     {
         CloseManagementDialogs();
-        if (!GameDatabase.Recipes.TryGetIngredientById(id, out var ingredient)) return;
+        int grade = RestaurantProgress.ShopKeyGrade(id);
+        if (!GameDatabase.Recipes.TryGetIngredientById(RestaurantProgress.ShopKeyId(id), out var ingredient)) return;
+        int price = RestaurantProgress.ShopUnitPrice(ingredient, grade);
         int available = Stock(GameSession.Current, id);
         if (available <= 0) return;
         cart.TryGetValue(id, out int previous);
@@ -419,8 +429,8 @@ public partial class RestaurantManagementUI
         var card = DayLoopUI.Card(dim.transform, DayLoopUI.Kit.Sail, "QuantityCard");
         DayLoopUI.Place(card.rectTransform, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(720, 560));
         DayLoopUI.Vertical(card, 30, 18);
-        Copy(card.transform, ingredient.IngredientName + " · 수량 선택", 60, 36);
-        Copy(card.transform, $"개당 {RestaurantProgress.RegularUnitPrice(ingredient):N0}G · 재고 {available}개", 42, 24);
+        Copy(card.transform, $"{ingredient.IngredientName} {RestaurantRules.GradeLetter(grade)} · 수량 선택", 60, 36);
+        Copy(card.transform, $"개당 {price:N0}G · 재고 {available}개", 42, 24);
         var row = DayLoopUI.Rect("Quantity", card.transform); DayLoopUI.Layout(row, preferredHeight: 64); DayLoopUI.Horizontal(row, 0, 18);
         TMP_InputField input = null;
         ActionButton(row, "−", () => input.text = Mathf.Max(0, ReadQuantity(input.text, available) - 1).ToString(), 90, 60);
@@ -433,7 +443,7 @@ public partial class RestaurantManagementUI
         input.text = Mathf.Clamp(previous > 0 ? previous : 1, 0, available).ToString();
         ActionButton(row, "+", () => input.text = Mathf.Min(available, ReadQuantity(input.text, available) + 1).ToString(), 90, 60);
         var summary = Copy(card.transform, "", 60, 26);
-        Action update = () => summary.text = $"선택 {ReadQuantity(input.text, available)}개 · {RestaurantProgress.RegularUnitPrice(ingredient) * ReadQuantity(input.text, available):N0}G";
+        Action update = () => summary.text = $"선택 {ReadQuantity(input.text, available)}개 · {price * ReadQuantity(input.text, available):N0}G";
         input.onValueChanged.AddListener(_ => update()); update();
         Copy(card.transform, "수량을 직접 입력하거나 − / + 버튼으로 조절해요.", 42, 21, DayLoopUI.Kit.InkSoft);
         DetailAction(card.transform, "담기", () => {
@@ -486,8 +496,12 @@ public partial class RestaurantManagementUI
         DetailAction(card.transform, "닫기", CloseManagementDialogs);
     }
 
-    private static int Stock(GameSaveData s, int id) => s.progression.regularStockDay == s.day
-        ? s.progression.dailyStock.Find(x => x.itemId == id)?.currentStock ?? 50 : 50;
+    /// <summary>상점 키(재료 id + 등급 × 1000)의 오늘 남은 재고.</summary>
+    private static int Stock(GameSaveData s, int key)
+    {
+        int limit = RestaurantProgress.ShopStockLimit(RestaurantProgress.ShopKeyGrade(key));
+        return s.progression.regularStockDay == s.day ? s.progression.dailyStock.Find(x => x.itemId == key)?.currentStock ?? limit : limit;
+    }
 
     private void DesignedStaff(GameSaveData s)
     {

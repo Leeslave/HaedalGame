@@ -1,0 +1,40 @@
+{
+  "id": "island_grain_done",
+  "backgroundStyle": "SeasideDusk",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "farmer",
+      "name": "곡물 섬 농부",
+      "color": "#F2D16B",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "농부는 새로운 요리를 맛볼 때마다 눈이 동그래졌다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "이렇게 맛있는 게 우리 곡물로 만든 거라니! 앞으로 곡물은 이 식당에 대 드릴게요.",
+      "speaker": "farmer"
+    },
+    {
+      "text": "참, 배를 만드신다고요? 곡물 자루를 묶던 밧줄인데, 폭풍에도 안 끊어져요.",
+      "speaker": "farmer"
+    },
+    {
+      "text": "튼튼한 밧줄이 배 부품 상자에 들어갔다."
+    }
+  ]
+}

@@ -197,23 +197,35 @@ public static partial class RestaurantProgress
         long total = 0;
         foreach (var pair in items)
         {
-            if (pair.Value <= 0 || !GameDatabase.Recipes.TryGetIngredientById(pair.Key, out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+            int grade = ShopKeyGrade(pair.Key);
+            if (pair.Value <= 0 || !GameDatabase.Recipes.TryGetIngredientById(ShopKeyId(pair.Key), out var item) || item.IsBasicSeasoning) return "구매할 수 없는 재료예요.";
+            if (grade > IslandStory.SupplyGrade(s, item.IngredientName)) return $"{item.IngredientName} {RestaurantRules.GradeLetter(grade)}등급은 아직 들어오지 않아요.";
             var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
-            if ((stock?.currentStock ?? 50) < pair.Value) return $"{item.IngredientName}의 오늘 재고가 부족해요.";
-            total += (long)RegularUnitPrice(item) * pair.Value;
+            if ((stock?.currentStock ?? ShopStockLimit(grade)) < pair.Value) return $"{item.IngredientName}의 오늘 재고가 부족해요.";
+            total += (long)ShopUnitPrice(item, grade) * pair.Value;
         }
         if (total > int.MaxValue || !Spend(s, (int)total)) return "골드가 부족해요.";
         EnsureGrades(s);
         foreach (var pair in items)
         {
             var stock = s.progression.dailyStock.Find(x => x.itemId == pair.Key);
-            if (stock == null) { stock = new ShopStockEntry { itemId = pair.Key, currentStock = 50, maxStock = 50 }; s.progression.dailyStock.Add(stock); }
+            int limit = ShopStockLimit(ShopKeyGrade(pair.Key));
+            if (stock == null) { stock = new ShopStockEntry { itemId = pair.Key, currentStock = limit, maxStock = limit }; s.progression.dailyStock.Add(stock); }
             stock.currentStock -= pair.Value;
-            AddIngredient(s, pair.Key, 0, pair.Value);
+            AddIngredient(s, ShopKeyId(pair.Key), ShopKeyGrade(pair.Key), pair.Value);
         }
         return null;
     }, out error);
     public static int RegularUnitPrice(IngredientData item) => Mathf.Max(1, Mathf.RoundToInt(item.Price * 1.2f));
+
+    /// <summary>상점 장바구니 키 = 재료 id + 등급 × 1000. F(0등급)는 재료 id 그대로라 예전 재고 기록과 같다.</summary>
+    public const int ShopGradeKey = 1000;
+    public static int ShopKey(int id, int grade) => id + grade * ShopGradeKey;
+    public static int ShopKeyId(int key) => key % ShopGradeKey;
+    public static int ShopKeyGrade(int key) => key / ShopGradeKey;
+    /// <summary>섬 직송 가격: 등급이 하나 오를 때마다 일반 가격의 2배.</summary>
+    public static int ShopUnitPrice(IngredientData item, int grade) => RegularUnitPrice(item) * (1 << Mathf.Clamp(grade, 0, 5));
+    public static int ShopStockLimit(int grade) => grade <= 0 ? 50 : IslandStory.SupplyStock;
     public static void AcquireBlueprint(int id)
     {
         if (GameSession.IsActive && !GameSession.Current.progression.blueprints.Contains(id)) GameSession.Current.progression.blueprints.Add(id);
@@ -371,9 +383,10 @@ public static partial class RestaurantProgress
         if (s.progression.questRecipeId > 0) return "먼저 주민이 부탁한 음식을 전해주세요.";
         string flag = "ExploreDay-" + s.day;
         if (s.storyFlags.Contains(flag)) return "오늘 주민과의 만남은 마쳤어요.";
-        int required = Mathf.Min(10, 1 + s.progression.islandChapter * 2);
+        int required = IslandStory.RequiredLevel(s.progression.islandChapter);
         if (s.restaurantLevel < required) return $"다음 섬에는 식당 레벨 {required}이 필요해요.";
         s.storyFlags.Add(flag); EnsureGrades(s);
+        if (s.progression.islandChapter < IslandStory.Islands.Length) GameSaveData.AddUnique(s.storyFlags, IslandStory.MetFlag(s.progression.islandChapter));
         // 확정 기획: 식재료 획득은 상점에서만. 주민 교류는 요청과 도안 보상만 제공한다.
         var available = s.unlockedRecipeIds.Where(recipe => GameDatabase.TryGetRecipe(recipe, out _)).ToArray();
         if (available.Length > 0) { s.progression.questRecipeId = available[(s.day + s.progression.islandChapter) % available.Length]; s.progression.questIssuedDay = s.day; }
@@ -396,15 +409,23 @@ public static partial class RestaurantProgress
         s.progression.questRecipeId = 0; s.progression.npcSatisfaction++;
         var reward = GameDatabase.Recipes.Recipes.FirstOrDefault(r => !s.unlockedRecipeIds.Contains(r.RecipeId) && !s.progression.blueprints.Contains(r.RecipeId));
         if (reward != null) s.progression.blueprints.Add(reward.RecipeId);
-        if (s.progression.npcSatisfaction % 3 == 0 && s.progression.islandChapter < 5)
-        {
-            if (s.progression.islandChapter < 3) s.progression.boatParts.Add("Part-" + s.progression.islandChapter);
+        if (s.progression.npcSatisfaction % IslandStory.RequestsPerIsland == 0 && s.progression.islandChapter < IslandStory.Islands.Length)
             s.progression.islandChapter++;
-        }
+        IslandStory.SyncBoatParts(s);
+        return null;
+    }, out error);
+    /// <summary>클라이맥스: 다섯 섬과 교류를 마치면 해달과 화해하고 요정에게서 선체 목재를 받는다.</summary>
+    public static bool TryReceiveWood(out string error) => Change(s => {
+        if (!s.progression.freeTime) return "영업을 마친 자유시간에 이야기할 수 있어요.";
+        if (s.progression.islandChapter < IslandStory.Islands.Length) return "아직 모든 섬과 교류하지 못했어요.";
+        if (s.storyFlags.Contains(IslandStory.WoodFlag)) return "목재는 이미 받았어요.";
+        s.storyFlags.Add(IslandStory.WoodFlag);
+        IslandStory.SyncBoatParts(s);
         return null;
     }, out error);
     public static bool TryEnding(out string error) => Change(s => {
-        if (s.progression.boatParts.Count < 3) return "배 부품 3개가 필요해요.";
+        IslandStory.SyncBoatParts(s);
+        if (!IslandStory.ShipReady(s)) return $"배 부품 {IslandStory.BoatPartsNeeded}개가 필요해요.";
         if (s.progression.endingSeen) return "배를 이미 수리했어요. 다시 섬을 방문하면 후일담을 볼 수 있어요.";
         s.progression.endingSeen = true;
         GameSaveData.AddUnique(s.storyFlags, "BoatRepaired"); return null;

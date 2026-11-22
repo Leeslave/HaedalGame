@@ -1,0 +1,52 @@
+{
+  "id": "island_climax_wood",
+  "backgroundStyle": "SeasideNight",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "fairy",
+      "name": "요정",
+      "color": "#9FE0A0",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "모든 부품이 모인 밤, 해달은 식당 구석에 앉아 말이 없었다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "…요정이 목재를 안 준 거, 사실 내가 부탁해서야.",
+      "speaker": "haedal"
+    },
+    {
+      "text": "네가 배를 고치면 떠나 버릴 테니까. 그게… 싫었어.",
+      "speaker": "haedal"
+    },
+    {
+      "text": "화가 날 줄 알았는데, 이상하게 마음이 따뜻해졌다. 이 작은 섬이 어느새 내게도 소중해져 있었다."
+    },
+    {
+      "text": "우리는 그날 밤 처음으로 서로의 진심을 이야기했다."
+    },
+    {
+      "text": "다음 날, 요정이 숲에서 가장 튼튼한 나무를 보내 왔다.",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade"
+    },
+    {
+      "text": "해달이 부탁하더라. 이제 보내 줘도 된다고. 좋은 친구를 뒀네.",
+      "speaker": "fairy"
+    }
+  ]
+}

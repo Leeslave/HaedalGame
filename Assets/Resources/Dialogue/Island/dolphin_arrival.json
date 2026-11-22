@@ -1,0 +1,40 @@
+{
+  "id": "island_dolphin_arrival",
+  "backgroundStyle": "WarmInterior",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "dolphin",
+      "name": "돌고래 셰프",
+      "color": "#8EC5FF",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "깐깐해 보이는 돌고래가 앞치마를 두른 채 자리에 앉았다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "이 바다 근처에서 제일 시끄러운 식당이 여기라지. 실력이 소문만 한지 볼까.",
+      "speaker": "dolphin"
+    },
+    {
+      "text": "저 녀석, 이 근방에서 제일 까다로운 셰프야. 긴장하지 마… 아니, 좀 해.",
+      "speaker": "haedal"
+    },
+    {
+      "text": "오래 잊고 있던 감각이 손끝에 돌아오는 것 같았다."
+    }
+  ]
+}

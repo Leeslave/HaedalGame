@@ -315,6 +315,24 @@ public class ProgressionTests
             Assert.AreEqual(47, GameSession.Current.progression.dailyStock.Single(x => x.itemId == item.IngredientId).currentStock);
         }
     }
+    [Test] public void IslandSupply_SellsHigherGradeOnlyAfterIslandExchange()
+    {
+        var shrimp = GameDatabase.Recipes.Ingredients.First(i => i.IngredientName == "새우");
+        GameSession.Current.wallets[0].amount = 100000;
+        GameSession.Current.progression.dailyStock.Clear();
+        GameSession.Current.progression.islandChapter = 1;   // 요정의 숲만 교류 중: 해산물은 아직 F만
+        int key = RestaurantProgress.ShopKey(shrimp.IngredientId, 1);
+        Assert.IsFalse(RestaurantProgress.TryBuyIngredients(new Dictionary<int, int> { { key, 2 } }, out _));
+
+        int before = GameSession.Current.progression.ingredientGrades.Where(x => x.ingredientId == shrimp.IngredientId && x.grade == 1).Sum(x => x.amount);
+        GameSession.Current.progression.islandChapter = 2;   // 돌고래의 바다 교류: 해산물 E
+        Assert.AreEqual(1, IslandStory.SupplyGrade(GameSession.Current, "새우"));
+        Assert.IsTrue(RestaurantProgress.TryBuyIngredients(new Dictionary<int, int> { { key, 2 } }, out string error), error);
+        Assert.AreEqual(100000 - RestaurantProgress.RegularUnitPrice(shrimp) * 2 * 2, RestaurantProgress.Gold(GameSession.Current));
+        Assert.AreEqual(IslandStory.SupplyStock - 2, GameSession.Current.progression.dailyStock.Single(x => x.itemId == key).currentStock);
+        Assert.AreEqual(before + 2, GameSession.Current.progression.ingredientGrades.Where(x => x.ingredientId == shrimp.IngredientId && x.grade == 1).Sum(x => x.amount));
+        Assert.IsFalse(RestaurantProgress.TryBuyIngredients(new Dictionary<int, int> { { RestaurantProgress.ShopKey(shrimp.IngredientId, 2), 1 } }, out _));
+    }
     [Test] public void FurniturePurchase_ChargesOnce_AndRejectsInsufficientFunds()
     {
         GameSession.Current.wallets[0].amount = 200;
