@@ -343,6 +343,7 @@ public class DayCycleController : MonoBehaviour
             _record.previousRating = rating.RestaurantRating;
             _record.todayRating = rating.TodayAverage;
             _record.ratingCount = rating.TodayScoreCount;
+            _record.litterLeft = RestaurantLitter.Count;
             rating.CommitTodayRating(day);   // 같은 날은 한 번만 확정된다
             _record.totalRating = rating.RestaurantRating;
             _record.seedRatingIncluded = rating.HasSeedRating;

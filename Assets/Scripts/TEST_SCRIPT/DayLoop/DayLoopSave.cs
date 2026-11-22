@@ -56,6 +56,8 @@ public static class DayLoopSave
             return "오늘은 평가가 없어 식당 평점이 그대로예요.";
 
         string note = $"식당 평점은 최근 7일 영업 평점의 평균이에요. 오늘 평점 {DayLoopUI.Rating(r.todayRating)} ({r.ratingCount}건)이 반영됐어요.";
+        if (r.litterLeft > 0)
+            note += $" 치우지 않은 쓰레기 {r.litterLeft}개 때문에 오늘 평점이 {RestaurantLitter.RatingPenalty:0.0} 깎였어요. 영업 중에 쓰레기를 눌러 치워 주세요.";
         if (r.seedRatingIncluded)
             note += " 처음 7일 동안은 시작 평판 4.0이 평균에 함께 들어가요.";
         return note;

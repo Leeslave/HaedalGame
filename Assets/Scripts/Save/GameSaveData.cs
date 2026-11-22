@@ -202,6 +202,7 @@ public class DaySettlementRecord
     public float previousRating;    // 결산 전 식당 평점
     public float totalRating;       // 결산 후 식당 평점
     public bool seedRatingIncluded; // 시작 평판(시드)이 아직 평균에 포함되어 있는지
+    public int litterLeft;          // 마감 때 치우지 않은 쓰레기 수 (하나라도 있으면 오늘 평점 감점)
 
     // 운영 측정값 (평균 = 합계 / 표본 수)
     public float seatWaitSum;

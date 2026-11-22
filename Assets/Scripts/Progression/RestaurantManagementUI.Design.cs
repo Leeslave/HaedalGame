@@ -626,10 +626,25 @@ public partial class RestaurantManagementUI
         }, true, chosen.CurrentStock > 0);
     }
 
+    /// <summary>
+    /// 배치된 테이블의 좌석 수 목록. QA #5: 섬 화면처럼 식당 씬 밖에서는 PlacedTable.Active가 비어 있으므로
+    /// 세이브에 남은 배치(placedTables)를 센다. 식당 씬에서는 편집 중인 실제 배치를 센다.
+    /// </summary>
+    private static List<int> PlacedTableSeats(GameSaveData s)
+    {
+        if (PlacedTable.Active.Count > 0 || TableSaveLoadManager.Instance != null)
+            return PlacedTable.Active.Select(t => t.tableData.chairTiles.Length).ToList();
+        return s.placedTables.Select(e => SeatsOf(e.tableType)).Where(n => n > 0).ToList();
+    }
+    private static int SeatsOf(string tableType) =>
+        tableType == nameof(TableType.OneSeat) ? 1 : tableType == nameof(TableType.TwoSeat) ? 2
+        : tableType == nameof(TableType.FourSeat) ? 4 : tableType == nameof(TableType.SixSeat) ? 6 : 0;
+
     private void DesignedFurniture(GameSaveData s)
     {
-        int seats = PlacedTable.Active.Sum(t => t.tableData.chairTiles.Length);
-        info.text = $"좌석 {seats} / 최대 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 테이블 {PlacedTable.Active.Count}개";
+        var placedSeats = PlacedTableSeats(s);
+        int seats = placedSeats.Sum();
+        info.text = $"좌석 {seats} / 최대 {RestaurantRules.SeatLimit(s.restaurantLevel)}석 · 테이블 {placedSeats.Count}개";
         Filters(content, "전체", "테이블", "대기석", "테이블 색상", "창고에 있음");
         var list = Split(out var detail);
         var grid = CardGrid(list);
@@ -637,7 +652,7 @@ public partial class RestaurantManagementUI
         foreach (int size in sixSeatUnlocked ? new[] { 1, 2, 4, 6 } : new[] { 1, 2, 4 })
         {
             int count = size, owned = RestaurantProgress.FurnitureCount(s, size);
-            int placed = PlacedTable.Active.Count(t => t.tableData.chairTiles.Length == size);
+            int placed = placedSeats.Count(n => n == size);
             if (filter != "전체" && filter != "테이블" && !(filter == "창고에 있음" && owned > 0)) continue;
             Tile(grid, size + "인석 테이블", $"배치 {placed} · 창고 {owned}", selectedId == size, () => { selectedId = count; Refresh(); }, DesignArt.Load("IconFurniture"), owned > 0 ? $"창고 {owned}" : null);
         }
@@ -680,7 +695,7 @@ public partial class RestaurantManagementUI
         int chosen = selectedId == 1 || selectedId == 2 || (selectedId == 6 && sixSeatUnlocked) ? selectedId : 4;
         Copy(detail, chosen + "인석 테이블", 60, 33);
         Copy(detail, $"좌석 {chosen} · 창고에 {RestaurantProgress.FurnitureCount(s, chosen)}개", 60, 23);
-        Copy(detail, $"배치함   {PlacedTable.Active.Count(t => t.tableData.chairTiles.Length == chosen)}개\n창고      {RestaurantProgress.FurnitureCount(s, chosen)}개\n더 사기  {chosen * 40}G", 150, 24);
+        Copy(detail, $"배치함   {placedSeats.Count(n => n == chosen)}개\n창고      {RestaurantProgress.FurnitureCount(s, chosen)}개\n더 사기  {chosen * 40}G", 150, 24);
         DayLoopUI.Spacer(detail);
         DetailAction(detail, $"더 사기 · {chosen * 40}G", () => Run((out string error) => RestaurantProgress.TryBuyFurniture(chosen, out error)));
         DetailAction(detail, "놓으러 가기", () => PlaceTable(chosen), true, RestaurantProgress.FurnitureCount(s, chosen) > 0);

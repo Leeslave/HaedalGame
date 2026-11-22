@@ -103,6 +103,7 @@ public class SettlementPanel : MonoBehaviour
 
         _ratingValue.text = $"{DayLoopUI.Rating(r.previousRating)} → {DayLoopUI.Rating(r.totalRating)}";
         _ratingSub.text = r.ratingCount > 0 ? $"오늘 {DayLoopUI.Rating(r.todayRating)} • 평가 {r.ratingCount}건" : "오늘 평가 없음";
+        if (r.ratingCount > 0 && r.litterLeft > 0) _ratingSub.text += $" • 쓰레기 {r.litterLeft}개 −{RestaurantLitter.RatingPenalty:0.0}";
 
         _goldValue.text = DayLoopUI.Gold(r.goldAtClose);
         _goldValue.color = DayLoopUI.Kit.GoldInk;

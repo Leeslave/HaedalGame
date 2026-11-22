@@ -428,7 +428,7 @@ public class FirstDayGuide : MonoBehaviour
             _sleepGuideActive = true;
             string role = agent is ChefAgent ? "주방" : "홀";
             SetGuide("직원 잠듦", $"지친 {role} 직원이 잠들었어요. 자는 동안에는 일이 멈춰요.",
-                "잠든 직원(발밑에 '잠듦' 표시)을 클릭하면 깨울 수 있어요. 체력이 낮을수록 잘 잠들어요.");
+                "잠든 직원(발밑에 '잠듦' 표시)을 클릭하면 바로 깨울 수 있어요. 그냥 두면 잠시 뒤 스스로 깨요. 체력이 낮을수록 잘 잠들어요.");
             RefreshGuideBar();
             WaitForContinue(() => EndSleepGuide(true));
             return;

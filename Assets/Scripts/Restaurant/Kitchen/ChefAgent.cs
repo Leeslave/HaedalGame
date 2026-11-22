@@ -38,7 +38,7 @@ public class ChefAgent : PartTimerAgent
     {
         get
         {
-            if (IsSleeping) return "잠듦 · 눌러서 깨우기";
+            if (IsSleeping) return $"잠듦 {Mathf.CeilToInt(SleepRemaining)}초 · 눌러서 깨우기";
             switch (state)
             {
                 case ChefState.WaitingForTool: return "조리도구 대기";

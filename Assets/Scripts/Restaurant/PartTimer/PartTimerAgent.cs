@@ -5,12 +5,17 @@ public class PartTimerAgent : MonoBehaviour
 {
     protected EmployeeEntry employee;
     public bool IsSleeping { get; private set; }
+    /// <summary>QA #4: 잠든 직원은 이 시간(게임 속도 기준 초)이 지나면 스스로 깬다. 눌러서 깨우면 바로 일어난다.</summary>
+    public const float NapSeconds = 12f;
+    /// <summary>스스로 깰 때 회복하는 체력 비율. 깨자마자 다시 잠드는 것을 막는다.</summary>
+    public const float NapRecovery = .3f;
+    public float SleepRemaining { get; private set; }
     private float lastWork;
     private float restTimer;
     public void BindEmployee(EmployeeEntry entry)
     {
         employee = entry;
-        IsSleeping = false;
+        IsSleeping = false; SleepRemaining = 0;
         if (employee.stamina < 0) employee.stamina = employee.hp;
         partTimerName = entry.name;
         level = entry.grade;
@@ -20,11 +25,12 @@ public class PartTimerAgent : MonoBehaviour
     }
     protected PartTimerStatus SavedStatus(PartTimerStatus fallback) => employee == null ? fallback : new PartTimerStatus
     { serving = 3f * (1 + employee.serving / 100f), cooking = employee.cooking, handy = employee.handy, hp = employee.hp };
-    public void WakeUp() { IsSleeping = false; }
+    public void WakeUp() { IsSleeping = false; SleepRemaining = 0; }
     // 화면 표시용 남은 체력 비율 (직원 정보가 없으면 1)
     public float StaminaRatio => employee == null || employee.hp <= 0 ? 1f : Mathf.Clamp01(employee.stamina / employee.hp);
     private void Update()
     {
+        if (IsSleeping) Nap(Time.deltaTime * RestaurantSpeedController.SpeedMultiplier);
         if (employee == null || Time.time - lastWork < 5) return;
         restTimer += Time.deltaTime;
         if (restTimer >= 5) { employee.stamina = Mathf.Min(employee.hp, employee.stamina + 1); restTimer = 0; }
@@ -47,7 +53,17 @@ public class PartTimerAgent : MonoBehaviour
         {
             employee.stamina = Mathf.Max(0, employee.stamina - staminaCost);
             IsSleeping = Random.value < .15f * (1 - employee.stamina / Mathf.Max(1, employee.hp));
+            if (IsSleeping) SleepRemaining = NapSeconds;
         }
+    }
+    /// <summary>낮잠 시간을 줄이고, 다 자면 체력을 조금 회복한 채 스스로 깬다.</summary>
+    public void Nap(float elapsed)
+    {
+        if (!IsSleeping) return;
+        SleepRemaining -= elapsed;
+        if (SleepRemaining > 0) return;
+        if (employee != null) employee.stamina = Mathf.Max(employee.stamina, Mathf.Ceil(employee.hp * NapRecovery));
+        WakeUp();
     }
     [Header("공통 사항")]
     [ReadOnly][SerializeField] protected string partTimerName;
