@@ -390,7 +390,6 @@ public static partial class RestaurantProgress
         // 확정 기획: 식재료 획득은 상점에서만. 주민 교류는 요청과 도안 보상만 제공한다.
         var available = s.unlockedRecipeIds.Where(recipe => GameDatabase.TryGetRecipe(recipe, out _)).ToArray();
         if (available.Length > 0) { s.progression.questRecipeId = available[(s.day + s.progression.islandChapter) % available.Length]; s.progression.questIssuedDay = s.day; }
-        if (s.progression.endingSeen) s.progression.epilogueSeen = true;
         return null;
     }, out error);
     public static bool TryDeliverQuest(out string error) => Change(s => {
@@ -426,7 +425,7 @@ public static partial class RestaurantProgress
     public static bool TryEnding(out string error) => Change(s => {
         IslandStory.SyncBoatParts(s);
         if (!IslandStory.ShipReady(s)) return $"배 부품 {IslandStory.BoatPartsNeeded}개가 필요해요.";
-        if (s.progression.endingSeen) return "배를 이미 수리했어요. 다시 섬을 방문하면 후일담을 볼 수 있어요.";
+        if (s.progression.endingSeen) return "이미 배를 완성하고 섬을 떠났어요.";
         s.progression.endingSeen = true;
         GameSaveData.AddUnique(s.storyFlags, "BoatRepaired"); return null;
     }, out error);

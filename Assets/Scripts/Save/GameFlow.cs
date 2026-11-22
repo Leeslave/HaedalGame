@@ -102,8 +102,23 @@ public static class GameFlow
             return status;
 
         GameSession.Begin(data);
+        // 엔딩을 본 뒤 처음 이어하기: 섬 주민들의 후일담(에필로그)을 먼저 보여 주고 섬으로 간다.
+        var dialogue = DialogueManager.Instance;
+        if (IslandStory.ShouldPlayEpilogue(data) && dialogue != null && !dialogue.IsPlaying
+            && dialogue.PlayFromResources(IslandStory.EpilogueDialogue, FinishEpilogue))
+            return SaveLoadStatus.Ok;
         EnterDayStart();
         return SaveLoadStatus.Ok;
+    }
+
+    /// <summary>에필로그를 본 것으로 저장하고, 엔딩 직전처럼 자유롭게 이어서 플레이한다.</summary>
+    private static void FinishEpilogue()
+    {
+        if (!GameSession.IsActive) return;
+        GameSession.Current.progression.epilogueSeen = true;
+        if (!SaveService.TryWrite(GameSession.Current, out string error))
+            Debug.LogWarning($"[Epilogue] 에필로그 기록을 저장하지 못했어요: {error}");
+        EnterDayStart();
     }
 
     // ───── 하루 흐름 ─────

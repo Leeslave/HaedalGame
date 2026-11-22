@@ -1,0 +1,116 @@
+{
+  "id": "island_epilogue",
+  "backgroundStyle": "Dim",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "fairy",
+      "name": "요정",
+      "color": "#9FE0A0",
+      "side": "Right"
+    },
+    {
+      "id": "dolphin",
+      "name": "돌고래 셰프",
+      "color": "#8EC5FF",
+      "side": "Right"
+    },
+    {
+      "id": "engineer",
+      "name": "왕국 엔지니어",
+      "color": "#E8C27F",
+      "side": "Right"
+    },
+    {
+      "id": "farmer",
+      "name": "곡물 섬 농부",
+      "color": "#F2D16B",
+      "side": "Right"
+    },
+    {
+      "id": "rancher",
+      "name": "목장 장인",
+      "color": "#F5E6C8",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "그 뒤로도 섬들에는 저마다의 계절이 흘렀다.",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade"
+    },
+    {
+      "text": "요정의 숲에는 목재를 베어 낸 자리마다 어린 나무가 다시 자랐다.",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade"
+    },
+    {
+      "text": "베어 간 만큼 다시 심어야지. 그게 숲의 약속이니까! 이 나무가 다 자라면 꼭 보여 줄 거야.",
+      "speaker": "fairy"
+    },
+    {
+      "text": "돌고래 셰프는 바닷속에 작은 요리 교실을 열었다.",
+      "backgroundStyle": "DeepSea",
+      "transition": "Fade"
+    },
+    {
+      "text": "칼질부터 다시 해. …육지에서 온 그 셰프도 처음엔 그랬으니까.",
+      "speaker": "dolphin"
+    },
+    {
+      "text": "해달 왕국은 새 왕을 세우는 대신, 엔지니어들이 함께 나라를 꾸려 가기로 했다.",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade"
+    },
+    {
+      "text": "왕관보다는 공구가 낫지. 그 녀석 덕분에 다들 그걸 알게 됐어.",
+      "speaker": "engineer"
+    },
+    {
+      "text": "곡물 섬에는 처음으로 갓 구운 빵 냄새가 퍼졌다.",
+      "backgroundStyle": "SeasideDay",
+      "transition": "Fade"
+    },
+    {
+      "text": "알려 주신 요리법대로 했더니 아이들이 한 톨도 안 남겨요!",
+      "speaker": "farmer"
+    },
+    {
+      "text": "목장 섬의 치즈는 이제 바다 건너 여러 섬의 식탁에 오른다.",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade"
+    },
+    {
+      "text": "새로 숙성한 치즈는 그분이 돌아오면 제일 먼저 맛보여 줄 거예요.",
+      "speaker": "rancher"
+    },
+    {
+      "text": "그리고 해달의 식당.",
+      "backgroundStyle": "WarmInterior",
+      "transition": "Fade"
+    },
+    {
+      "text": "해달은 오늘도 투덜거리며 가게 문을 연다. 주방 한쪽에는 누군가의 자리가 그대로 비워져 있다."
+    },
+    {
+      "text": "…메뉴는 안 바꿨어. 언제 돌아와도 바로 일할 수 있게.",
+      "speaker": "haedal"
+    },
+    {
+      "text": "그리고 다시, 섬의 하루가 시작된다.",
+      "backgroundStyle": "SeasideNight",
+      "transition": "Fade"
+    }
+  ]
+}

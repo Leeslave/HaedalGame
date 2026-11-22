@@ -57,6 +57,9 @@ public static class IslandStory
     public static string DoneDialogue(int island) => $"Dialogue/Island/{Islands[island].DialogueKey}_done";
     public const string WoodDialogue = "Dialogue/Island/climax_wood";
     public const string EndingDialogue = "Dialogue/Island/ending_farewell";
+    /// <summary>엔딩 뒤 처음 이어하기를 누르면 나오는 섬 주민들의 후일담. (플롯 8. 에필로그)</summary>
+    public const string EpilogueDialogue = "Dialogue/Island/epilogue";
+    public static bool ShouldPlayEpilogue(GameSaveData s) => s?.progression != null && s.progression.endingSeen && !s.progression.epilogueSeen;
 
     public static string PartName(string part) => part switch
     {
@@ -137,10 +140,10 @@ public static class IslandStory
     public const string ClimaxIntro =
         "다섯 섬과 모두 교류하게 됐어요. 배에 남은 건 선체가 될 목재뿐이에요.\n그런데 요정은 여전히 목재 이야기를 피하고, 해달은 어딘가 말이 없어요.";
     public const string ClimaxDone =
-        "해달이 목재를 막아 달라고 부탁했던 사실을 털어놓았어요. 두 사람은 서로의 마음을 이해했고, 요정이 선체 목재를 보내 줬어요.";
+        "해달이 목재를 막아 달라고 부탁했던 사실을 털어놓았어요. 두 사람은 서로의 마음을 이해했고, 요정이 보내 준 선체 목재로 드디어 배가 완성됐어요.\n떠날 준비가 되면 [탈출하기]를 눌러요.";
 
     public const string EndingText =
-        "모은 부품으로 드디어 배를 완성했어요.\n떠나는 날, 그동안 만난 섬 주민과 손님들이 배웅을 나왔어요. " +
+        "완성한 배를 타고 섬을 떠났어요.\n떠나는 날, 그동안 만난 섬 주민과 손님들이 배웅을 나왔어요. " +
         "해달은 숨어 있다가 마지막에야 나타나 '퇴직 기념'이라며 작은 상자를 건넸어요.\n" +
-        "식당은 계속 열어 둘 수 있어요.";
+        "식당은 계속 열어 둘 수 있어요. 타이틀에서 이어하기를 누르면 섬 주민들의 후일담을 볼 수 있어요.";
 }

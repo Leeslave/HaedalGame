@@ -45,7 +45,7 @@ public partial class RestaurantManagementUI
             card.interactable = known;
         }
         if (allIslands)
-            SelectCard(items, "마지막 이야기", p.endingSeen ? "배를 완성했어요" : IslandStory.WoodReceived(s) ? "배를 완성할 수 있어요" : "해달과 선체 목재",
+            SelectCard(items, "마지막 이야기", p.endingSeen ? "배웅을 받으며 떠났어요" : IslandStory.WoodReceived(s) ? "배가 완성됐어요 · 탈출할 수 있어요" : "해달과 선체 목재",
                 shown == ClimaxCard, () => { selectedId = ClimaxCard; Refresh(); }, DesignArt.Load("IconExplore"));
 
         if (shown == ClimaxCard) ClimaxDetail(s, detail);
@@ -59,9 +59,9 @@ public partial class RestaurantManagementUI
         if (p.questRecipeId > 0)
             DetailAction(detail, "부탁한 음식 전달하기", DeliverIslandRequest, true, p.freeTime);
         else if (shown == ClimaxCard && !IslandStory.WoodReceived(s))
-            DetailAction(detail, "해달과 이야기하기", () => RunStory(RestaurantProgress.TryReceiveWood, IslandStory.WoodDialogue, "선체 목재를 받았어요. 이제 배를 완성할 수 있어요."), true, p.freeTime);
+            DetailAction(detail, "해달과 이야기하기", () => RunStory(RestaurantProgress.TryReceiveWood, IslandStory.WoodDialogue, "선체 목재로 배가 완성됐어요. 떠날 준비가 되면 탈출하기를 눌러요."), true, p.freeTime);
         else if (shown == ClimaxCard && !p.endingSeen)
-            DetailAction(detail, "배 완성하기", () => RunStory(RestaurantProgress.TryEnding, IslandStory.EndingDialogue, "배를 완성했어요."), true, p.freeTime && IslandStory.ShipReady(s));
+            DetailAction(detail, "탈출하기", () => RunStory(RestaurantProgress.TryEnding, IslandStory.EndingDialogue, "섬 주민들의 배웅을 받으며 바다로 떠났어요."), true, p.freeTime && IslandStory.ShipReady(s));
         else if (!p.endingSeen || allIslands)
             DetailAction(detail, p.endingSeen ? "주민 만나기 · 후일담" : "주민 만나기", MeetIslandResident, !allIslands, p.freeTime);
     }
