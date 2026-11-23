@@ -29,6 +29,8 @@ public class ResearchPractice : MonoBehaviour
     private float temperature = .5f, heat = .5f, heatScore, heatElapsed;
     private TMP_Text heatLabel;
     private readonly System.Collections.Generic.List<float> scores = new System.Collections.Generic.List<float>();
+    /// <summary>전용 단계 화면의 [나가기]. 연구 화면의 [닫기 · 예약 유지]와 같게 동작한다.</summary>
+    public Action ExitRequested;
 
     public void Begin(RectTransform parent, RecipeData data, Action<float> onFinished, Transform phaseList = null, Transform scoreCard = null)
     {
@@ -60,6 +62,18 @@ public class ResearchPractice : MonoBehaviour
         hits = mistakes = expected = 0; transitioning = waiting = false; startButton = null; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
+        // 굽기는 팬이 보이는 전용 화면에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
+        if (Kind == "Grill" && surface.parent != null && surface.parent.parent != null)
+        {
+            int index = phase;
+            surface.gameObject.SetActive(false);
+            GrillStation.Open(surface.parent.parent, recipe, steps, phase, score => {
+                if (this == null || index != phase) return;
+                surface.gameObject.SetActive(true);
+                CompletePhase(score);
+            }, ExitRequested);
+            return;
+        }
         Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
         Label(steps[phase].text, -80, 24);
         instruction = Label("", -125, 21);
@@ -299,6 +313,13 @@ public class ResearchPractice : MonoBehaviour
         }
         fill.rectTransform.anchorMin = fill.rectTransform.anchorMax = new Vector2(value, .5f);
         fill.rectTransform.anchoredPosition = Vector2.zero;
+    }
+    // 전용 화면(굽기)이 결과와 [다음 단계]를 이미 보여 줬으므로 점수만 넣고 바로 다음으로 간다.
+    private void CompletePhase(float score)
+    {
+        total += score; scores.Add(score);
+        if (++phase < steps.Length) ShowPhase();
+        else { var callback = finished; finished = null; callback?.Invoke(total / steps.Length); Destroy(this); }
     }
     private void FinishPhase(float score)
     {

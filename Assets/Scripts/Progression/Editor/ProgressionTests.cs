@@ -591,4 +591,33 @@ public class ProgressionTests
         Assert.AreEqual(4, inventory.GetCount(8));
         Assert.AreEqual(0, inventory.GetCount(20));
     }
+
+    // 굽기: 중불에서 초록 구간에 뒤집고 꺼내면 완벽, 강불로 온도를 못 지키면 점수가 깎인다.
+    private static float SimulateGrill(int heat, float flipAt)
+    {
+        float t = GrillRules.StartTemperature, d = 0, inZone = 0, elapsed = 0, front = 0; bool back = false;
+        while (elapsed < GrillRules.TimeLimit)
+        {
+            const float dt = .05f;
+            t = GrillRules.StepTemperature(t, heat, dt); d += GrillRules.CookRate(t) * dt; elapsed += dt;
+            if (GrillRules.InTempZone(t)) inZone += dt;
+            if (d < flipAt) continue;
+            if (!back) { front = GrillRules.SideScore(d); back = true; d = 0; continue; }
+            return GrillRules.StepScore(front, GrillRules.SideScore(d), inZone / elapsed);
+        }
+        return GrillRules.StepScore(front, 0, inZone / elapsed);
+    }
+    [Test] public void Grill_MediumHeatAndFlipInGreenZone_IsPerfect()
+    {
+        float score = SimulateGrill(1, .86f);
+        Assert.AreEqual("완벽!", GrillRules.Verdict(score), score.ToString());
+    }
+    [Test] public void Grill_HighHeatOrLateFlip_LosesPoints()
+    {
+        Assert.Less(SimulateGrill(2, .86f), 4.5f, "강불은 팬 온도 구간을 못 지켜서 완벽이 아니어야 해요");
+        Assert.Less(SimulateGrill(1, 1.2f), 4f, "타고 나서 뒤집으면 점수가 깎여야 해요");
+        Assert.AreEqual(5f, GrillRules.SideScore(.85f), .001f);
+        Assert.AreEqual(1.5f, GrillRules.SideScore(.5f), .001f);
+        Assert.AreEqual(0f, GrillRules.CookRate(110f), .0001f, "덜 달군 팬에서는 익지 않아요");
+    }
 }

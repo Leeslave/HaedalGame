@@ -756,6 +756,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         DayLoopUI.Vertical(score, 33, 18);
         score.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         practice = gameObject.AddComponent<ResearchPractice>();
+        practice.ExitRequested = () => { StopPractice(); window.gameObject.SetActive(true); Refresh(); };
         practice.Begin(stage, recipe, average => {
             bool ok = RestaurantProgress.TryCompleteResearch(id, average, out string error);
             window.gameObject.SetActive(true); Refresh();
