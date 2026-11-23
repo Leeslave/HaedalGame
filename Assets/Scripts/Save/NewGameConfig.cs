@@ -168,7 +168,15 @@ public class NewGameConfig : ScriptableObject
         // 첫 조리도구는 관리 화면에서 무료 선택한다. 선택 전에는 영업할 수 없다.
         data.menuSlots.Clear();
         for (int i = 0; i < RestaurantRules.MenuLimit(data.restaurantLevel); i++) data.menuSlots.Add(-1);
-        if (data.placedTables.Count > 1) data.placedTables.RemoveRange(1, data.placedTables.Count - 1);
+        // 시작 테이블은 시작 레벨의 좌석 한도까지만 놓는다.
+        // 예전에는 테이블 1개(2석)만 남겨서, 한도가 4석인데 왜 2석으로 시작하는지 헷갈렸다.
+        int startSeats = 0;
+        for (int i = 0; i < data.placedTables.Count; i++)
+        {
+            int seats = RestaurantManagementUI.SeatsOf(data.placedTables[i].tableType);
+            if (seats <= 0 || startSeats + seats > RestaurantRules.SeatLimit(data.restaurantLevel)) data.placedTables.RemoveAt(i--);
+            else startSeats += seats;
+        }
         for (int id = 1; id <= 10; id++) if (!data.ingredients.Exists(x => x.ingredientId == id)) AddIngredient(data, id, 30, now);
         foreach (var ingredient in data.ingredients) ingredient.amount = 30;
         return data;

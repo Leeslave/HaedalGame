@@ -377,8 +377,33 @@ public static partial class RestaurantProgress
         if (c == null) return "지원자가 없어요.";
         if (s.employees.Count >= 10) return "직원은 최대 10명까지 고용할 수 있어요.";
         if (!Spend(s, c.wage)) return "계약금이 부족해요.";
+        var role = HirePlacement(s, c);
+        if (role != PartTimerRole.None)
+        {
+            var assigned = s.employees.Where(x => x.role == role.ToString()).ToList();
+            c.role = role.ToString(); c.slotIndex = Enumerable.Range(0, 5).First(i => !assigned.Any(x => x.slotIndex == i));
+        }
         s.employees.Add(c); s.progression.candidates.Remove(c); return null;
     }, out error);
+    /// <summary>
+    /// 고용하면 앉을 자리. 비어 있는 홀·주방 중 그 직원이 더 잘하는 쪽으로, 둘 다 차 있으면 대기.
+    /// 예전에는 늘 대기로 들어가서, 돈을 내고도 영업에 안 나오는 걸 나중에야 알았다.
+    /// </summary>
+    public static PartTimerRole HirePlacement(GameSaveData s, EmployeeEntry candidate)
+    {
+        bool hall = HasFreeStaffSlot(s, PartTimerRole.Serving), kitchen = HasFreeStaffSlot(s, PartTimerRole.Kitchen);
+        if (hall && kitchen) return candidate.cooking > candidate.serving ? PartTimerRole.Kitchen : PartTimerRole.Serving;
+        return hall ? PartTimerRole.Serving : kitchen ? PartTimerRole.Kitchen : PartTimerRole.None;
+    }
+    private static bool HasFreeStaffSlot(GameSaveData s, PartTimerRole role) =>
+        s.employees.Count(x => x.role == role.ToString()) < RestaurantRules.StaffLimit(s.restaurantLevel, role);
+    /// <summary>고용 확인창 문구: 낼 돈과 어디로 들어가는지.</summary>
+    public static string HireConfirmText(GameSaveData s, EmployeeEntry candidate) => HirePlacement(s, candidate) switch
+    {
+        PartTimerRole.Serving => $"{candidate.name} 직원을 {candidate.wage:N0}G에 고용할까요?\n바로 홀에 배치돼요.",
+        PartTimerRole.Kitchen => $"{candidate.name} 직원을 {candidate.wage:N0}G에 고용할까요?\n바로 주방에 배치돼요.",
+        _ => $"{candidate.name} 직원을 {candidate.wage:N0}G에 고용할까요?\n<color=#C0392B>홀·주방 자리가 모두 차서 대기 직원이 돼요.</color>\n대기 직원은 영업에 나가지 않지만 주급은 나가요.",
+    };
     /// <summary>
     /// 증축이 끝나 늘어난 홀·주방 자리에 대기 직원을 그 일을 잘하는 순서로 앉힌다.
     /// 예전에는 자리가 늘어도 대기 직원이 그대로 있어서, 모르고 지나가면 손님이 기다리다 돌아갔다.

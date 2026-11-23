@@ -489,6 +489,75 @@ public class ProgressionTests
         // Lv.3 주방 자리는 2개라 남은 대기 직원이 주방으로 간다.
         Assert.AreEqual(nameof(PartTimerRole.Kitchen), s.employees.Find(e => e.instanceId == "slow").role);
     }
+    [Test] public void Hire_SitsInFreeSlot_AndWarnsBeforePayingWhenOnlyStandbyIsLeft()
+    {
+        PrepareUpgrade(4f, 1000, false);
+        var s = GameSession.Current;
+        s.progression.unpaidEmployeeIds.Clear(); s.progression.expedition = null;
+        s.employees.Clear(); s.progression.candidates.Clear();
+        s.employees.Add(new EmployeeEntry { instanceId = "hall", role = nameof(PartTimerRole.Serving), slotIndex = 0 });
+        s.progression.candidates.Add(new EmployeeEntry { instanceId = "cook", name = "해달 1", cooking = 9, serving = 2, wage = 100 });
+        s.progression.candidates.Add(new EmployeeEntry { instanceId = "extra", name = "해달 2", cooking = 3, serving = 8, wage = 100 });
+        // Lv.1은 홀 1·주방 1. 홀이 차 있으니 첫 직원은 주방으로 바로 들어간다.
+        StringAssert.Contains("주방에 배치", RestaurantProgress.HireConfirmText(s, s.progression.candidates[0]));
+        Assert.IsTrue(RestaurantProgress.TryHire("cook", out string error), error);
+        s = GameSession.Current;
+        var cook = s.employees.Find(e => e.instanceId == "cook");
+        Assert.AreEqual(nameof(PartTimerRole.Kitchen), cook.role);
+        Assert.AreEqual(0, cook.slotIndex);
+        // 홀·주방이 다 차면 돈을 내기 전에 대기로 들어간다고 알린다.
+        var extra = s.progression.candidates.Find(e => e.instanceId == "extra");
+        StringAssert.Contains("대기 직원이 돼요", RestaurantProgress.HireConfirmText(s, extra));
+        Assert.IsTrue(RestaurantProgress.TryHire("extra", out error), error);
+        Assert.AreEqual(nameof(PartTimerRole.None), GameSession.Current.employees.Find(e => e.instanceId == "extra").role);
+        Assert.AreEqual(800, RestaurantProgress.Gold(GameSession.Current));
+    }
+    [Test] public void HirePlacement_PicksTheRoleTheCandidateIsBetterAt_WhenBothAreFree()
+    {
+        var s = GameSession.Current;
+        s.restaurantLevel = 1; s.employees.Clear();
+        Assert.AreEqual(PartTimerRole.Kitchen, RestaurantProgress.HirePlacement(s, new EmployeeEntry { cooking = 9, serving = 2 }));
+        Assert.AreEqual(PartTimerRole.Serving, RestaurantProgress.HirePlacement(s, new EmployeeEntry { cooking = 2, serving = 9 }));
+    }
+    [Test] public void NewGame_StartsWithTablesUpToLevelOneSeatLimit()
+    {
+        var data = NewGameConfig.Load().CreateSaveData();
+        int seats = data.placedTables.Sum(t => RestaurantManagementUI.SeatsOf(t.tableType));
+        Assert.AreEqual(RestaurantRules.SeatLimit(1), seats, "1레벨 한도 4석을 채워서 시작한다 (예전엔 2석)");
+        StringAssert.Contains("다 찼어요", GameTutorial.SeatRoomText(data));
+        StringAssert.Contains("6석", GameTutorial.SeatRoomText(data));
+        data.placedTables.RemoveAt(1);
+        StringAssert.Contains("2석 더 놓을 수 있어요", GameTutorial.SeatRoomText(data));
+    }
+    [Test] public void ExpansionGuide_OnlyShowsBeforeFirstUpgrade()
+    {
+        var data = NewGameConfig.Load().CreateSaveData();
+        data.day = 7;
+        Assert.IsFalse(GameTutorial.ExpansionGuideNeeded(data), "8일차 전에는 띄우지 않는다");
+        data.day = 8;
+        Assert.IsTrue(GameTutorial.ExpansionGuideNeeded(data));
+        data.progression.pendingRestaurantLevel = 2;
+        Assert.IsFalse(GameTutorial.ExpansionGuideNeeded(data), "이미 증축 공사 중");
+        data.progression.pendingRestaurantLevel = 0; data.restaurantLevel = 3;
+        Assert.IsFalse(GameTutorial.ExpansionGuideNeeded(data), "이미 Lv.3인데 증축하라고 하던 문제");
+    }
+    [Test] public void StaffOnlyDozeWhenTired_AndNapsRestoreEnoughToKeepWorking()
+    {
+        Assert.AreEqual(0f, PartTimerAgent.SleepChance(10, 10), "체력이 가득하면 졸지 않는다");
+        Assert.AreEqual(0f, PartTimerAgent.SleepChance(5, 10), "예전엔 체력 50%에서도 7.5%씩 잠들었다");
+        Assert.AreEqual(0f, PartTimerAgent.SleepChance(3, 10));
+        Assert.Greater(PartTimerAgent.SleepChance(1, 10), 0f);
+        Assert.AreEqual(PartTimerAgent.MaxSleepChance, PartTimerAgent.SleepChance(0, 10), 1e-5f);
+        // F등급(체력 10)이 Lv.3 하루 몫(서빙 약 25건)을 하는 동안 체력이 30% 아래로 떨어지는 건 15번째 일부터다.
+        float stamina = 10; int firstTired = 0;
+        for (int task = 1; task <= 25 && firstTired == 0; task++)
+        {
+            stamina -= PartTimerAgent.StaminaPerTask;
+            if (PartTimerAgent.SleepChance(stamina, 10) > 0) firstTired = task;
+        }
+        Assert.AreEqual(15, firstTired);
+        Assert.Greater(PartTimerAgent.NapRecovery, PartTimerAgent.TiredRatio, "깨자마자 다시 졸지 않는다");
+    }
     [Test] public void RestaurantLevel_FollowsLevelTable()
     {
         Assert.AreEqual(180, RestaurantRules.DailyVisitors(10));

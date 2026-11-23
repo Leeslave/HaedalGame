@@ -265,11 +265,29 @@ public class GameTutorial : MonoBehaviour
 
     private Step ExpansionStep()
     {
-        if (!OnIsland || GameSession.Current.day < 8) return Step.None;
+        if (!OnIsland || !ExpansionGuideNeeded(GameSession.Current)) return Step.None;
         return RestaurantManagementUI.OpenTab == "대장간" ? Step.ExpandLevel : Step.ExpandForge;
     }
+    /// <summary>
+    /// 8일차 증축 안내는 아직 한 번도 증축하지 않았을 때만 띄운다.
+    /// 예전에는 이미 Lv.3인데도 "대장간에서 식당 레벨을 올릴 수 있어요"라고 안내했다.
+    /// </summary>
+    public static bool ExpansionGuideNeeded(GameSaveData s) =>
+        s.day >= 8 && s.restaurantLevel <= 1 && s.progression.pendingRestaurantLevel == 0;
 
     private static int DaysToWage(GameSaveData s) => (7 - s.day % 7) % 7;
+    /// <summary>
+    /// 테이블 안내의 좌석 한 줄. 1레벨은 한도까지 놓고 시작하므로, 꽉 찼으면 증축해야 늘어난다고 말한다.
+    /// </summary>
+    public static string SeatRoomText(GameSaveData s)
+    {
+        int limit = RestaurantRules.SeatLimit(s.restaurantLevel);
+        int seats = RestaurantManagementUI.PlacedTableSeats(s).Sum();
+        if (seats < limit) return $"좌석은 식당 레벨마다 한도가 있어요. 지금 {seats}석이라 {limit - seats}석 더 놓을 수 있어요.";
+        return s.restaurantLevel >= RestaurantRules.MaxLevel
+            ? $"지금 최대 {limit}석이 다 찼어요."
+            : $"지금 최대 {limit}석이 다 찼어요. 대장간에서 식당을 증축하면 {RestaurantRules.SeatLimit(s.restaurantLevel + 1)}석까지 늘어요.";
+    }
 
     /// <summary>말풍선 머리의 단계 표시. (번호, 전체 단계 수)</summary>
     private static (int number, int total) Position(Step step) => step switch
@@ -442,7 +460,7 @@ public class GameTutorial : MonoBehaviour
 
             case Step.GrowthFurniture:
                 if (RestaurantManagementUI.OpenTab == "가구")
-                    return Explain("테이블 늘리기", $"테이블을 사서 [놓으러 가기]를 누르면 식당에 놓을 수 있어요.\n좌석은 식당 레벨마다 한도가 있어요. 지금은 최대 {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석이에요.",
+                    return Explain("테이블 늘리기", $"테이블을 사서 [놓으러 가기]를 누르면 식당에 놓을 수 있어요.\n{SeatRoomText(GameSession.Current)}",
                         "알겠어요", () => Finish(Lesson.Growth));
                 return Ask("테이블 늘리기", "자리가 늘면 한 번에 더 많은 손님을 받을 수 있어요.", "가구 보기", () => RestaurantManagementUI.OpenSection("가구"));
 

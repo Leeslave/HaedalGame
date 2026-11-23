@@ -503,10 +503,11 @@ public partial class RestaurantManagementUI
         {
             string id = candidate.instanceId;
             Copy(candidates, $"{candidate.name} · {candidate.grade}등급 · 주급 {candidate.wage:N0}G\n요리 {candidate.cooking:0} · 서빙 {candidate.serving:0} · 솜씨 {candidate.handy:0} · 체력 {candidate.hp:0}", 76, 23);
-            DetailAction(candidates, $"고용 · {candidate.wage:N0}G", () => {
+            var hire = candidate;
+            DetailAction(candidates, $"고용 · {candidate.wage:N0}G", () => ManagementDialog.Show(canvas.transform, RestaurantProgress.HireConfirmText(GameSession.Current, hire), () => {
                 if (RestaurantProgress.TryHire(id, out string error)) { selectedEmployee = id; Refresh(); OpenRecruitment(); }
                 else notice.text = error;
-            }, true, GameSession.Current.employees.Count < 10 && RestaurantProgress.Gold(GameSession.Current) >= candidate.wage);
+            }), true, GameSession.Current.employees.Count < 10 && RestaurantProgress.Gold(GameSession.Current) >= candidate.wage);
         }
         DetailAction(card.transform, "닫기", CloseManagementDialogs);
     }
@@ -560,10 +561,11 @@ public partial class RestaurantManagementUI
         Copy(detail, $"체력 {ratio * 100:0}%", 36, 24);
         var bar = DayLoopUI.Bar(detail, ratio, ratio < .3f ? DayLoopUI.Kit.Alert : DayLoopUI.Kit.Kelp);
         DayLoopUI.Layout(bar.transform.parent, preferredHeight: 18);
-        Copy(detail, "체력이 바닥나면 영업 중에 잠들어요. 집에서 자고 나면 모두 회복해요.", 96, 22, DayLoopUI.Kit.InkSoft);
+        Copy(detail, "체력이 30% 아래로 떨어지면 영업 중에 졸 수 있어요. 집에서 자고 나면 모두 회복해요.", 96, 22, DayLoopUI.Kit.InkSoft);
         DayLoopUI.Spacer(detail);
         string employeeId = selected.instanceId;
-        if (s.progression.candidates.Contains(selected)) DetailAction(detail, "고용 · " + selected.wage.ToString("N0") + "G", () => Run((out string error) => RestaurantProgress.TryHire(employeeId, out error)), true);
+        if (s.progression.candidates.Contains(selected)) DetailAction(detail, "고용 · " + selected.wage.ToString("N0") + "G", () => ManagementDialog.Show(canvas.transform, RestaurantProgress.HireConfirmText(GameSession.Current, selected),
+            () => Run((out string error) => RestaurantProgress.TryHire(employeeId, out error))), true);
         else
         {
             DetailAction(detail, "홀에 배치", () => Run((out string error) => RestaurantProgress.TryAssign(employeeId, PartTimerRole.Serving, out error)));
@@ -717,7 +719,7 @@ public partial class RestaurantManagementUI
             return PlacedTable.Active.Select(t => t.tableData.chairTiles.Length).ToList();
         return s.placedTables.Select(e => SeatsOf(e.tableType)).Where(n => n > 0).ToList();
     }
-    private static int SeatsOf(string tableType) =>
+    public static int SeatsOf(string tableType) =>
         tableType == nameof(TableType.OneSeat) ? 1 : tableType == nameof(TableType.TwoSeat) ? 2
         : tableType == nameof(TableType.FourSeat) ? 4 : tableType == nameof(TableType.SixSeat) ? 6 : 0;
 

@@ -8,7 +8,22 @@ public class PartTimerAgent : MonoBehaviour
     /// <summary>QA #4: 잠든 직원은 이 시간(게임 속도 기준 초)이 지나면 스스로 깬다. 눌러서 깨우면 바로 일어난다.</summary>
     public const float NapSeconds = 12f;
     /// <summary>스스로 깰 때 회복하는 체력 비율. 깨자마자 다시 잠드는 것을 막는다.</summary>
-    public const float NapRecovery = .3f;
+    public const float NapRecovery = .6f;
+    /// <summary>일 하나(주문 받기·서빙·조리)에 드는 체력.</summary>
+    public const float StaminaPerTask = .5f;
+    /// <summary>체력이 이 비율 아래로 떨어져야 졸기 시작한다.</summary>
+    public const float TiredRatio = .3f;
+    /// <summary>체력이 바닥났을 때 일 하나를 끝내고 잠들 확률.</summary>
+    public const float MaxSleepChance = .25f;
+    /// <summary>
+    /// 일을 끝낸 뒤 잠들 확률. 체력이 30% 아래일 때만 졸고, 바닥에 가까울수록 잘 존다.
+    /// 예전에는 체력이 조금만 줄어도 일할 때마다 잠들 수 있어서 Lv.3 영업 한 번에 4~8번씩 잤다.
+    /// </summary>
+    public static float SleepChance(float stamina, float hp)
+    {
+        float ratio = stamina / Mathf.Max(1, hp);
+        return ratio >= TiredRatio ? 0 : MaxSleepChance * (1 - Mathf.Max(0, ratio) / TiredRatio);
+    }
     public float SleepRemaining { get; private set; }
     private float lastWork;
     private float restTimer;
@@ -52,8 +67,8 @@ public class PartTimerAgent : MonoBehaviour
         }
         if (employee != null)
         {
-            employee.stamina = Mathf.Max(0, employee.stamina - staminaCost);
-            IsSleeping = Random.value < .15f * (1 - employee.stamina / Mathf.Max(1, employee.hp));
+            employee.stamina = Mathf.Max(0, employee.stamina - staminaCost * StaminaPerTask);
+            IsSleeping = Random.value < SleepChance(employee.stamina, employee.hp);
             if (IsSleeping) SleepRemaining = NapSeconds;
         }
     }
