@@ -21,6 +21,8 @@ public class NpcStatusOverlay : MonoBehaviour
     private const float ChipHeight = 0.5f;
     private const float ChipFontSize = 3.0f;
     private const float IconSize = 0.6f;
+    /// <summary>식탁에 놓인 음식 크기. 머리 위 아이콘(0.6)과 같으면 접시가 너무 작아 보였다.</summary>
+    public const float TableFoodSize = 1.0f;
     private const int ChipOrder = 4000;
 
     private static readonly Color Mint = new Color32(0x7F, 0xD1, 0xA0, 0xFF);
@@ -254,9 +256,9 @@ public class NpcStatusOverlay : MonoBehaviour
         {
             Vector2 facing = seat.GetFacingDirection();
             Vector3 basePos = seat.GetSeatPoint() != null ? seat.GetSeatPoint().position : customer.transform.position;
-            tablePos = basePos + (Vector3)(facing.normalized * 0.6f);
+            tablePos = TableFoodPosition(seat, basePos, facing);
         }
-        ShowFood(view.food, view.foodTag, eating ? order : null, tablePos);
+        ShowFood(view.food, view.foodTag, eating ? order : null, tablePos, TableFoodSize);
 
         // 먹는 동안 머리 위에 하트가 콩콩
         bool heart = state == CustomerState.Eating && _heartGlyph.Length > 0;
@@ -344,15 +346,36 @@ public class NpcStatusOverlay : MonoBehaviour
         ShowFood(view.food, view.foodTag, agent.IsSleeping ? null : food, new Vector3(bounds.center.x, bounds.max.y + IconSize * 0.45f, 0f));
     }
 
+    /// <summary>
+    /// 식탁 위 접시 자리: 앉은 자리에서 식탁 가운데 쪽으로, 자기 몫의 식탁 절반 위.
+    /// 예전에는 자리에서 0.6만 떨어져 손님 얼굴에 겹쳤다. 식탁 가운데는 같은 식탁 좌석들의 가운데로 잡는다.
+    /// </summary>
+    private static Vector3 TableFoodPosition(Seat seat, Vector3 seatPos, Vector2 facing)
+    {
+        TableGroup table = seat.GetComponentInParent<TableGroup>();
+        Seat[] seats = table != null ? table.GetSeats() : null;
+        Vector3 center;
+        if (seats != null && seats.Length >= 2)
+        {
+            center = Vector3.zero;
+            foreach (Seat s in seats) center += s.GetSeatPoint().position;
+            center /= seats.Length;
+        }
+        else center = seatPos + (Vector3)(facing.normalized * 0.9f);
+        Vector3 position = Vector3.Lerp(seatPos, center, 0.72f);
+        position.z = 0f;
+        return position;
+    }
+
     // 음식 아이콘을 보여 준다. 아이콘이 없는 메뉴는 같은 자리에 음식 이름표를 띄운다. food가 null이면 모두 숨긴다.
-    private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position)
+    private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position, float size = IconSize)
     {
         Sprite designIcon = DesignArt.Food(food);
         bool hasIcon = designIcon != null;
         icon.gameObject.SetActive(hasIcon);
         if (hasIcon)
         {
-            SetIcon(icon, designIcon);
+            SetIcon(icon, designIcon, size);
             icon.transform.position = position;
         }
 
