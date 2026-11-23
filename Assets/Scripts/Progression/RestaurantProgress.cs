@@ -34,6 +34,23 @@ public static partial class RestaurantProgress
     public static bool HasTool(GameSaveData s, RecipeData recipe) => recipe.ClassId == 205
         ? s.progression.tools.Contains(201) && s.progression.tools.Contains(202) && s.progression.tools.Contains(204)
         : s.progression.tools.Contains(recipe.ClassId);
+    public static readonly string[] ToolNames = { "프라이팬", "도마", "튀김기", "냄비" };
+    /// <summary>조리도구는 식당 레벨마다 하나씩 더 가질 수 있다. (Lv.1 1개 … Lv.4부터 4개)</summary>
+    public static int ToolSlots(int level) => Mathf.Min(4, level);
+    public static bool CanBuyAnotherTool(GameSaveData s) => s.progression.tools.Count < ToolSlots(s.restaurantLevel);
+    /// <summary>다음 조리도구를 살 수 있게 되는 식당 레벨.</summary>
+    public static int NextToolLevel(GameSaveData s) => Mathf.Max(s.restaurantLevel, s.progression.tools.Count) + 1;
+    /// <summary>요리에 필요한데 없는 도구와 구하는 방법. 다 있으면 null.</summary>
+    public static string MissingToolHint(GameSaveData s, RecipeData recipe)
+    {
+        int[] ids = recipe.ClassId == 205 ? new[] { 201, 202, 204 } : new[] { recipe.ClassId };
+        var missing = ids.Where(id => id >= 201 && id <= 204 && !s.progression.tools.Contains(id)).Select(id => ToolNames[id - 201]).ToList();
+        if (missing.Count == 0) return null;
+        string how = CanBuyAnotherTool(s) ? "조리도구 화면에서 살 수 있어요." : $"식당 레벨 {NextToolLevel(s)}부터 조리도구를 하나 더 살 수 있어요.";
+        string last = missing[missing.Count - 1];
+        bool batchim = last[last.Length - 1] >= '가' && last[last.Length - 1] <= '힣' && (last[last.Length - 1] - '가') % 28 != 0;
+        return $"{string.Join(", ", missing)}{(batchim ? "이" : "가")} 필요해요. {how}";
+    }
     public static bool TrySetMenu(int slot, int id, out string error)
     {
         if (!GameSession.IsActive) { error = "진행 중인 게임이 없어요."; return false; }
@@ -103,7 +120,7 @@ public static partial class RestaurantProgress
     public static bool TryBuyTool(int id, out string error) => Change(s => {
         if (!s.progression.firstToolChosen && id != FirstToolPicker.StartingToolId) return "첫 조리도구는 프라이팬을 무료로 받아요.";
         if (id < 201 || id > 204 || s.progression.tools.Contains(id)) return "이미 보유한 도구예요.";
-        if (s.progression.tools.Count >= Mathf.Min(4, s.restaurantLevel)) return "식당 레벨이 오르면 다음 도구를 선택할 수 있어요.";
+        if (!CanBuyAnotherTool(s)) return $"식당 레벨 {NextToolLevel(s)}부터 조리도구를 하나 더 살 수 있어요.";
         // 첫 도구는 기본 메뉴가 있어야 첫날 영업을 할 수 있다. (튀김기는 기본 메뉴가 없어 연구가 필요)
         if (!s.progression.firstToolChosen && !GameDatabase.Recipes.Recipes.Any(r => r.DefaultUnlock && r.ClassId == id))
             return "기본 메뉴가 있는 도구를 첫 도구로 골라 주세요.";
@@ -236,16 +253,23 @@ public static partial class RestaurantProgress
         if (!Spend(s, Mathf.RoundToInt(r.Price * 1.2f))) return "골드가 부족해요.";
         s.progression.blueprints.Add(id); return null;
     }, out error);
-    public static bool CanResearch => CanManage && GameSession.Current.progression.freeTime;
-    /// <summary>연구소는 장사를 마친 자유시간에만 들어간다. 장사 전(아침)에는 버튼을 끄고 이 안내를 띄운다.</summary>
-    public static bool ResearchLocked => GameSession.IsActive && !GameSession.Current.progression.freeTime;
-    public const string FreeTimeOnlyTip = "장사 이후 자유시간에 방문할 수 있어요.";
+    /// <summary>
+    /// 장사 없이 쉬는 때: 장사를 마친 자유시간, 또는 공사로 쉬는 날. 연구소·주민 만나기는 이때 한다.
+    /// 휴업일에는 장사가 없어 자유시간이 오지 않으므로 하루 종일이 쉬는 때다. (예전에는 휴업일 내내 잠겨 할 일이 없었다)
+    /// </summary>
+    public static bool OffDuty(GameSaveData s) => s.progression.freeTime || RestaurantRules.IsClosedForConstruction(s);
+    public const string OffDutyText = "영업을 마친 자유시간이나 공사로 쉬는 날";
+    public static bool CanResearch => CanManage && OffDuty(GameSession.Current);
+    /// <summary>장사 전(아침)에는 연구소 버튼을 끄고 FreeTimeOnlyTip 안내를 띄운다.</summary>
+    public static bool ResearchLocked => GameSession.IsActive && !OffDuty(GameSession.Current);
+    public const string FreeTimeOnlyTip = "장사 이후 자유시간이나 공사로 쉬는 날에 방문할 수 있어요.";
+    private const string ResearchClosedText = "연구실은 영업을 마친 자유시간이나 공사로 쉬는 날에 이용할 수 있어요.";
     public const int TutorialResearchRecipeId = 7; // 고등어 구이 · 프라이팬
     public const string ResearchGiftId = "Tutorial.FreeTime.ResearchGift";
 
     /// <summary>첫 연구 안내용 설계도와 부족한 연구 재료를 한 번만 지급한다. 해금은 실습 성공으로 처리한다.</summary>
     public static bool TryPrepareTutorialResearch(out string error) => Change(s => {
-        if (!s.progression.freeTime) return "연구실은 영업을 마친 자유시간에 이용할 수 있어요.";
+        if (!OffDuty(s)) return ResearchClosedText;
         if (!GameDatabase.TryGetRecipe(TutorialResearchRecipeId, out var recipe) || RecipeResearchPlan.Find(recipe.RecipeId) == null)
             return "튜토리얼 요리의 연구 과정이 준비되지 않았어요.";
         if (s.HasTutorialCompleted(ResearchGiftId) || s.unlockedRecipeIds.Contains(recipe.RecipeId)) return null;
@@ -263,7 +287,7 @@ public static partial class RestaurantProgress
     }, out error);
 
     public static bool TryStartResearch(int id, out string error) => Change(s => {
-        if (!s.progression.freeTime) return "연구실은 영업을 마친 자유시간에 이용할 수 있어요.";
+        if (!OffDuty(s)) return ResearchClosedText;
         if (!GameDatabase.TryGetRecipe(id, out var r) || !s.progression.blueprints.Contains(id)) return "먼저 레시피 설계도를 구매하세요.";
         if (s.unlockedRecipeIds.Contains(id) || s.progression.research.Any(x => x.recipeId == id)) return "이미 연구했거나 연구 중이에요.";
         if (s.progression.research.Count >= RestaurantRules.ResearchSlots(s.restaurantLevel)) return "연구 칸이 부족해요.";
@@ -310,7 +334,7 @@ public static partial class RestaurantProgress
         return missing.Count == 0 ? "연구 재료가 부족해요." : "연구 재료가 부족해요: " + string.Join(", ", names) + ". 상점에서 사 오세요.";
     }
     public static bool TryCancelResearch(int id, out string error) => Change(s => {
-        if (!s.progression.freeTime) return "연구 취소는 자유시간에 할 수 있어요.";
+        if (!OffDuty(s)) return "연구 취소는 " + FreeTimeOnlyTip.Replace("방문할", "할");
         var entry = s.progression.research.Find(x => x.recipeId == id);
         if (entry == null) return "진행 중인 연구가 없어요.";
         EnsureGrades(s);
@@ -318,7 +342,7 @@ public static partial class RestaurantProgress
         s.progression.research.Remove(entry); s.progression.blueprints.Remove(id); return null;
     }, out error);
     public static bool TryCompleteResearch(int id, float score, out string error) => Change(s => {
-        if (!s.progression.freeTime) return "실습은 자유시간에 할 수 있어요.";
+        if (!OffDuty(s)) return "실습은 " + FreeTimeOnlyTip.Replace("방문할", "할");
         var r = s.progression.research.Find(x => x.recipeId == id);
         if (r == null || r.remainingDays > 0) return "연구 시간이 남았어요.";
         if (float.IsNaN(score) || float.IsInfinity(score) || score < 4 || score > 5) return "4점 이상이면 연구가 완료돼요. 다시 도전할 수 있어요.";
@@ -417,13 +441,14 @@ public static partial class RestaurantProgress
         foreach (var r in s.progression.research) r.remainingDays = Mathf.Max(0, r.remainingDays - 1);
         if (s.progression.pendingRestaurantLevel > 0 && s.day >= s.progression.constructionUntilDay)
         { s.restaurantLevel = s.progression.pendingRestaurantLevel; s.progression.pendingRestaurantLevel = 0; FillOpenStaffSlots(s); }
+        ReplaceUnreachableQuest(s);
         while (s.menuSlots.Count < RestaurantRules.MenuLimit(s.restaurantLevel)) s.menuSlots.Add(-1);
         GameSession.StampCheckpoint(s, GameSaveData.ReasonDayEnded);
         if (!GameSession.IsDevSession && !SaveService.TryWrite(s, out error)) return false;
         GameSession.ApplyCheckpoint(s); GameFlow.EnterDayStart(); return true;
     }
     public static bool TryExplore(out string error) => Change(s => {
-        if (!s.progression.freeTime) return "영업을 마친 자유시간에 주민을 만날 수 있어요.";
+        if (!OffDuty(s)) return OffDutyText + "에 주민을 만날 수 있어요.";
         if (s.day < 2) return "둘째 날부터 주민을 만날 수 있어요.";
         if (s.progression.questRecipeId > 0) return "먼저 주민이 부탁한 음식을 전해주세요.";
         string flag = "ExploreDay-" + s.day;
@@ -433,13 +458,36 @@ public static partial class RestaurantProgress
         s.storyFlags.Add(flag); EnsureGrades(s);
         if (s.progression.islandChapter < IslandStory.Islands.Length) GameSaveData.AddUnique(s.storyFlags, IslandStory.MetFlag(s.progression.islandChapter));
         // 확정 기획: 식재료 획득은 상점에서만. 주민 교류는 요청과 도안 보상만 제공한다.
-        var available = s.unlockedRecipeIds.Where(recipe => GameDatabase.TryGetRecipe(recipe, out _)).ToArray();
-        if (available.Length > 0) { s.progression.questRecipeId = available[(s.day + s.progression.islandChapter) % available.Length]; s.progression.questIssuedDay = s.day; }
+        int quest = PickQuestRecipe(s);
+        if (quest > 0) { s.progression.questRecipeId = quest; s.progression.questIssuedDay = s.day; }
         return null;
     }, out error);
+    /// <summary>
+    /// 주민이 부탁할 음식. 가진 도구로 만들 수 있는 해금 메뉴에서 고른다. (QA: 2일차에 냄비 요리, 9일차에 도마 요리를 부탁해
+    /// 아직 살 수 없는 도구 때문에 막혔다) 만들 수 있는 메뉴가 없을 때만 도구가 없는 메뉴도 고른다.
+    /// </summary>
+    /// <summary>
+    /// 예전에 받은 부탁이 지금은 살 수도 없는 도구를 요구하면 만들 수 있는 음식으로 바꾼다. 자고 일어날 때 부른다.
+    /// (이 수정 전에 받은 부탁 때문에 다음 레벨까지 섬 이야기가 막히지 않게)
+    /// </summary>
+    public static void ReplaceUnreachableQuest(GameSaveData s)
+    {
+        if (s.progression.questRecipeId <= 0 || !GameDatabase.TryGetRecipe(s.progression.questRecipeId, out var quest)) return;
+        if (HasTool(s, quest) || CanBuyAnotherTool(s)) return;
+        int replacement = PickQuestRecipe(s);
+        if (replacement > 0) s.progression.questRecipeId = replacement;
+    }
+    public static int PickQuestRecipe(GameSaveData s)
+    {
+        var available = s.unlockedRecipeIds.Select(id => GameDatabase.TryGetRecipe(id, out var recipe) ? recipe : null).Where(r => r != null).ToList();
+        var pool = available.Where(r => CookwareRules.CanCook(s, r)).ToList();
+        if (pool.Count == 0) pool = available.Where(r => HasTool(s, r)).ToList();
+        if (pool.Count == 0) pool = available;
+        return pool.Count == 0 ? 0 : pool[(s.day + s.progression.islandChapter) % pool.Count].RecipeId;
+    }
     public static bool TryDeliverQuest(out string error) => Change(s => {
-        if (!s.progression.freeTime || !GameDatabase.TryGetRecipe(s.progression.questRecipeId, out var recipe)) return "전달할 음식 요청이 없어요.";
-        if (!CookwareRules.CanCook(s, recipe)) return "요청한 음식을 만들 도구가 필요해요.";
+        if (!OffDuty(s) || !GameDatabase.TryGetRecipe(s.progression.questRecipeId, out var recipe)) return "전달할 음식 요청이 없어요.";
+        if (!CookwareRules.CanCook(s, recipe)) return MissingToolHint(s, recipe) ?? "조리도구를 강화해야 이 음식을 만들 수 있어요.";
         EnsureGrades(s);
         foreach (var group in recipe.Requirements.GroupBy(r => r.IngredientId))
         {
@@ -460,7 +508,7 @@ public static partial class RestaurantProgress
     }, out error);
     /// <summary>클라이맥스: 다섯 섬과 교류를 마치면 해달과 화해하고 요정에게서 선체 목재를 받는다.</summary>
     public static bool TryReceiveWood(out string error) => Change(s => {
-        if (!s.progression.freeTime) return "영업을 마친 자유시간에 이야기할 수 있어요.";
+        if (!OffDuty(s)) return OffDutyText + "에 이야기할 수 있어요.";
         if (s.progression.islandChapter < IslandStory.Islands.Length) return "아직 모든 섬과 교류하지 못했어요.";
         if (s.storyFlags.Contains(IslandStory.WoodFlag)) return "목재는 이미 받았어요.";
         s.storyFlags.Add(IslandStory.WoodFlag);

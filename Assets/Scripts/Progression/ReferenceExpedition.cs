@@ -19,8 +19,9 @@ public static class ReferenceExpedition
     /// <summary>
     /// 돌아오는 때. QA #12: 반나절(앞바다)과 하루(갯벌)가 둘 다 다음 날 아침에 돌아와 기간 표기가 의미 없었다.
     /// 반나절 탐험은 아침에 보내면 그날 영업을 마친 밤에, 밤에 보내면 다음 날 아침에 돌아온다.
+    /// 공사로 쉬는 날에는 영업이 없어 "영업을 마친 밤"이 오지 않으므로 다음 날 아침에 돌아온다.
     /// </summary>
-    public static bool ReturnsTonight(GameSaveData s, int destination) => destination == 0 && !s.progression.freeTime;
+    public static bool ReturnsTonight(GameSaveData s, int destination) => destination == 0 && !RestaurantProgress.OffDuty(s);
     public static string ReturnLabel(int returnDay, bool tonight, int today) =>
         tonight ? (returnDay == today ? "오늘 영업을 마친 밤" : $"{returnDay}일차 밤") : $"{returnDay}일차 아침";
     public static Dictionary<int, int> Rewards(GameSaveData s)
@@ -48,7 +49,9 @@ public static partial class RestaurantProgress
         int min = destination == 2 ? 2 : 1, max = destination == 0 ? 1 : 2;
         if (employees == null || employees.Count < min || employees.Count > max || employees.Distinct().Count() != employees.Count) return $"직원 {min}~{max}명을 선택해 주세요.";
         if (employees.Any(id => !s.employees.Any(e => e.instanceId == id))) return "선택한 직원이 없어요.";
-        if (!s.progression.freeTime || ReferenceExpedition.Duration(destination) > 1)
+        // 다음 영업 전에 돌아오지 못하면 영업할 직원을 남겨야 한다. 쉬는 때(자유시간·공사 휴업일)에 떠난 하루짜리 탐험은
+        // 다음 날 아침에 돌아오므로 모두 보내도 된다.
+        if (!RestaurantProgress.OffDuty(s) || ReferenceExpedition.Duration(destination) > 1)
         {
             var remaining = s.employees.Where(e => !employees.Contains(e.instanceId)).ToList();
             if (!remaining.Any(e => e.role == "Serving") || !remaining.Any(e => e.role == "Kitchen"))

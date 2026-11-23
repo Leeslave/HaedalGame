@@ -279,6 +279,81 @@ public class ProgressionTests
         s.day = 4; s.progression.freeTime = false;
         Assert.IsTrue(RestaurantRules.IsClosedForConstruction(s));
     }
+    [Test] public void Research_OpensAllDayOnConstructionClosure_ButNotOnOrdinaryMorning()
+    {
+        PrepareUpgrade(4f, 1000, false);
+        Assert.IsTrue(RestaurantProgress.ResearchLocked, "평소 아침에는 장사 전이라 연구소가 잠긴다");
+        Assert.IsTrue(RestaurantProgress.TryUpgrade(out string error), error);
+        var s = GameSession.Current;
+        Assert.IsTrue(RestaurantRules.IsClosedForConstruction(s));
+        Assert.IsFalse(RestaurantProgress.ResearchLocked, "공사로 쉬는 날은 자유시간이 오지 않으므로 하루 종일 연다");
+        Assert.IsTrue(RestaurantProgress.CanResearch);
+        Assert.IsTrue(RestaurantProgress.TryPrepareTutorialResearch(out error), error);
+    }
+    [Test] public void ClosureDay_AllowsMeetingResidents_AndSendingWholeCrewOnOneDayTrip()
+    {
+        PrepareUpgrade(4f, 1000, false);
+        var s = GameSession.Current;
+        s.storyFlags.Remove("ExploreDay-" + s.day);
+        s.progression.questRecipeId = 0;
+        s.progression.expedition = null;
+        Assert.IsFalse(RestaurantProgress.OffDuty(s), "평소 아침은 장사 전이다");
+        Assert.IsTrue(RestaurantProgress.TryUpgrade(out string error), error);
+        s = GameSession.Current; // 바꾸기에 성공하면 세션이 새 저장 데이터로 바뀐다.
+        Assert.IsTrue(RestaurantProgress.OffDuty(s), "공사로 쉬는 날은 하루 종일 쉬는 때다");
+        Assert.IsTrue(RestaurantProgress.TryExplore(out error), error);
+
+        s = GameSession.Current;
+        s.employees.Clear();
+        s.employees.Add(new EmployeeEntry { instanceId = "hall", role = nameof(PartTimerRole.Serving), slotIndex = 0 });
+        s.employees.Add(new EmployeeEntry { instanceId = "cook", role = nameof(PartTimerRole.Kitchen), slotIndex = 0 });
+        Assert.IsFalse(ReferenceExpedition.ReturnsTonight(s, 0), "영업이 없는 날은 다음 날 아침에 돌아온다");
+        Assert.IsTrue(RestaurantProgress.TryDepart(1, new[] { "hall", "cook" }, out error), error);
+        s = GameSession.Current;
+        Assert.AreEqual(s.day + 1, s.progression.expedition.returnDay);
+    }
+    [Test] public void IslandRequest_PicksDishCookableWithOwnedTools()
+    {
+        var s = GameSession.Current;
+        s.restaurantLevel = 2; s.day = 2;
+        s.progression.tools.Clear(); s.progression.tools.Add(201);
+        var recipes = GameDatabase.Recipes.Recipes;
+        s.unlockedRecipeIds = recipes.Select(r => r.RecipeId).ToList(); // 도구가 없는 요리도 잔뜩 해금된 상태
+        for (int day = 2; day < 12; day++)
+        {
+            s.day = day;
+            Assert.IsTrue(GameDatabase.TryGetRecipe(RestaurantProgress.PickQuestRecipe(s), out var quest));
+            Assert.IsTrue(RestaurantProgress.HasTool(s, quest), $"{day}일차 부탁 {quest.RecipeName}은 가진 도구(프라이팬)로 만들 수 있어야 한다");
+        }
+    }
+    [Test] public void MissingToolHint_NamesToolAndUnlockLevel()
+    {
+        var s = GameSession.Current;
+        var board = GameDatabase.Recipes.Recipes.First(r => r.ClassId == 202);
+        s.progression.tools.Clear(); s.progression.tools.AddRange(new[] { 201, 203, 204 });
+        s.restaurantLevel = 3;
+        string hint = RestaurantProgress.MissingToolHint(s, board);
+        StringAssert.Contains("도마가 필요해요", hint);
+        StringAssert.Contains("식당 레벨 4부터", hint);
+        s.restaurantLevel = 4;
+        StringAssert.Contains("조리도구 화면에서 살 수 있어요", RestaurantProgress.MissingToolHint(s, board));
+        s.progression.tools.Add(202);
+        Assert.IsNull(RestaurantProgress.MissingToolHint(s, board));
+    }
+    [Test] public void UnreachableIslandRequest_IsReplaced_OnlyWhenToolCannotBeBought()
+    {
+        var s = GameSession.Current;
+        var board = GameDatabase.Recipes.Recipes.First(r => r.ClassId == 202);
+        s.unlockedRecipeIds = GameDatabase.Recipes.Recipes.Select(r => r.RecipeId).ToList();
+        s.progression.tools.Clear(); s.progression.tools.AddRange(new[] { 201, 203, 204 });
+        s.restaurantLevel = 4; s.progression.questRecipeId = board.RecipeId;
+        RestaurantProgress.ReplaceUnreachableQuest(s);
+        Assert.AreEqual(board.RecipeId, s.progression.questRecipeId, "도마를 지금 살 수 있으면 부탁은 그대로");
+        s.restaurantLevel = 3;
+        RestaurantProgress.ReplaceUnreachableQuest(s);
+        Assert.IsTrue(GameDatabase.TryGetRecipe(s.progression.questRecipeId, out var quest));
+        Assert.IsTrue(RestaurantProgress.HasTool(s, quest), "도마를 살 수 없으면 가진 도구로 만들 수 있는 음식으로 바뀐다");
+    }
     [Test] public void RestaurantUpgrade_RequiresRatingAndCost_Atomically()
     {
         PrepareUpgrade(2.4f, 1000, false);

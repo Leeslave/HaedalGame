@@ -609,7 +609,7 @@ public partial class RestaurantManagementUI
         ResearchActions(detail, s, selected, recipeId);
         if (unlocked || plan == null) RecipeRequirements(detail, selected, true);
         else ResearchCosts(detail, s, selected);
-        if (!RestaurantProgress.CanResearch) message.text = "연구 실습은 영업을 마친 자유시간에 이용할 수 있어요.";
+        if (!RestaurantProgress.CanResearch) message.text = "연구 실습은 " + RestaurantProgress.FreeTimeOnlyTip.Replace("방문할", "할");
         else if (cartDay == s.day && cart.Any(x => x.Value > 0)) message.text = "장바구니에 담은 재료가 있어요. 상점에서 [사기]를 눌러야 창고에 들어와요.";
     }
 
@@ -837,8 +837,9 @@ public partial class RestaurantManagementUI
         }
         bool tonight = ReferenceExpedition.ReturnsTonight(s, destination);
         Copy(detail, $"돌아오는 때  {ReferenceExpedition.ReturnLabel(tonight ? s.day : s.day + ReferenceExpedition.Duration(destination), tonight, s.day)}", 56, 22);
-        Copy(detail, "예상 수확  " + (destination == 0 ? "고등어 · 광어 · 새우" : destination == 1 ? "조개 · 가리비 6~10개" : "전복 · 문어 6~10개"), 76, 22);
-        Copy(detail, "선택한 직원은 탐험 중 영업에 나오지 않아요.", 90, 21, DayLoopUI.Kit.WarnInk);
+        Copy(detail, "예상 수확  " + (destination == 0 ? "고등어 · 광어 · 새우" : destination == 1 ? "조개 · 가리비 6~10개" : "전복 · 문어 6~10개"), 46, 22);
+        // 직원이 3명 이상이면 칸이 길어져 [출발]이 카드 아래로 잘렸다. 안내 줄 높이를 글자에 맞춘다.
+        Copy(detail, "선택한 직원은 탐험 중 영업에 나오지 않아요.", 58, 21, DayLoopUI.Kit.WarnInk);
         DayLoopUI.Spacer(detail);
         DetailAction(detail, "출발", () => { bool ok = RestaurantProgress.TryDepart(destination, expeditionStaff.ToList(), out string error); if (ok) expeditionStaff.Clear(); Refresh(); message.text = ok ? "탐험을 출발했어요." : error; },
             true, trip.destination < 0 && expeditionStaff.Count > 0);
@@ -892,7 +893,7 @@ public partial class RestaurantManagementUI
         {
             int id = i;
             var definition = CookwareRules.Definition(id);
-            string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? "미보유 · 500G" : id == FirstToolPicker.StartingToolId ? "첫 도구 무료" : "프라이팬을 먼저 받아요";
+            string state = s.progression.tools.Contains(id) ? $"Lv.{CookwareRules.Level(s, id)} · 사용 중" : s.progression.firstToolChosen ? (RestaurantProgress.CanBuyAnotherTool(s) ? "미보유 · 500G" : $"미보유 · 식당 Lv.{RestaurantProgress.NextToolLevel(s)}부터 · 500G") : id == FirstToolPicker.StartingToolId ? "첫 도구 무료" : "프라이팬을 먼저 받아요";
             SelectCard(items, ToolNames[id - 201], state, selectedId == id, () => { selectedId = id; Refresh(); }, DesignArt.Load(ToolIcons[id - 201]));
         }
         selectedId = Mathf.Clamp(selectedId, 201, 204); int toolId = selectedId;

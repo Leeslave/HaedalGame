@@ -723,7 +723,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     }
     private void BeginChallenge(int id)
     {
-        if (!RestaurantProgress.CanResearch) { message.text = "실습은 자유시간에 할 수 있어요."; return; }
+        if (!RestaurantProgress.CanResearch) { message.text = "실습은 " + RestaurantProgress.FreeTimeOnlyTip.Replace("방문할", "할"); return; }
         var research = GameSession.Current.progression.research.Find(x => x.recipeId == id);
         if (research == null || research.remainingDays > 0) { message.text = "연구 시간이 남았어요."; return; }
         if (!GameDatabase.TryGetRecipe(id, out var recipe)) return;

@@ -14,7 +14,7 @@ public partial class RestaurantManagementUI
     private static bool HasIslandNews(GameSaveData s)
     {
         var p = s.progression;
-        if (!p.freeTime || p.endingSeen) return false;
+        if (!RestaurantProgress.OffDuty(s) || p.endingSeen) return false;
         if (p.questRecipeId > 0) return true;
         if (p.islandChapter >= IslandStory.Islands.Length) return !IslandStory.WoodReceived(s) || IslandStory.ShipReady(s);
         return s.day >= 2 && !s.storyFlags.Contains("ExploreDay-" + s.day) && s.restaurantLevel >= IslandStory.RequiredLevel(p.islandChapter);
@@ -51,19 +51,20 @@ public partial class RestaurantManagementUI
         if (shown == ClimaxCard) ClimaxDetail(s, detail);
         else IslandDetail(s, detail, shown, chapter);
 
-        Copy(detail, "배 부품  " + (owned.Count == 0 ? "아직 없음" : string.Join(" · ", owned.Select(IslandStory.PartName))), 60, 21, DayLoopUI.Kit.InkSoft);
-        if (!p.freeTime && !p.endingSeen)
-            Copy(detail, "영업을 마친 자유시간에 주민을 만날 수 있어요.", 70, 21, DayLoopUI.Kit.WarnInk);
+        Copy(detail, "배 부품  " + (owned.Count == 0 ? "아직 없음" : string.Join(" · ", owned.Select(IslandStory.PartName))), 32, 21, DayLoopUI.Kit.InkSoft);
+        bool offDuty = RestaurantProgress.OffDuty(s);
+        if (!offDuty && !p.endingSeen)
+            Copy(detail, RestaurantProgress.OffDutyText + "에 주민을 만날 수 있어요.", 56, 20, DayLoopUI.Kit.WarnInk);
         DayLoopUI.Spacer(detail);
 
         if (p.questRecipeId > 0)
-            DetailAction(detail, "부탁한 음식 전달하기", DeliverIslandRequest, true, p.freeTime);
+            DetailAction(detail, "부탁한 음식 전달하기", DeliverIslandRequest, true, offDuty);
         else if (shown == ClimaxCard && !IslandStory.WoodReceived(s))
-            DetailAction(detail, "해달과 이야기하기", () => RunStory(RestaurantProgress.TryReceiveWood, IslandStory.WoodDialogue, "선체 목재로 배가 완성됐어요. 떠날 준비가 되면 탈출하기를 눌러요."), true, p.freeTime);
+            DetailAction(detail, "해달과 이야기하기", () => RunStory(RestaurantProgress.TryReceiveWood, IslandStory.WoodDialogue, "선체 목재로 배가 완성됐어요. 떠날 준비가 되면 탈출하기를 눌러요."), true, offDuty);
         else if (shown == ClimaxCard && !p.endingSeen)
-            DetailAction(detail, "탈출하기", () => RunStory(RestaurantProgress.TryEnding, IslandStory.EndingDialogue, "섬 주민들의 배웅을 받으며 바다로 떠났어요."), true, p.freeTime && IslandStory.ShipReady(s));
+            DetailAction(detail, "탈출하기", () => RunStory(RestaurantProgress.TryEnding, IslandStory.EndingDialogue, "섬 주민들의 배웅을 받으며 바다로 떠났어요."), true, offDuty && IslandStory.ShipReady(s));
         else if (!p.endingSeen || allIslands)
-            DetailAction(detail, p.endingSeen ? "주민 만나기 · 후일담" : "주민 만나기", MeetIslandResident, !allIslands, p.freeTime);
+            DetailAction(detail, p.endingSeen ? "주민 만나기 · 후일담" : "주민 만나기", MeetIslandResident, !allIslands, offDuty);
     }
 
     private void IslandDetail(GameSaveData s, RectTransform detail, int shown, int chapter)
@@ -82,12 +83,14 @@ public partial class RestaurantManagementUI
         Copy(detail, $"교류하면 상점에  {supply}", 36, 21, DayLoopUI.Kit.InkSoft);
         if (p.questRecipeId > 0 && GameDatabase.TryGetRecipe(p.questRecipeId, out var recipe))
         {
-            Copy(detail, island.Request, 100, 21);
+            Copy(detail, island.Request, 58, 21);
             Copy(detail, $"부탁한 음식 · {recipe.RecipeName}", 42, 24);
+            string toolHint = RestaurantProgress.MissingToolHint(s, recipe);
+            if (toolHint != null) Copy(detail, toolHint, 48, 20, DayLoopUI.Kit.WarnInk);
             RecipeRequirements(detail, recipe);
         }
         else Copy(detail, island.Arrival, 100, 21);
-        Copy(detail, $"이 섬과의 약속  {p.npcSatisfaction % IslandStory.RequestsPerIsland} / {IslandStory.RequestsPerIsland}", 42, 22);
+        Copy(detail, $"이 섬과의 약속  {p.npcSatisfaction % IslandStory.RequestsPerIsland} / {IslandStory.RequestsPerIsland}", 32, 22);
     }
 
     private static void ClimaxDetail(GameSaveData s, RectTransform detail)
