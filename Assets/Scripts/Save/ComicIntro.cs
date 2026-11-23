@@ -17,18 +17,26 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
     private const float PageWidth = 1660f, PageHeight = 1135f;
     private const float CharsPerSecond = 32f;
 
-    private struct Line
+    public struct Line
     {
         public Rect box;     // 그림 안에서 말풍선 글자 칸 (픽셀, 왼쪽 위 기준)
         public string text;
+        public bool caption; // 서술은 그림 아래 내레이션 칸을 사용한다.
+        public bool speech;
+        public Rect bubble;
+        public Vector2 tailTip;
+        public bool tailFromLeft;
     }
 
-    private struct Cut
+    public struct Cut
     {
         public string art;
         public Vector2 position; // 펼침면 위 왼쪽 위 좌표
         public Line[] lines;
-        public Cut(string art, float x, float y, params Line[] lines) { this.art = art; position = new Vector2(x, y); this.lines = lines; }
+        public Vector2 size;
+        public Rect uv; // 비어 있으면 전체 그림, 아니면 정규화된 아틀라스 영역.
+        public Cut(string art, float x, float y, params Line[] lines)
+        { this.art = art; position = new Vector2(x, y); this.lines = lines; size = Vector2.zero; uv = default; }
     }
 
     private static Line Say(float x0, float y0, float x1, float y1, string text) => new Line { box = Rect.MinMaxRect(x0, y0, x1, y1), text = text };
@@ -58,6 +66,11 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
     private int _shown = -1;     // 지금까지 나온 마지막 컷
     private Coroutine _typing;
     private bool _closing;
+    private Cut[] _cuts = Cuts;
+    private Vector2 _pageSize = new Vector2(PageWidth, PageHeight);
+    private string _title;
+    private readonly System.Collections.Generic.List<Sprite> _panelSprites = new System.Collections.Generic.List<Sprite>();
+    public static ComicIntro Active { get; private set; }
 
     public static bool HasArt
     {
@@ -73,13 +86,28 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
     public static ComicIntro TryPlay(Action onFinished)
     {
         if (!HasArt) return null;
+        return TryPlay(Cuts, new Vector2(PageWidth, PageHeight), null, onFinished);
+    }
+
+    /// <summary>오프닝과 같은 클릭·타이핑 연출로 주민 만화도 재생한다. art는 UIDesign/Art 기준 경로.</summary>
+    public static ComicIntro TryPlay(Cut[] cuts, Vector2 pageSize, string title, Action onFinished)
+    {
+        if (Active != null || cuts == null || cuts.Length == 0) return null;
+        foreach (var cut in cuts)
+            if (Resources.Load<Texture2D>(ArtPath(cut.art)) == null) return null;
         var canvas = DayLoopUI.CreateCanvas("[ComicIntro]", 950, SceneManager.GetActiveScene());
         var intro = canvas.gameObject.AddComponent<ComicIntro>();
+        Active = intro;
+        intro._cuts = cuts;
+        intro._pageSize = pageSize;
+        intro._title = title;
         intro._onFinished = onFinished;
         intro.Build(canvas.transform);
         intro.Next();
         return intro;
     }
+
+    private static string ArtPath(string art) => "UIDesign/Art/" + (art.Contains("/") ? art : "Intro/" + art);
 
     private void Build(Transform root)
     {
@@ -90,21 +118,38 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
         paper.raycastTarget = true; // 화면 어디를 눌러도 넘어간다 (OnPointerClick)
 
         _page = DayLoopUI.Rect("Spread", root);
-        DayLoopUI.Place(_page, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(PageWidth, PageHeight));
+        DayLoopUI.Place(_page, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, _pageSize);
         // 책 가운데 접히는 선
-        var fold = DayLoopUI.Panel(_page, new Color(0, 0, 0, .12f), "Fold", false);
-        fold.raycastTarget = false;
-        DayLoopUI.Place(fold.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -20), new Vector2(3, PageHeight - 40));
-
-        _cutViews = new RectTransform[Cuts.Length];
-        _texts = new TextMeshProUGUI[Cuts.Length][];
-        for (int i = 0; i < Cuts.Length; i++)
+        if (string.IsNullOrEmpty(_title))
         {
-            var cut = Cuts[i];
-            var sprite = DesignArt.Load("Intro/" + cut.art);
+            var fold = DayLoopUI.Panel(_page, new Color(0, 0, 0, .12f), "Fold", false);
+            fold.raycastTarget = false;
+            DayLoopUI.Place(fold.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 1), new Vector2(0, -20), new Vector2(3, _pageSize.y - 40));
+        }
+        else
+        {
+            var title = DayLoopUI.Text(_page, _title, 38, BubbleInk, TextAlignmentOptions.TopLeft, FontStyles.Bold);
+            title.raycastTarget = false;
+            DayLoopUI.Place(title.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(36, -12), new Vector2(_pageSize.x - 72, 65));
+        }
+
+        _cutViews = new RectTransform[_cuts.Length];
+        _texts = new TextMeshProUGUI[_cuts.Length][];
+        for (int i = 0; i < _cuts.Length; i++)
+        {
+            var cut = _cuts[i];
+            var sprite = DesignArt.Load(cut.art.Contains("/") ? cut.art : "Intro/" + cut.art);
+            if (cut.uv.width > 0 && cut.uv.height > 0)
+            {
+                var texture = sprite.texture;
+                sprite = Sprite.Create(texture, new Rect(cut.uv.x * texture.width, cut.uv.y * texture.height,
+                    cut.uv.width * texture.width, cut.uv.height * texture.height), new Vector2(.5f, .5f), 100);
+                sprite.hideFlags = HideFlags.DontSave;
+                _panelSprites.Add(sprite);
+            }
             var image = DayLoopUI.Panel(_page, Color.white, cut.art, false);
             image.sprite = sprite; image.type = Image.Type.Simple; image.raycastTarget = false;
-            var size = sprite.rect.size;
+            var size = cut.size.x > 0 && cut.size.y > 0 ? cut.size : sprite.rect.size;
             var view = image.rectTransform;
             DayLoopUI.Place(view, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(cut.position.x + size.x / 2, -cut.position.y - size.y / 2), size);
             _cutViews[i] = view;
@@ -113,11 +158,31 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
             for (int j = 0; j < _texts[i].Length; j++)
             {
                 var line = cut.lines[j];
+                if (line.speech)
+                {
+                    var balloon = DayLoopUI.Rect("Speech balloon", view);
+                    float top = Mathf.Min(0, line.bubble.yMin);
+                    DayLoopUI.Place(balloon, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, -top), new Vector2(size.x, size.y - top));
+                    var graphic = balloon.gameObject.AddComponent<ComicSpeechBubble>();
+                    graphic.body = new Rect(line.bubble.x, line.bubble.y - top, line.bubble.width, line.bubble.height);
+                    graphic.tailTip = line.tailTip - new Vector2(0, top); graphic.raycastTarget = false;
+                    graphic.tailFromLeft = line.tailFromLeft;
+                    graphic.SetAllDirty();
+                }
+                if (line.caption)
+                {
+                    var caption = DayLoopUI.Panel(view, new Color32(0xFC, 0xF5, 0xE9, 0xFF), "Caption", false);
+                    caption.raycastTarget = false;
+                    DayLoopUI.Place(caption.rectTransform, new Vector2(0, 1), new Vector2(0, 1),
+                        new Vector2(line.box.xMin - 14, -line.box.yMin + 12), line.box.size + new Vector2(28, 24));
+                }
                 var label = DayLoopUI.Text(view, line.text, 28, BubbleInk, TextAlignmentOptions.Center, FontStyles.Bold);
                 label.raycastTarget = false;
                 label.enableAutoSizing = true; label.fontSizeMin = 16; label.fontSizeMax = 30;
                 label.lineSpacing = -4f;
-                label.textWrappingMode = TextWrappingModes.NoWrap; // 줄은 대사에 직접 나눠 두고, 넘치면 글자를 줄인다.
+                label.textWrappingMode = line.caption || line.speech ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                if (line.caption) { label.alignment = TextAlignmentOptions.TopLeft; label.fontSizeMin = 22; label.fontSizeMax = 26; label.lineSpacing = 4; }
+                if (line.speech) { label.fontSizeMin = 22; label.fontSizeMax = 28; label.lineSpacing = 0; }
                 label.maxVisibleCharacters = 0;
                 DayLoopUI.Place(label.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(line.box.xMin, -line.box.yMin), line.box.size);
                 _texts[i][j] = label;
@@ -140,7 +205,7 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
     {
         var area = ((RectTransform)transform).rect.size;
         if (area.x <= 0 || area.y <= 0) return;
-        float scale = Mathf.Min((area.x - 60f) / PageWidth, (area.y - 110f) / PageHeight);
+        float scale = Mathf.Min((area.x - 60f) / _pageSize.x, (area.y - 110f) / _pageSize.y);
         _page.localScale = Vector3.one * Mathf.Max(.1f, scale);
     }
 
@@ -163,10 +228,13 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
         if (_typing != null)
         {
             StopCoroutine(_typing); _typing = null;
+            var view = _cutViews[_shown];
+            view.GetComponent<CanvasGroup>().alpha = 1f;
+            view.localScale = Vector3.one;
             foreach (var label in _texts[_shown]) label.maxVisibleCharacters = label.text.Length;
             return;
         }
-        if (_shown + 1 >= Cuts.Length) { Close(); return; }
+        if (_shown + 1 >= _cuts.Length) { Close(); return; }
         _shown++;
         _typing = StartCoroutine(Reveal(_shown));
     }
@@ -223,6 +291,7 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
         }
         Action callback = _onFinished;
         _onFinished = null;
+        if (Active == this) Active = null;
         Destroy(gameObject);
         callback?.Invoke();
     }
@@ -232,5 +301,16 @@ public class ComicIntro : MonoBehaviour, IPointerClickHandler
     {
         _onFinished = null;
         Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Active == this) Active = null;
+        foreach (var sprite in _panelSprites)
+        {
+            if (sprite == null) continue;
+            if (Application.isPlaying) Destroy(sprite);
+            else DestroyImmediate(sprite);
+        }
     }
 }

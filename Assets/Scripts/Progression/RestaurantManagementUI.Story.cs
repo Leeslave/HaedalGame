@@ -144,6 +144,12 @@ public partial class RestaurantManagementUI
     {
         Action finish = () => { if (this == null || window == null) return; Refresh(); message.text = done; };
         var manager = DialogueManager.Instance;
+        if (!string.IsNullOrEmpty(dialogue) && ComicIntro.Active == null && (manager == null || !manager.IsPlaying)
+            && IslandComic.TryPlay(dialogue, finish) != null)
+        {
+            Refresh(); message.text = done;
+            return;
+        }
         if (string.IsNullOrEmpty(dialogue) || manager == null || manager.IsPlaying || !manager.PlayFromResources(dialogue, finish))
         {
             if (!string.IsNullOrEmpty(dialogue)) Debug.LogWarning($"[IslandStory] 대화 장면을 재생하지 못했어요: {dialogue}");
