@@ -9,7 +9,8 @@ using UnityEngine.UI;
 ///  - 주문: 홀 직원이 받아 간 주문 중 아직 아무도 만들기 시작하지 않은 것. 아래 막대가 그 손님의 남은 인내심.
 ///  - 조리 중: 주방 직원이 맡은 요리(아래 막대가 조리 진행도)와, 다 만들어 손님에게 가는 중인 요리(체크 표시).
 ///  - 두 줄 모두 칸이 넘치면 가로로 스크롤된다. (마우스 휠·끌기)
-///  - 접으면 탭에 주문·조리 수만 남고, 인내심이 얼마 안 남은 주문이 있으면 탭이 코랄색으로 바뀐다.
+///  - 펼친 서랍은 왼쪽 손잡이 탭(→)으로 접는다. 접으면 서랍은 화면 밖으로 나가고 오른쪽 아래에 접힌 주문 빌지
+///    (시안 386:362, "주문수 N건 ^")만 남는다. 빌지를 누르면 다시 펼친다. 인내심이 얼마 안 남은 주문이 있으면 건수가 코랄색.
 /// 표시만 담당하며 손님·직원의 행동에는 관여하지 않는다. 순서는 주문을 받은 순서.
 /// </summary>
 public class OrderDrawer : MonoBehaviour
@@ -25,6 +26,9 @@ public class OrderDrawer : MonoBehaviour
     private const float SlotHeight = 72f;
     private const float IconSize = 44f;
     private const float SlideSpeed = 12f;
+    private static readonly Vector2 FoldedSize = new Vector2(352f, 80f);   // 시안 접힌 빌지
+    private static readonly Color ReceiptInk = new Color32(0x3D, 0x2A, 0x1E, 0xFF);
+    private static readonly Color ReceiptUrgent = new Color32(0xD8, 0x4A, 0x3A, 0xFF);
 
     private static readonly Color Sky = new Color32(0x7C, 0xC8, 0xEE, 0xFF);
     private static readonly Color Mint = new Color32(0x7F, 0xD1, 0xA0, 0xFF);
@@ -74,7 +78,8 @@ public class OrderDrawer : MonoBehaviour
     private Row _orders, _cookingRow;
     private Button _tab;
     private Image _chevron;
-    private TMP_Text _tabText;
+    private CanvasGroup _folded;
+    private TMP_Text _foldedCount;
 
     public static OrderDrawer Create(Transform parent)
     {
@@ -108,13 +113,19 @@ public class OrderDrawer : MonoBehaviour
 
     private void Update()
     {
-        // 접고 펼치기: 접으면 패널 폭만큼 오른쪽 화면 밖으로 밀어 탭만 남긴다.
-        float target = s_open ? 0f : PanelWidth;
+        // 접고 펼치기: 접으면 서랍을 손잡이까지 오른쪽 화면 밖으로 밀고, 그 자리에 접힌 빌지를 띄운다.
+        float k = 1f - Mathf.Exp(-SlideSpeed * Time.unscaledDeltaTime);
+        float target = s_open ? 0f : ClosedOffset;
         Vector2 pos = _root.anchoredPosition;
         if (Mathf.Abs(pos.x - target) < 0.5f) pos.x = target;
-        else pos.x = Mathf.Lerp(pos.x, target, 1f - Mathf.Exp(-SlideSpeed * Time.unscaledDeltaTime));
+        else pos.x = Mathf.Lerp(pos.x, target, k);
         _root.anchoredPosition = pos;
+        float fade = s_open ? 0f : 1f;
+        _folded.alpha = Mathf.MoveTowards(Mathf.Lerp(_folded.alpha, fade, k), fade, .01f);
     }
+
+    // 서랍 전체(손잡이 포함)가 화면 오른쪽 밖으로 나가는 거리
+    private float ClosedOffset => _root.rect.width + 4f;
 
     private void Toggle()
     {
@@ -177,10 +188,9 @@ public class OrderDrawer : MonoBehaviour
         Fill(_orders, _orderEntries, false);
         Fill(_cookingRow, _cookEntries, true);
 
-        _chevron.rectTransform.localEulerAngles = new Vector3(0f, 0f, s_open ? 0f : 180f);   // 펼치면 → (접기), 접으면 ← (펼치기)
-        _tabText.gameObject.SetActive(!s_open);
-        _tabText.text = $"주문\n{_orderEntries.Count}\n\n조리\n{_cookEntries.Count}";
-        DayLoopUI.SetButtonColors(_tab, !s_open && urgent ? Peach : DayLoopUI.Kit.WoodLight, Color.white);
+        _folded.blocksRaycasts = !s_open;
+        _foldedCount.text = _orderEntries.Count + "건";
+        _foldedCount.color = urgent ? ReceiptUrgent : ReceiptInk;
     }
 
     private void Fill(Row row, List<Entry> entries, bool cooking)
@@ -217,15 +227,19 @@ public class OrderDrawer : MonoBehaviour
     {
         _root = root;
         float height = RowHeight * 2 + RowGap * 3;
-        DayLoopUI.Place(root, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(s_open ? 0f : PanelWidth, BottomMargin), new Vector2(PanelWidth - TabTuck + TabWidth, Mathf.Max(height, TabHeight)));
+        Vector2 rootSize = new Vector2(PanelWidth - TabTuck + TabWidth, Mathf.Max(height, TabHeight));
+        DayLoopUI.Place(root, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(s_open ? 0f : rootSize.x + 4f, BottomMargin), rootSize);
 
-        // 패널 오른쪽 둥근 모서리는 화면 밖으로 내보내 화면 끝에 붙은 서랍처럼 보이게 한다.
-        Image panel = DayLoopUI.Card(root, DayLoopUI.Kit.Sail, "Panel", 3f, 5f);
-        panel.GetComponent<RoundedCorner>().radius = 28f;
+        // 시안의 주문 빌지(감열지). 오른쪽 끝은 화면 밖으로 내보내 화면 끝에 붙은 서랍처럼 보이게 하고,
+        // 아래 톱니 절단면(11) 만큼 아래 여백을 더 주고 위 여백을 줄여 전체 높이는 그대로 둔다. (손님 길에 닿지 않게)
+        Image panel = DayLoopUI.Panel(root, Color.white, "Panel", false);
+        DesignArt.ApplySliced(panel, "PlayHud/ReceiptPaperOpen");
         DayLoopUI.Place(panel.rectTransform, new Vector2(1f, .5f), new Vector2(1f, .5f), new Vector2(28f, 0f), new Vector2(PanelWidth + 28f, height));
         VerticalLayoutGroup rows = DayLoopUI.Vertical(panel, (int)RowGap, RowGap, TextAnchor.MiddleLeft);
         rows.padding.left = 14;
         rows.padding.right = 28 + 14;
+        rows.padding.top = 5;
+        rows.padding.bottom = 15;
         _orders = BuildRow(panel.transform, "주문", "아직 받은 주문이 없어요", Sky);
         _cookingRow = BuildRow(panel.transform, "조리 중", "조리 중인 요리가 없어요", Mint);
 
@@ -238,11 +252,37 @@ public class OrderDrawer : MonoBehaviour
         _chevron.sprite = DesignArt.Load("IconChevronRight");
         _chevron.preserveAspect = true;
         _chevron.raycastTarget = false;
-        DayLoopUI.Place(_chevron.rectTransform, new Vector2(.5f, 1f), new Vector2(.5f, .5f), new Vector2(-TabTuck * .5f, -26f), new Vector2(26f, 26f));
-        _tabText = Jua(_tab.GetComponentInChildren<TMP_Text>());
-        _tabText.lineSpacing = -18f;
-        _tabText.textWrappingMode = TextWrappingModes.NoWrap;
-        DayLoopUI.Stretch(_tabText.rectTransform, 0f, 46f, TabTuck, 10f);
+        // 손잡이는 펼친 서랍을 접는 데만 쓴다. (접으면 화면 밖으로 나가고 접힌 빌지가 대신한다)
+        DayLoopUI.Place(_chevron.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(-TabTuck * .5f, 0f), new Vector2(26f, 26f));
+        foreach (TMP_Text unused in _tab.GetComponentsInChildren<TMP_Text>(true)) unused.gameObject.SetActive(false);
+
+        BuildFolded(root.parent);
+    }
+
+    // 접힌 주문 빌지 (시안 386:362): 감열지 위에 "주문수", 받은 주문 건수, 펼침 표시(^). 누르면 서랍을 펼친다.
+    private void BuildFolded(Transform parent)
+    {
+        Button folded = DayLoopUI.Button(parent, "", Color.white, ReceiptInk, 20, Toggle, "FoldedReceipt");
+        DesignArt.ApplySliced(folded.image, "PlayHud/ReceiptPaper");
+        DayLoopUI.Place((RectTransform)folded.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-BottomMargin, BottomMargin), FoldedSize);
+        foreach (TMP_Text unused in folded.GetComponentsInChildren<TMP_Text>(true)) unused.gameObject.SetActive(false);
+        _folded = folded.gameObject.AddComponent<CanvasGroup>();
+        _folded.alpha = s_open ? 0f : 1f;
+        _folded.blocksRaycasts = !s_open;
+
+        TMP_Text title = Jua(DayLoopUI.Text(folded.transform, "주문수", 23, ReceiptInk));
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        DayLoopUI.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -19f), new Vector2(120f, 30f));
+
+        _foldedCount = Jua(DayLoopUI.Text(folded.transform, "0건", 27, ReceiptInk, TextAlignmentOptions.MidlineRight));
+        _foldedCount.textWrappingMode = TextWrappingModes.NoWrap;
+        DayLoopUI.Place(_foldedCount.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(284f, -14f), new Vector2(120f, 38f));
+
+        Image chevron = DayLoopUI.Panel(folded.transform, Color.white, "Chevron", false);
+        chevron.sprite = DesignArt.Load("PlayHud/ReceiptChevron");
+        chevron.preserveAspect = true;
+        chevron.raycastTarget = false;
+        DayLoopUI.Place(chevron.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(312f, -29f), new Vector2(16f, 12f));
     }
 
     // 왼쪽에 제목과 개수, 오른쪽에 가로로 스크롤되는 칸 줄

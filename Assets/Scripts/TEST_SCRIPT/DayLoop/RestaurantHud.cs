@@ -5,9 +5,11 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// [TEST 하루 루프] 영업 HUD. (HUD-01, HUD-02, CLOSE-01) 캐주얼 시안: 글자를 줄이고 네 귀퉁이에 동글동글한 카드만 둔다.
+/// [TEST 하루 루프] 영업 HUD. (HUD-01, HUD-02, CLOSE-01) 캐주얼 시안: 글자를 줄이고 네 귀퉁이에 카드만 둔다.
+/// 카드 겉모양은 플레이씬 시안(Figma 386:73)의 나무 테·끼운 종이 조각을 쓴다. (DesignArt.WoodCard, Resources/UIDesign/Art/PlayHud)
 ///  - 왼쪽 위: 해 아이콘 · n일차 · 단계 칩 · 방문 게이지(마감 중에는 남은 손님)
-///  - 왼쪽 위 일차 카드 오른쪽: 직원 얼굴. 둘레 링이 체력, 잠들면 Zz와 [깨우기]
+///  - 왼쪽 위 일차 카드 아래: 직원별 상태 카드(시안 386:263). 초상 · 역할 · 상태 칩(대기 중/조리 중/서빙 중/잠듦) · 체력 막대,
+///    잠들면 카드가 분홍빛이 되고 체력 막대 자리에 [깨우기]. 직원이 많으면 카드 줄을 줄여 메뉴판에 닿지 않게 한다.
 ///  - 오른쪽 위: 보유 골드 · 평점 · 배속(눌러서 x1 → x2 → x3) · 일시정지
 ///  - 왼쪽 아래: 오늘의 메뉴. 음식 그림에 남은 인분 스티커 (2인분 이하 코랄, 0이면 품절). 5개부터 작게 두 줄.
 ///    제목 옆 버튼으로 접으면 메뉴 슬롯 앞 2개만 남고, 숨은 메뉴가 2인분 이하면 버튼이 코랄색으로 바뀐다.
@@ -28,24 +30,46 @@ public class RestaurantHud : MonoBehaviour
     private static bool MenuExpanded => s_menuExpanded ?? (SeaRestaurantLayout.Instance?.HasSecondWaitingRow != true);
 
     // 캐주얼 시안 색 (Kit 색보다 밝은 파스텔)
-    private static readonly Color Sky = new Color32(0x7C, 0xC8, 0xEE, 0xFF);
     private static readonly Color Mint = new Color32(0x7F, 0xD1, 0xA0, 0xFF);
     private static readonly Color Leaf = new Color32(0x5B, 0xBF, 0x8C, 0xFF);
     private static readonly Color Butter = new Color32(0xFF, 0xD4, 0x5E, 0xFF);
     private static readonly Color Peach = new Color32(0xFF, 0x8A, 0x7A, 0xFF);
-    private static readonly Color Track = new Color32(0xF3, 0xE6, 0xD3, 0xFF);
     private static readonly Color Muted = new Color32(0xB8, 0xA8, 0x98, 0xFF);
+
+    // 직원 상태 카드 색 (시안 386:263)
+    private static readonly Color StaffCard = new Color32(0xF7, 0xFA, 0xF9, 0xFF);
+    private static readonly Color StaffCardLine = new Color32(0xC9, 0xDA, 0xDF, 0xFF);
+    private static readonly Color SleepCard = new Color32(0xFF, 0xF3, 0xEB, 0xFF);
+    private static readonly Color SleepCardInner = new Color32(0xF9, 0xEC, 0xE7, 0xFF);
+    private static readonly Color SleepCardLine = new Color32(0xDE, 0xAE, 0x9D, 0xFF);
+    private static readonly Color SleepPortrait = new Color(1f, .86f, .80f, 1f);   // 회청색 초상 배경(PortraitFrame)을 분홍(#EFCDC1)에 가깝게
+    private static readonly Color StaffName = new Color32(0x17, 0x2F, 0x3B, 0xFF);
+    private static readonly Color StaffSoft = new Color32(0x42, 0x5B, 0x66, 0xFF);
+    private static readonly Color StatusChip = new Color32(0xE7, 0xEE, 0xF1, 0xFF);
+    private static readonly Color SleepChip = new Color32(0xF1, 0xD2, 0xC6, 0xFF);
+    private static readonly Color WakeRed = new Color32(0x96, 0x3C, 0x2D, 0xFF);
+    private static readonly Color WakeText = new Color32(0xFF, 0xF8, 0xEE, 0xFF);
 
     private class StaffSlot
     {
         public PartTimerAgent agent;
         public GameObject root;
-        public Image ring;
-        public Image face;
-        public GameObject sleepBadge;
-        public GameObject role;
+        public Image card, inner, portrait;
+        public Outline line;
+        public Image statusChip;
+        public TMP_Text status;
+        public Image stamina;
+        public GameObject staminaRow;
         public GameObject wake;
+        public RectTransform wakeTip;   // 잠든 직원 머리 위 [직원 깨우기] 말풍선
+        public SpriteRenderer body;
     }
+
+    // 잠든 직원 머리 위 말풍선 (시안 386:251, 대상 점 386:253)
+    private static readonly Vector2 WakeTipSize = new Vector2(240f, 64f);
+    private static readonly Color WakeTipRed = new Color32(0xB7, 0x50, 0x45, 0xFF);
+    private static readonly Color WakeTipLine = new Color32(0x4A, 0x2E, 0x1B, 0xFF);
+    private static readonly Color WakeTipDrop = new Color32(0x3A, 0x27, 0x18, 0xBF);
 
     private class MenuSlot
     {
@@ -67,7 +91,7 @@ public class RestaurantHud : MonoBehaviour
     private int _lastRatingCount;
     private Coroutine _ratingPunch;
     private Button _speedButton, _pauseButton;
-    private RectTransform _menuRow, _staffRow;
+    private RectTransform _menuRow, _staffRow, _wakeLayer;
     private GridLayoutGroup _menuGrid;
     private Button _menuToggle;
     private Image _menuChevron;
@@ -290,70 +314,152 @@ public class RestaurantHud : MonoBehaviour
             int ra = a is ChefAgent ? 0 : 1, rb = b is ChefAgent ? 0 : 1;
             return ra != rb ? ra.CompareTo(rb) : string.CompareOrdinal(a.name, b.name);
         });
-        // QA #20: 예전에는 4명까지만 보여 Lv.5(주방 3 + 홀 2)부터 직원이 빠졌다. 모두 보여 주고, 한 줄에 5명씩 놓는다.
+        // QA #20: 예전에는 4명까지만 보여 Lv.5(주방 3 + 홀 2)부터 직원이 빠졌다. 모두 보여 준다.
 
         bool same = agents.Count == _staff.Count;
         for (int i = 0; same && i < agents.Count; i++) same = agents[i] == _staff[i].agent;
         if (same) return;
 
-        foreach (StaffSlot slot in _staff) Destroy(slot.root);
+        foreach (StaffSlot slot in _staff)
+        {
+            Destroy(slot.root);
+            if (slot.wakeTip != null) Destroy(slot.wakeTip.gameObject);
+        }
         _staff.Clear();
         // 카드를 먼저 켜 두고 만든다. (꺼진 채로 만들면 버튼 등의 Awake가 미뤄진다)
-        _staffRow.parent.gameObject.SetActive(agents.Count > 0);
-        _staffRow.GetComponent<GridLayoutGroup>().constraintCount = Mathf.Clamp(agents.Count, 1, StaffPerRow);
+        _staffRow.gameObject.SetActive(agents.Count > 0);
         foreach (PartTimerAgent agent in agents) _staff.Add(CreateStaffSlot(agent));
+        // 카드 줄이 StaffColumnMax보다 길면 위쪽 모서리를 기준으로 줄인다. (Lv.5 직원 5명이어도 메뉴판에 닿지 않게)
+        float column = agents.Count * StaffCardSize.y + Mathf.Max(0, agents.Count - 1) * StaffCardGap;
+        _staffRow.localScale = Vector3.one * Mathf.Min(1f, StaffColumnMax / Mathf.Max(1f, column));
     }
+
+    // 시안 386:263 직원 상태 카드. 좌표는 시안 그대로(카드 왼쪽 위 기준, 아래로 +).
+    private static readonly Vector2 StaffCardSize = new Vector2(320f, 136f);
+    private const float StaffCardGap = 8f;
+    private const float StaffColumnMax = 600f;   // 일차 카드 아래 ~ 메뉴판 위 사이에 들어가는 카드 줄 높이
 
     private StaffSlot CreateStaffSlot(PartTimerAgent agent)
     {
         bool chef = agent is ChefAgent;
         StaffSlot slot = new StaffSlot { agent = agent };
 
-        RectTransform column = DayLoopUI.Rect(agent.name, _staffRow);
-        slot.root = column.gameObject;
-        DayLoopUI.Vertical(column, 0, 4, TextAnchor.UpperCenter).childForceExpandWidth = false;
-        DayLoopUI.Layout(column, preferredWidth: 72);
+        slot.card = DayLoopUI.Panel(_staffRow, StaffCard, agent.name);
+        slot.card.GetComponent<RoundedCorner>().radius = 16f;
+        slot.card.raycastTarget = false;
+        slot.line = DayLoopUI.AddOutline(slot.card, StaffCardLine, 1f);
+        Shadow drop = slot.card.gameObject.AddComponent<Shadow>();
+        drop.effectColor = new Color32(0x0E, 0x29, 0x39, 0x2B);
+        drop.effectDistance = new Vector2(0f, -5f);
+        DayLoopUI.Layout(slot.card, preferredWidth: StaffCardSize.x, preferredHeight: StaffCardSize.y);
+        slot.root = slot.card.gameObject;
+        Transform card = slot.card.transform;
 
-        RectTransform holder = DayLoopUI.Rect("Face", column);
-        DayLoopUI.Layout(holder, preferredWidth: 64, preferredHeight: 64);
-        Image track = Disc(holder, Track, 64, "StaminaTrack");
-        DayLoopUI.Chunky(track, 3f, 0f);
-        DayLoopUI.Stretch(track.rectTransform);
+        // 안쪽 테두리(밝은 띠)와 상태 카드 면. 잠들면 바깥·안쪽 면만 분홍빛이 된다.
+        Image band = DayLoopUI.Panel(card, StaffCard, "Band");
+        band.GetComponent<RoundedCorner>().radius = 16f;
+        band.raycastTarget = false;
+        DayLoopUI.Stretch(band.rectTransform, 4f, 4f, 4f, 9f);
+        slot.inner = DayLoopUI.Panel(card, StaffCard, "Face");
+        slot.inner.GetComponent<RoundedCorner>().radius = 13f;
+        slot.inner.raycastTarget = false;
+        DayLoopUI.Stretch(slot.inner.rectTransform, 8f, 8f, 8f, 13f);
 
-        slot.ring = DayLoopUI.Panel(track.transform, Mint, "Stamina", false);
-        slot.ring.sprite = DayLoopUI.Circle;
-        slot.ring.type = Image.Type.Filled;
-        slot.ring.fillMethod = Image.FillMethod.Radial360;
-        slot.ring.fillOrigin = (int)Image.Origin360.Top;
-        slot.ring.fillClockwise = true;
-        slot.ring.raycastTarget = false;
-        DayLoopUI.Stretch(slot.ring.rectTransform);
+        slot.portrait = DayLoopUI.Panel(card, Color.white, "PortraitFrame", false);
+        DesignArt.ApplySliced(slot.portrait, "PlayHud/PortraitFrame");
+        slot.portrait.raycastTarget = false;
+        PlaceInCard(slot.portrait.rectTransform, 15f, 17f, 94f, 98f);
+        Image face = DayLoopUI.Panel(card, Color.white, "Portrait", false);
+        face.sprite = DesignArt.Load(chef ? "OtterChef" : "OtterServer");
+        face.preserveAspect = true;
+        face.raycastTarget = false;
+        PlaceInCard(face.rectTransform, 16f, 24f, 88f, 88f);
 
-        Image inner = Disc(track.transform, DayLoopUI.Kit.Sail, 50, "Inner");
-        DayLoopUI.Place(inner.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(50, 50));
-        inner.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-        slot.face = DayLoopUI.Panel(inner.transform, Color.white, "Portrait", false);
-        slot.face.sprite = DesignArt.Load(chef ? "OtterChef" : "OtterServer");
-        slot.face.preserveAspect = true;
-        slot.face.raycastTarget = false;
-        DayLoopUI.Place(slot.face.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, -5), new Vector2(62, 62));
+        TMP_Text name = Jua(DayLoopUI.Text(card, chef ? "주방 직원" : "홀 직원", 25, StaffName));
+        name.textWrappingMode = TextWrappingModes.NoWrap;
+        name.overflowMode = TextOverflowModes.Overflow;
+        PlaceInCard(name.rectTransform, 122f, 17f, 106f, 32f);
 
-        Image zz = Pill(holder, Color.white, "Sleeping", 3f, 0f);
-        DayLoopUI.Place(zz.rectTransform, new Vector2(1f, 1f), new Vector2(.5f, .5f), new Vector2(-4, -4), new Vector2(36, 26));
-        TMP_Text zzText = Jua(DayLoopUI.Text(zz.transform, "Zz", 15, Sky, TextAlignmentOptions.Center));
-        DayLoopUI.Stretch(zzText.rectTransform);
-        slot.sleepBadge = zz.gameObject;
+        slot.statusChip = DayLoopUI.Panel(card, StatusChip, "Status");
+        slot.statusChip.GetComponent<RoundedCorner>().radius = 8f;
+        slot.statusChip.raycastTarget = false;
+        PlaceInCard(slot.statusChip.rectTransform, 232f, 17f, 68f, 32f);
+        slot.status = Jua(DayLoopUI.Text(slot.statusChip.transform, "", 19, StaffSoft, TextAlignmentOptions.Center));
+        slot.status.textWrappingMode = TextWrappingModes.NoWrap;
+        slot.status.overflowMode = TextOverflowModes.Overflow;
+        DayLoopUI.Stretch(slot.status.rectTransform);
 
-        TMP_Text role = Jua(DayLoopUI.Text(column, chef ? "주방" : "홀", 16, DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center));
-        DayLoopUI.Layout(role, preferredWidth: 72, preferredHeight: 26);
-        slot.role = role.gameObject;
+        RectTransform staminaRow = DayLoopUI.Rect("Stamina", card);
+        DayLoopUI.Stretch(staminaRow);
+        slot.staminaRow = staminaRow.gameObject;
+        TMP_Text label = Jua(DayLoopUI.Text(staminaRow, "체력", 18, StaffSoft));
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        PlaceInCard(label.rectTransform, 122f, 63f, 48f, 26f);
+        slot.stamina = Gauge(staminaRow, "Bar");
+        PlaceInCard((RectTransform)slot.stamina.transform.parent, 174f, 72f, 125f, 10f);
 
-        Button wake = DayLoopUI.KitButton(column, "깨우기", Peach, Color.white, 16, agent.WakeUp, "Wake");
-        Round(wake.image);
+        Button wake = DayLoopUI.Button(card, "깨우기", WakeRed, WakeText, 22, agent.WakeUp, "Wake");
+        RoundedCorner wakeCorner = wake.image.GetComponent<RoundedCorner>();
+        if (wakeCorner != null) wakeCorner.radius = 9f;
         Jua(wake.GetComponentInChildren<TMP_Text>());
-        DayLoopUI.Layout(wake, preferredWidth: 72, preferredHeight: 26);
+        PlaceInCard((RectTransform)wake.transform, 122f, 64f, 177f, 42f);
         slot.wake = wake.gameObject;
+
+        slot.body = agent.GetComponentInChildren<SpriteRenderer>();
+        slot.wakeTip = CreateWakeTip(agent);
         return slot;
+    }
+
+    // [직원 깨우기] 말풍선: 빨간 둥근 단추에 진갈색 테와 아래 그림자, 밑에 직원 머리를 가리키는 대상 점.
+    // 아래 가운데(pivot)를 직원 머리 위 화면 좌표에 맞춘다. 누르면 그 직원을 깨운다.
+    private RectTransform CreateWakeTip(PartTimerAgent agent)
+    {
+        Button tip = DayLoopUI.Button(_wakeLayer, "직원 깨우기", WakeTipRed, Color.white, 23, agent.WakeUp, "WakeTip " + agent.name);
+        RoundedCorner corner = tip.image.GetComponent<RoundedCorner>();
+        if (corner != null) corner.radius = 16f;
+        DayLoopUI.AddOutline(tip.image, WakeTipLine, 4f);
+        Shadow drop = tip.gameObject.AddComponent<Shadow>();
+        drop.effectColor = WakeTipDrop;
+        drop.effectDistance = new Vector2(0f, -4f);
+        Jua(tip.GetComponentInChildren<TMP_Text>()).textWrappingMode = TextWrappingModes.NoWrap;
+        RectTransform rt = (RectTransform)tip.transform;
+        DayLoopUI.Place(rt, new Vector2(.5f, .5f), new Vector2(.5f, 0f), Vector2.zero, WakeTipSize);
+
+        Image dot = DayLoopUI.Panel(rt, Color.white, "TargetDot", false);
+        dot.sprite = DesignArt.Load("PlayHud/TargetDot");
+        dot.raycastTarget = false;
+        // 조각(48px, 2x)에 그림자 여백이 있어 24×24로 놓아야 점이 시안대로 8px이 된다. 점 가운데를 말풍선 아래 12에 둔다.
+        DayLoopUI.Place(dot.rectTransform, new Vector2(.5f, 0f), new Vector2(.5f, .5f), new Vector2(0f, -12f), new Vector2(24f, 24f));
+        rt.gameObject.SetActive(false);
+        return rt;
+    }
+
+    // 말풍선은 직원·카메라가 움직여도 따라가도록 매 프레임 자리를 잡는다.
+    private void LateUpdate()
+    {
+        if (_bar == null || !_bar.gameObject.activeInHierarchy) return;
+        Camera cam = Camera.main;
+        foreach (StaffSlot slot in _staff)
+        {
+            if (slot.wakeTip == null) continue;
+            bool show = cam != null && slot.agent != null && slot.agent.isActiveAndEnabled && slot.agent.IsSleeping;
+            if (show)
+            {
+                Vector3 head = slot.body != null && slot.body.sprite != null
+                    ? new Vector3(slot.body.bounds.center.x, slot.body.bounds.max.y, 0f)
+                    : slot.agent.transform.position + Vector3.up * .6f;
+                Vector3 screen = cam.WorldToScreenPoint(head);
+                Vector2 local = Vector2.zero;
+                show = screen.z > 0f && RectTransformUtility.ScreenPointToLocalPointInRectangle(_wakeLayer, screen, null, out local);
+                if (show) slot.wakeTip.anchoredPosition = local + new Vector2(0f, 20f);   // 대상 점(8)과 틈을 머리 위에 둔다
+            }
+            if (slot.wakeTip.gameObject.activeSelf != show) slot.wakeTip.gameObject.SetActive(show);
+        }
+    }
+
+    private static void PlaceInCard(RectTransform rt, float x, float y, float width, float height)
+    {
+        DayLoopUI.Place(rt, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(x, -y), new Vector2(width, height));
     }
 
     private void RefreshStaff()
@@ -361,15 +467,26 @@ public class RestaurantHud : MonoBehaviour
         foreach (StaffSlot slot in _staff)
         {
             if (slot.agent == null) { _nextStaffScan = 0f; continue; }
-            float stamina = slot.agent.StaminaRatio;
             bool sleeping = slot.agent.IsSleeping;
-            slot.ring.fillAmount = stamina;
-            slot.ring.color = stamina > .6f ? Mint : stamina > .3f ? Butter : Peach;
-            slot.face.color = sleeping ? new Color(1f, 1f, 1f, .6f) : Color.white;
-            slot.sleepBadge.SetActive(sleeping);
-            slot.role.SetActive(!sleeping);
+            slot.card.color = sleeping ? SleepCard : StaffCard;
+            slot.line.effectColor = sleeping ? SleepCardLine : StaffCardLine;
+            slot.inner.color = sleeping ? SleepCardInner : StaffCard;
+            slot.portrait.color = sleeping ? SleepPortrait : Color.white;
+            slot.statusChip.color = sleeping ? SleepChip : StatusChip;
+            slot.status.color = sleeping ? WakeRed : StaffSoft;
+            string status = sleeping ? "잠듦" : StaffWork(slot.agent);
+            if (slot.status.text != status) slot.status.text = status;
+            slot.staminaRow.SetActive(!sleeping);
             slot.wake.SetActive(sleeping);
+            DayLoopUI.SetBar(slot.stamina, slot.agent.StaminaRatio);
         }
+    }
+
+    private static string StaffWork(PartTimerAgent agent)
+    {
+        if (agent is ChefAgent chef && chef.CookingRecipe != null) return "조리 중";
+        if (agent is ServerAgent server && server.CarriedFood != null) return "서빙 중";
+        return "대기 중";
     }
 
     // ───── 평점 ─────
@@ -455,10 +572,11 @@ public class RestaurantHud : MonoBehaviour
     private void RefreshControls()
     {
         DayLoopUI.SetButtonLabel(_speedButton, "x" + (RestaurantSpeedController.SpeedIndex + 1));
-        DayLoopUI.SetButtonColors(_speedButton, RestaurantSpeedController.SpeedIndex > 0 ? DayLoopUI.Kit.Sea : Sky, Color.white);
+        // 나무 테 칸은 바탕색을 바꾸지 않고 글자색·밝기로만 상태를 알린다.
+        DayLoopUI.SetButtonColors(_speedButton, Color.white, RestaurantSpeedController.SpeedIndex > 0 ? DayLoopUI.Kit.Sea : DayLoopUI.Kit.Ink);
 
         bool paused = _day != null && _day.IsPaused;
-        DayLoopUI.SetButtonColors(_pauseButton, paused ? Butter : DayLoopUI.Kit.Sail, DayLoopUI.Kit.Line);
+        _pauseButton.image.color = paused ? Butter : Color.white;
         SetPauseOverlay(paused);
     }
 
@@ -503,6 +621,9 @@ public class RestaurantHud : MonoBehaviour
         _canvas.transform.SetParent(transform, false);
         _bar = DayLoopUI.Rect("OperationHud", _canvas.transform);
         DayLoopUI.Stretch(_bar);
+        // 깨우기 말풍선은 월드 위에 뜨므로 귀퉁이 카드들보다 먼저(아래에) 깐다.
+        _wakeLayer = DayLoopUI.Rect("WakeTips", _bar);
+        DayLoopUI.Stretch(_wakeLayer);
 
         BuildTopLeft();
         BuildTopRight();
@@ -512,12 +633,12 @@ public class RestaurantHud : MonoBehaviour
         BuildToast();
     }
 
-    // 왼쪽 위 줄: 일차 카드 + 직원 카드. 뗏목 왼쪽 빈 바다에 나란히 둔다.
+    // 왼쪽 위: 일차 카드 아래에 직원 카드를 쌓는다. 뗏목 왼쪽 빈 바다에 둔다. (시안 386:73)
     private void BuildTopLeft()
     {
         RectTransform group = DayLoopUI.Rect("TopLeft", _bar);
         DayLoopUI.Place(group, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(Margin, -Margin), Vector2.zero);
-        DayLoopUI.Horizontal(group, 0, 12, TextAnchor.UpperLeft);
+        DayLoopUI.Vertical(group, 0, 16, TextAnchor.UpperLeft).childForceExpandWidth = false;
         Fit(group);
         BuildToday(group);
         BuildStaffTray(group);
@@ -526,9 +647,10 @@ public class RestaurantHud : MonoBehaviour
     // 해 · n일차 · 단계 칩 / 방문 게이지
     private void BuildToday(Transform parent)
     {
-        Image today = Pill(parent, DayLoopUI.Kit.Sail, "Today");
+        // 시안의 영업 팻말: 나무 테에 끼운 종이와 황동 핀
+        Image today = DesignArt.WoodCard(parent, "Today", "PlayHud/SignPaper", pins: true);
         HorizontalLayoutGroup row = DayLoopUI.Horizontal(today, 0, 14);
-        row.padding = new RectOffset(12, 28, 10, 12);
+        row.padding = new RectOffset(22, 34, 18, 20);
 
         Image sun = Disc(today.transform, Butter, 52, "Sun");
         DayLoopUI.Chunky(sun, 3f, 0f);
@@ -547,8 +669,8 @@ public class RestaurantHud : MonoBehaviour
 
         RectTransform progress = DayLoopUI.Rect("Visits", info);
         DayLoopUI.Horizontal(progress, 0, 10);
-        _progressFill = DayLoopUI.Bar(progress, 0, Mint);
-        DayLoopUI.Layout(_progressFill.transform.parent, preferredWidth: 150, preferredHeight: 14);
+        _progressFill = Gauge(progress, "Bar");
+        DayLoopUI.Layout(_progressFill.transform.parent, preferredWidth: 150, preferredHeight: 12);
         _progressText = Jua(DayLoopUI.Text(progress, "", 19, DayLoopUI.Kit.InkSoft));
         _progressText.textWrappingMode = TextWrappingModes.NoWrap;
     }
@@ -562,17 +684,18 @@ public class RestaurantHud : MonoBehaviour
         DayLoopUI.Horizontal(group, 0, 12, TextAnchor.MiddleRight);
         Fit(group);
 
-        Image gold = Pill(group, DayLoopUI.Kit.Sail, "Gold");
-        DayLoopUI.Horizontal(gold, 0, 8).padding = new RectOffset(10, 24, 0, 0);
+        // 시안의 우측 조작 HUD: 칸마다 나무 테에 종이를 끼운다.
+        Image gold = DesignArt.WoodCard(group, "Gold", frame: "PlayHud/HudGoldFrame");
+        DayLoopUI.Horizontal(gold, 0, 8).padding = new RectOffset(14, 24, 0, 0);
         DayLoopUI.Layout(gold, preferredHeight: 64);
-        Image coin = Disc(gold.transform, DayLoopUI.Kit.Coin, 40, "Coin");
-        DayLoopUI.Chunky(coin, 3f, 0f);
+        Image coin = Disc(gold.transform, Color.white, 40, "Coin");
+        coin.sprite = DesignArt.Load("PlayHud/IconGold");
         _goldText = Jua(DayLoopUI.Text(gold.transform, "", 30, DayLoopUI.Kit.Ink));
         _goldText.textWrappingMode = TextWrappingModes.NoWrap;
 
-        Image rating = Pill(group, DayLoopUI.Kit.Sail, "Rating");
+        Image rating = DesignArt.WoodCard(group, "Rating");
         _ratingBlock = rating.rectTransform;
-        DayLoopUI.Horizontal(rating, 0, 6).padding = new RectOffset(14, 24, 0, 0);
+        DayLoopUI.Horizontal(rating, 0, 6).padding = new RectOffset(18, 24, 0, 0);
         DayLoopUI.Layout(rating, preferredHeight: 64);
         string star = DayLoopUI.Glyph("★", "평점");
         TMP_Text starText = DayLoopUI.Text(rating.transform, star, star == "★" ? 36 : 20, DayLoopUI.Kit.Coin, TextAlignmentOptions.Center);
@@ -584,25 +707,30 @@ public class RestaurantHud : MonoBehaviour
         _ratingText = Jua(DayLoopUI.Text(rating.transform, "", 30, DayLoopUI.Kit.Ink));
         _ratingText.textWrappingMode = TextWrappingModes.NoWrap;
 
-        _speedButton = DayLoopUI.KitButton(group, "x1", Sky, Color.white, 26, RestaurantSpeedController.CycleSpeed, "Speed");
-        Round(_speedButton.image);
+        _speedButton = DesignArt.WoodButton(group, "x1", 26, RestaurantSpeedController.CycleSpeed, "Speed", "PlayHud/HudSpeedFrame");
         Jua(_speedButton.GetComponentInChildren<TMP_Text>());
         DayLoopUI.Layout(_speedButton, preferredWidth: 64, preferredHeight: 64);
 
-        _pauseButton = DayLoopUI.KitButton(group, "II", DayLoopUI.Kit.Sail, DayLoopUI.Kit.Line, 26, () => _day.SetPaused(!_day.IsPaused), "Pause");
-        Round(_pauseButton.image);
-        Jua(_pauseButton.GetComponentInChildren<TMP_Text>());
+        // 일시정지 칸은 시안 그림에 II 표시까지 들어 있다.
+        _pauseButton = DayLoopUI.Button(group, "", Color.white, DayLoopUI.Kit.Ink, 26, () => _day.SetPaused(!_day.IsPaused), "Pause");
+        _pauseButton.image.sprite = DesignArt.Load("PlayHud/HudPauseButton");
+        _pauseButton.image.type = Image.Type.Simple;
+        _pauseButton.image.pixelsPerUnitMultiplier = 1f;
         DayLoopUI.Layout(_pauseButton, preferredWidth: 64, preferredHeight: 64);
     }
 
     // 왼쪽 아래: 오늘의 메뉴
     private void BuildMenuTray()
     {
-        Image tray = DayLoopUI.Card(_bar, DayLoopUI.Kit.Sail, "TodayMenu", 3f, 5f);
-        tray.GetComponent<RoundedCorner>().radius = 32f;
+        // 시안의 탁상 메뉴판: 나무 테에 메뉴지를 끼우고 아래에 받침목
+        Image tray = DesignArt.WoodCard(_bar, "TodayMenu", "PlayHud/MenuCardPaper", paperBottom: 16f, pins: true);
         DayLoopUI.Place(tray.rectTransform, Vector2.zero, Vector2.zero, new Vector2(Margin, Margin), Vector2.zero);
-        DayLoopUI.Vertical(tray, 0, 10).padding = new RectOffset(20, 22, 8, 18);
+        DayLoopUI.Vertical(tray, 0, 10).padding = new RectOffset(28, 30, 18, 30);
         Fit(tray);
+        Image stand = DesignArt.Backing(tray.transform, "PlayHud/MenuCardStand", 0f, 0f, 0f, 0f, "Stand");
+        stand.transform.SetSiblingIndex(1);   // 종이 위, 내용 아래
+        stand.rectTransform.anchorMax = new Vector2(1f, 0f);   // 아래 끝에 높이 16으로 깐다
+        stand.rectTransform.offsetMax = new Vector2(0f, 16f);
 
         RectTransform header = DayLoopUI.Rect("Header", tray.transform);
         DayLoopUI.Horizontal(header, 0, 10);
@@ -629,22 +757,14 @@ public class RestaurantHud : MonoBehaviour
         tray.gameObject.SetActive(false);
     }
 
-    // 왼쪽 위 일차 카드 오른쪽: 직원
-    private const int StaffPerRow = 5;
+    // 왼쪽 위 일차 카드 아래: 직원별 상태 카드 줄. 위쪽 모서리를 기준으로 줄일 수 있게 pivot을 왼쪽 위에 둔다.
     private void BuildStaffTray(Transform parent)
     {
-        Image tray = DayLoopUI.Card(parent, DayLoopUI.Kit.Sail, "Staff", 3f, 5f);
-        tray.GetComponent<RoundedCorner>().radius = 32f;
-        DayLoopUI.Vertical(tray, 0, 2).padding = new RectOffset(14, 14, 6, 8);
-        DayLoopUI.Layout(Jua(DayLoopUI.Text(tray.transform, "직원", 16, DayLoopUI.Kit.InkSoft)), preferredHeight: 20);
-        _staffRow = DayLoopUI.Rect("Faces", tray.transform);
-        GridLayoutGroup faces = _staffRow.gameObject.AddComponent<GridLayoutGroup>();
-        faces.cellSize = new Vector2(72, 96);
-        faces.spacing = new Vector2(10, 4);
-        faces.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        faces.constraintCount = StaffPerRow;
-        faces.childAlignment = TextAnchor.UpperLeft;
-        tray.gameObject.SetActive(false);
+        _staffRow = DayLoopUI.Rect("Staff", parent);
+        _staffRow.pivot = new Vector2(0f, 1f);
+        DayLoopUI.Vertical(_staffRow, 0, StaffCardGap, TextAnchor.UpperLeft).childForceExpandWidth = false;
+        Fit(_staffRow);
+        _staffRow.gameObject.SetActive(false);
     }
 
     // 일시정지: 화면을 살짝 어둡게 하고 가운데에 [다시 시작]
@@ -695,6 +815,23 @@ public class RestaurantHud : MonoBehaviour
         Image pill = line > 0f ? DayLoopUI.Card(parent, color, name, line, drop) : DayLoopUI.Panel(parent, color, name);
         Round(pill);
         return pill;
+    }
+
+    /// <summary>시안의 체력 게이지 조각으로 만든 게이지. 반환한 채움 Image는 DayLoopUI.SetBar로 채운다.</summary>
+    private static Image Gauge(Transform parent, string name)
+    {
+        Image track = DayLoopUI.Panel(parent, Color.white, name, false);
+        DesignArt.ApplySliced(track, "PlayHud/HealthTrack");
+        track.raycastTarget = false;
+        Image fill = DayLoopUI.Panel(track.transform, Color.white, "Fill", false);
+        DesignArt.ApplySliced(fill, "PlayHud/HealthFill");
+        fill.raycastTarget = false;
+        fill.rectTransform.anchorMin = Vector2.zero;
+        fill.rectTransform.pivot = new Vector2(0f, .5f);
+        fill.rectTransform.offsetMin = Vector2.zero;
+        fill.rectTransform.offsetMax = Vector2.zero;
+        DayLoopUI.SetBar(fill, 0f);
+        return fill;
     }
 
     private static void Round(Image image)

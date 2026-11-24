@@ -115,7 +115,11 @@ public partial class RestaurantManagementUI : MonoBehaviour
     // 식당: 하단에 운영 시작 버튼이 있으므로 관리 버튼은 그 위에 배치한다.
     private void BuildOpener()
     {
-        var opener = DayLoopUI.KitButton(canvas.transform, "관리", DayLoopUI.Kit.Sea, Color.white, 28, () => Open("메뉴"), "Opener");
+        // 플레이씬 시안(Figma 386:212): 영업 HUD 오른쪽 위 칸들과 같은 나무 테에 종이를 끼운 버튼
+        var opener = DesignArt.WoodButton(canvas.transform, "관리", 30, () => Open("메뉴"), "Opener");
+        var label = opener.GetComponentInChildren<TMP_Text>();
+        label.font = DesignFonts.Heading;
+        label.fontSharedMaterial = label.font.material;
         PlaceOpener(opener, false);
         openers.Add(opener);
     }
@@ -125,7 +129,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         var rt = (RectTransform)opener.transform;
         if (besideHud)
-            DayLoopUI.Place(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-(24 + RestaurantHud.Current.TopRightWidth + 12), -24), new Vector2(150, 64));
+            DayLoopUI.Place(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-(24 + RestaurantHud.Current.TopRightWidth + 12), -24), new Vector2(140, 64));   // 시안 비율 116×54
         else
             DayLoopUI.Place(rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 124), new Vector2(170, 66));
     }

@@ -513,7 +513,7 @@ public class FirstDayGuide : MonoBehaviour
             _sleepingAgent = agent;
             string role = agent is ChefAgent ? "주방" : "홀";
             SetGuide("직원 잠듦", $"지친 {role} 직원이 잠들었어요. 자는 동안에는 일이 멈춰요.",
-                "잠든 직원(발밑에 '잠듦' 표시)을 클릭하면 바로 깨울 수 있어요. 그냥 두면 잠시 뒤 스스로 깨요. 체력이 낮을수록 잘 잠들어요.");
+                "잠든 직원 머리 위 [직원 깨우기]를 누르거나 직원을 클릭하면 바로 깨울 수 있어요. 그냥 두면 잠시 뒤 스스로 깨요. 체력이 낮을수록 잘 잠들어요.");
             RefreshGuideBar();
             WaitForContinue(() => EndSleepGuide(true));
             return;
@@ -635,9 +635,14 @@ public class FirstDayGuide : MonoBehaviour
         DayLoopUI.Horizontal(actions, 0, 14);
         DayLoopUI.Layout(actions, preferredHeight: 50);
         DayLoopUI.Spacer(actions);
-        var skip = DayLoopUI.KitButton(actions, "안내 건너뛰기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 22, SkipGuide);
+        // 시안의 안내 버튼(외곽선·아래 그림자가 그림에 들어 있다). 50 높이에 맞게 모서리를 70%로 줄이고, 그림자만큼 글자를 올린다.
+        var skip = DayLoopUI.Button(actions, "안내 건너뛰기", Color.white, DayLoopUI.Kit.Ink, 22, SkipGuide);
+        DesignArt.ApplySliced(skip.image, "PlayHud/ButtonSecondary", .7f);
+        DayLoopUI.Stretch(skip.GetComponentInChildren<TMP_Text>().rectTransform, 0f, 0f, 0f, 4f);
         DayLoopUI.Layout(skip, preferredWidth: 204, preferredHeight: 50);
-        _continueButton = DayLoopUI.KitButton(actions, "확인", DayLoopUI.Kit.WoodLight, Color.white, 24, Continue, "Continue");
+        _continueButton = DayLoopUI.Button(actions, "확인", Color.white, Color.white, 24, Continue, "Continue");
+        DesignArt.ApplySliced(_continueButton.image, "PlayHud/ButtonPrimary", .7f);
+        DayLoopUI.Stretch(_continueButton.GetComponentInChildren<TMP_Text>().rectTransform, 0f, 0f, 0f, 4f);
         DayLoopUI.Layout(_continueButton, preferredWidth: 100, preferredHeight: 50);
         _continueButton.gameObject.SetActive(false);
 
