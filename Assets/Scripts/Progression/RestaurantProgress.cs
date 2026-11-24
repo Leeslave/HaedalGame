@@ -23,13 +23,23 @@ public static partial class RestaurantProgress
     {
         var wallet = s.wallets.Find(w => w.currencyId == GameSession.GoldCurrencyId);
         if (amount < 0 || wallet == null || wallet.amount < amount) return false;
-        wallet.amount -= amount; return true;
+        wallet.amount -= amount;
+        DayMoney(s).daySpent += amount;
+        return true;
     }
     private static void Earn(GameSaveData s, int amount)
     {
         var w = s.wallets.Find(x => x.currencyId == GameSession.GoldCurrencyId);
         if (w == null) s.wallets.Add(new WalletEntry { currencyId = GameSession.GoldCurrencyId, amount = amount });
         else w.amount += amount;
+        if (amount > 0) DayMoney(s).dayEarned += amount;
+    }
+    /// <summary>오늘 영업 밖에서 쓴 골드·번 골드 장부. 날이 바뀌면 비운다.</summary>
+    public static ProgressionState DayMoney(GameSaveData s)
+    {
+        var p = s.progression;
+        if (p.moneyDay != s.day) { p.moneyDay = s.day; p.daySpent = p.dayEarned = 0; }
+        return p;
     }
     public static bool HasTool(GameSaveData s, RecipeData recipe) => recipe.ClassId == 205
         ? s.progression.tools.Contains(201) && s.progression.tools.Contains(202) && s.progression.tools.Contains(204)

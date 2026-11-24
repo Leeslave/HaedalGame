@@ -642,6 +642,36 @@ public class ProgressionTests
         Assert.IsNotNull(ResearchResultRules.Medal(ResearchResultRules.UnlockScore));
     }
 
+    // ───────────── 결산 문구 ─────────────
+    [Test] public void Settlement_CountsMorningShoppingAsExpense()
+    {
+        var item = GameDatabase.Recipes.Ingredients.First(i => !i.IsBasicSeasoning);
+        GameSession.Current.wallets[0].amount = 100000;
+        GameSession.Current.progression.dailyStock.Clear();
+        Assert.IsTrue(RestaurantProgress.TryBuyIngredients(new Dictionary<int, int> { { item.IngredientId, 2 } }, out string error), error);
+        var p = GameSession.Current.progression;
+        Assert.AreEqual(GameSession.Current.day, p.moneyDay);
+        Assert.AreEqual(RestaurantProgress.RegularUnitPrice(item) * 2, p.daySpent, "아침 장보기가 결산 지출에 들어간다 (예전엔 0G)");
+    }
+
+    [Test] public void Settlement_SoldOutIsBlamedBeforeSeats()
+    {
+        var r = new DaySettlementRecord { day = 10, visitedCount = 25, servedCount = 20, notServedCount = 5, soldOutCount = 5, seatWaitSum = 625, seatWaitSamples = 25 };
+        string advice = DayLoopSave.Suggestion(r);
+        StringAssert.Contains("재료가 떨어져", advice);
+        StringAssert.DoesNotContain("테이블", advice);
+    }
+
+    [Test] public void SeatHelp_DuringConstructionTalksAboutConstruction()
+    {
+        var s = GameSession.Current;
+        s.progression.pendingRestaurantLevel = s.restaurantLevel + 1;
+        s.progression.constructionUntilDay = s.day + 1;
+        string help = RestaurantRules.SeatLimitHelp(s);
+        StringAssert.Contains("공사 중", help);
+        StringAssert.DoesNotContain("올리면", help);
+    }
+
     // ───────────── 염지 ─────────────
     // 타원 재료 위를 왼쪽에서 오른쪽으로 줄마다 문지른다. speed는 1초에 움직이는 uv 거리.
     private static (float coverage, float amount) SimulateRub(float[] rows, float speed, int passes = 1)
@@ -691,5 +721,110 @@ public class ProgressionTests
         Assert.IsTrue(SeasonRules.IsRub("문어와 소스를 버무리기"));
         Assert.IsFalse(SeasonRules.IsRub("간장과 설탕을 섞어 양념 만들기"));
         Assert.IsFalse(SeasonRules.IsRub("새우, 전분, 소금, 후추를 섞기"));
+    }
+
+    // ───────────── 연구 실습 전용 화면 ─────────────
+    [Test] public void LabStations_EveryResearchStepHasAScreen()
+    {
+        int checkedSteps = 0;
+        for (int id = 1; id <= 40; id++)
+        {
+            var plan = RecipeResearchPlan.Find(id);
+            if (plan == null) continue;
+            foreach (var step in plan.steps) { Assert.IsNotNull(LabStations.StationFor(step), $"{id}: {step.kind} {step.text}"); checkedSteps++; }
+        }
+        Assert.Greater(checkedSteps, 50);
+        Assert.AreEqual("Stir", LabStations.StationFor(new ResearchStep { kind = "Add", text = "프라이팬에서 해산물을 가볍게 볶기" }));
+        Assert.AreEqual("Add", LabStations.StationFor(new ResearchStep { kind = "Add", text = "볶은 해산물을 넣고 소금과 후추로 간하기" }));
+        Assert.AreEqual("Simmer", LabStations.StationFor(new ResearchStep { kind = "Stir", text = "냄비에 레몬과 꿀을 넣고 소스 졸이기" }));
+        Assert.AreEqual("Sauce", LabStations.StationFor(new ResearchStep { kind = "Mix", text = "간장과 설탕을 섞어 양념 만들기" }));
+        Assert.AreEqual("Season", LabStations.StationFor(new ResearchStep { kind = "Mix", text = "고등어에 소금으로 염지하기" }));
+    }
+
+    /// <summary>모든 연구 레시피의 모든 단계 화면을 실제로 만들어 본다. (씻기 화면이 양념통 그림 없이 멈춘 일이 있었다)</summary>
+    [Test] public void LabStations_EveryStepScreenBuildsWithoutErrors()
+    {
+        var canvas = new GameObject("TestCanvas", typeof(RectTransform), typeof(Canvas));
+        try
+        {
+            int opened = 0;
+            foreach (var recipe in GameDatabase.Recipes.Recipes)
+            {
+                var plan = RecipeResearchPlan.Find(recipe.RecipeId);
+                if (plan == null) continue;
+                for (int i = 0; i < plan.steps.Length; i++)
+                {
+                    Assert.IsTrue(LabStations.TryOpen(canvas.transform, recipe, plan.steps, i, _ => { }, () => { }), $"{recipe.RecipeId}: {plan.steps[i].text}");
+                    opened++;
+                    canvas.transform.GetChild(canvas.transform.childCount - 1).gameObject.SetActive(false); // 지우면 글자 머티리얼을 함께 지워서 끝에 한꺼번에 지운다.
+                }
+            }
+            Assert.Greater(opened, 50);
+        }
+        finally { Object.DestroyImmediate(canvas); }
+    }
+
+    private static float SimulateHeat(string station, int heat, float finishAt)
+    {
+        var p = HeatRules.Profile(station, "냄비에 문어를 찌기");
+        float t = p.Start, progress = 0, spill = 0, peak = 0, inZone = 0, elapsed = 0, dt = .05f;
+        while (elapsed < p.Limit && progress < finishAt)
+        {
+            t = HeatRules.StepTemperature(p, t, heat, dt);
+            progress += HeatRules.ProgressRate(p, t, heat) * dt;
+            spill = Mathf.Clamp01(spill + HeatRules.SpillRate(p, t, heat, progress) * dt); peak = Mathf.Max(peak, spill);
+            if (HeatRules.InTempZone(p, t)) inZone += dt;
+            elapsed += dt;
+        }
+        return HeatRules.StepScore(p, progress, peak, inZone / elapsed);
+    }
+    [Test] public void Heat_MediumHeatAndFinishInGreenZone_IsPerfect()
+    {
+        foreach (var station in new[] { "Boil", "Simmer", "Fry" })
+            Assert.GreaterOrEqual(SimulateHeat(station, 1, .92f), 4.5f, station);
+        Assert.Less(SimulateHeat("Boil", 2, .92f), 4.5f, "강불로 끓이면 넘쳐서 감점");
+        Assert.Less(SimulateHeat("Boil", 1, .5f), 3f, "일찍 꺼내면 감점");
+        Assert.Less(SimulateHeat("Fry", 0, .92f), SimulateHeat("Fry", 1, .92f), "약불 튀김은 기름 온도를 못 지킨다");
+    }
+
+    [Test] public void Cut_StraightSwipeOnGuideIsPerfect_CrookedLosesPoints()
+    {
+        var item = new Vector2(960, 555);
+        var guides = CutRules.Guides("도마에서 문어를 얇게 썰기");
+        Assert.AreEqual(6, guides.Count);
+        Assert.AreEqual(6, CutRules.Guides("도마에서 새우를 잘게 다지기").Count);
+        Assert.AreEqual(2, CutRules.GuidesFor("도마에서 새우, 가리비, 오징어를 손질하기", 3).Count);
+        var g = guides[2];
+        var c = CutRules.Center(item, g);
+        CutRules.Measure(c + new Vector2(0, -200), c + new Vector2(0, 200), item, g, out float angle, out float distance, out float along);
+        Assert.AreEqual(5f, CutRules.CutScore(angle, distance), .01f);
+        CutRules.Measure(c + new Vector2(28, -200), c + new Vector2(28, 200), item, g, out angle, out distance, out along);
+        Assert.AreEqual(3f, CutRules.CutScore(angle, distance), .05f);
+        CutRules.Measure(c + new Vector2(-70, -200), c + new Vector2(70, 200), item, g, out angle, out distance, out along);
+        Assert.Less(CutRules.CutScore(angle, distance), 2.5f, "비스듬히 썰면 감점");
+        var diag = CutRules.Guides("광어 몸통에 칼집 넣기")[1];
+        var dir = CutRules.Direction(diag.Angle);
+        CutRules.Measure(item - dir * 200, item + dir * 200, item, diag, out angle, out distance, out along);
+        Assert.AreEqual(5f, CutRules.CutScore(angle, distance), .01f);
+        Assert.AreEqual(4.6f, CutRules.Score(new[] { 5f, 5f }, 2, 2), .01f);
+        Assert.AreEqual(2.5f, CutRules.Score(new[] { 5f }, 2, 0), .01f, "다 못 썰면 남은 줄은 0점");
+    }
+
+    [Test] public void StirAndDrop_ScoreRules()
+    {
+        Assert.AreEqual(5f, StirRules.Score(StirRules.StirTurns, StirRules.Need(false), 1f), .01f);
+        Assert.AreEqual(3.5f, StirRules.Score(StirRules.StirTurns / 2f, StirRules.Need(false), 1f), .01f);
+        Assert.IsTrue(StirRules.GoodSpeed(1f)); Assert.IsFalse(StirRules.GoodSpeed(2f));
+        Assert.AreEqual(5f, DropRules.OrderScore(3, 3, 0), .01f);
+        Assert.AreEqual(3.4f, DropRules.OrderScore(3, 3, 2), .01f);
+        Assert.AreEqual(5f, DropRules.PlaceScore(20f), .01f);
+        Assert.AreEqual(3f, DropRules.PlaceScore(65f), .01f);
+        Assert.IsTrue(DropRules.IsResult(DropMode.Sauce, new LabItem { Name = "양념" }));
+        var order = new List<string> { "새우", "가리비", "소금" };
+        var groups = new Dictionary<string, int> { { "새우", 3 }, { "가리비", 3 }, { "소금", -1 } };
+        Assert.IsTrue(DropRules.InOrder(order, 0, "가리비", groups), "해산물끼리는 순서를 바꿔도 된다");
+        Assert.IsFalse(DropRules.InOrder(order, 0, "소금", groups), "양념은 해산물 다음");
+        Assert.IsFalse(DropRules.InOrder(order, 2, "새우", groups));
+        Assert.IsFalse(DropRules.IsResult(DropMode.Add, new LabItem { Name = "양념" }));
     }
 }

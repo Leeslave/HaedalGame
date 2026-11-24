@@ -120,6 +120,7 @@ public class DayCycleController : MonoBehaviour
     private void OnDestroy()
     {
         Ledger.Stop();
+        CustomerAgent.OnAnySoldOut -= HandleSoldOut;
         if (_rgm != null)
         {
             _rgm.OnOperationStarted -= HandleOperationStarted;
@@ -272,11 +273,23 @@ public class DayCycleController : MonoBehaviour
         HideLegacyOperationCanvas();
 
         Ledger.Begin(CurrentGold);
+        _soldOutToasted = false;
+        CustomerAgent.OnAnySoldOut -= HandleSoldOut;
+        CustomerAgent.OnAnySoldOut += HandleSoldOut;
         GameFlow.SetPhase(GamePhase.Operation);
         SetPhase(DayLoopPhase.Open);
         var soldOut = SoldOutMenus();
         Toast(soldOut.Count == 0 ? $"{_openDay}일차 영업을 시작해요!"
             : $"{_openDay}일차 영업을 시작해요! 재료가 없어 오늘 품절: {string.Join(", ", soldOut)}");
+    }
+
+    private bool _soldOutToasted;
+    // 재료가 떨어져 손님이 그냥 돌아가기 시작하면 한 번 알린다.
+    private void HandleSoldOut(CustomerAgent customer)
+    {
+        if (_soldOutToasted || Phase == DayLoopPhase.Preparation) return;
+        _soldOutToasted = true;
+        Toast("메뉴 재료가 떨어졌어요! 손님이 주문을 못 하고 돌아가요.");
     }
 
     private void HandleEntryClosed()
@@ -336,6 +349,17 @@ public class DayCycleController : MonoBehaviour
         Ledger.Stop();
         int day = _openDay > 0 ? _openDay : Day;
         _record = Ledger.BuildRecord(day, CurrentGold);
+        // QA: 아침에 산 재료값은 CurrencyManager를 거치지 않아 지출이 0G로 나왔다. 영업 밖 거래를 더하고,
+        // 시작 골드도 장보기 전으로 되돌려 골드 변화와 순이익이 맞게 한다.
+        if (GameSession.IsActive && GameSession.Current.progression.moneyDay == day)
+        {
+            var p = GameSession.Current.progression;
+            _record.prepExpense = p.daySpent;
+            _record.expense += p.daySpent;
+            _record.otherIncome += p.dayEarned;
+            _record.netProfit = _record.revenue + _record.otherIncome - _record.expense;
+            _record.goldAtOpen += p.daySpent - p.dayEarned;
+        }
 
         RestaurantRatingManager rating = RestaurantRatingManager.Instance;
         if (rating != null)

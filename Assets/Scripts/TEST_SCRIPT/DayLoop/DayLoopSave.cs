@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -82,13 +83,16 @@ public static class DayLoopSave
 
         // QA #19: 예전에는 자리 대기를 먼저 봐서 원인과 상관없이 "테이블 배치"를 권했다. 주문·음식이 늦으면 손님이
         // 자리를 오래 차지해 자리 대기도 함께 길어지므로, 홀·주방 병목을 먼저 짚고 자리 대기는 마지막에 본다.
+        // QA 10일차: 재료가 떨어져 5명이 주문을 못 했는데, 자리 대기가 길어 "테이블을 더 놓으라"고 잘못 짚었다.
+        if (r.soldOutCount > 0)
+            return $"재료가 떨어져 손님 {r.soldOutCount}명이 주문을 못 하고 돌아갔어요. 오늘 손님은 {r.visitedCount}명이었어요. 내일은 메뉴 재료를 넉넉히 사 두거나 메뉴를 늘려 보세요.";
         string lead = r.notServedCount > 0 ? $"기다리다 돌아간 손님이 {r.notServedCount}명 있어요. " : "";
         if (orderTake >= 10f)
             return lead + $"주문을 받기까지 평균 {orderTake:0}초 걸렸어요. 홀 직원이 모자라요. 서빙(걷는 속도)이 높은 홀 직원을 써 보세요.";
         if (foodWait >= 25f)
             return lead + $"음식이 도착하기까지 평균 {foodWait:0}초 걸렸어요. 픽업대에 요리가 쌓이면 홀, 비어 있으면 주방 직원을 보강해 보세요.";
         if (seatWait >= 15f)
-            return lead + $"자리 대기가 평균 {seatWait:0}초였어요. 주문과 음식은 빨랐으니 테이블을 더 놓아 보세요.";
+            return lead + $"자리 대기가 평균 {seatWait:0}초였어요. " + SeatAdvice();
         if (r.notServedCount > 0)
             return $"대접하지 못한 손님이 {r.notServedCount}명 있어요. 오늘의 메뉴와 직원 배치를 확인해 보세요.";
         // QA #16: 레벨이 오르면 손님 기대 등급이 오르는데, 요리 등급을 올리는 방법을 알려 주는 곳이 없었다.
@@ -98,6 +102,21 @@ public static class DayLoopSave
         return r.day == 1
             ? "첫 영업에서 모든 손님을 대접했어요! 내일은 섬의 메뉴판에서 메뉴 구성을 바꿔 보세요."
             : "모든 손님을 대접했어요. 메뉴 구성을 바꿔 매출을 늘려 보세요.";
+    }
+
+    /// <summary>자리 대기가 길 때 할 일. 좌석이 한도까지 찼으면 테이블 대신 증축을 권한다.</summary>
+    private static string SeatAdvice()
+    {
+        if (!GameSession.IsActive) return "주문과 음식은 빨랐으니 테이블을 더 놓아 보세요.";
+        var s = GameSession.Current;
+        int limit = RestaurantRules.SeatLimit(s.restaurantLevel);
+        if (RestaurantManagementUI.PlacedTableSeats(s).Sum() < limit)
+            return "주문과 음식은 빨랐으니 테이블을 더 놓아 보세요.";
+        if (s.progression.pendingRestaurantLevel > s.restaurantLevel)
+            return $"좌석이 최대 {limit}석까지 찼어요. 공사가 끝나면 {RestaurantRules.SeatLimit(s.progression.pendingRestaurantLevel)}석까지 놓을 수 있어요.";
+        return s.restaurantLevel >= RestaurantRules.MaxLevel
+            ? $"좌석이 최대 {limit}석까지 찼어요. 직원을 보강해 손님이 빨리 먹고 나가게 해 보세요."
+            : $"좌석이 최대 {limit}석까지 찼어요. 대장간에서 식당을 Lv.{s.restaurantLevel + 1}로 증축하면 {RestaurantRules.SeatLimit(s.restaurantLevel + 1)}석까지 늘어요.";
     }
 
     public static string Headline(DaySettlementRecord r)

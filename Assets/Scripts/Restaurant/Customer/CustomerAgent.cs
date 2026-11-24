@@ -42,6 +42,15 @@ public class CustomerAgent : MonoBehaviour
 
     // 화면 표시·집계용 관찰 이벤트. 손님의 행동에는 관여하지 않는다.
     public static event Action<CustomerAgent> OnAnySpawned;
+    /// <summary>오늘 메뉴 재료가 떨어져 주문하지 못한 손님. 결산 원인 안내와 영업 중 알림에 쓴다.</summary>
+    public static event Action<CustomerAgent> OnAnySoldOut;
+    public bool SoldOut { get; private set; }
+    public void MarkSoldOut()
+    {
+        if (SoldOut) return;
+        SoldOut = true;
+        OnAnySoldOut?.Invoke(this);
+    }
     public static event Action<CustomerAgent, CustomerState> OnAnyStateChanged;
     public static event Action<CustomerAgent, RecipeData, int> OnAnyPaid;   // 실제 지급된 금액(팁 포함)
 
@@ -260,6 +269,8 @@ public class CustomerAgent : MonoBehaviour
         if (coc.GetOrderData() == null)
         {
             // 오늘의 메뉴가 비어 주문할 수 없으면 기다리지 않고 미대접으로 퇴장한다. (마감이 끝나지 않는 상황 방지)
+            // 메뉴는 있는데 재료가 다 떨어진 경우라면 품절로 알린다.
+            if (MenuManager.Instance != null && MenuManager.Instance.DailyFoods.Count > 0) MarkSoldOut();
             ratingFlag = RatingFlag.Low;
             cuc.CloseBubble();
             StartCoroutine(WaitStateChange(CustomerState.Exit));

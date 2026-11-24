@@ -67,11 +67,9 @@ public class GrillStation : LabStation
 {
     private RectTransform fishPivot;
     private Image raw, cooked, glow, bubbles, steam, tempFill, cookFill;
-    private RectTransform knob, tempNeedle;
+    private RectTransform tempNeedle;
     private TMP_Text tempValue, cookValue, cookTitle, cookHint, sizzle;
     private Button flipButton;
-    private readonly Button[] heatButtons = new Button[3];
-    private int heat = 1;
     private float temperature = GrillRules.StartTemperature, doneness, elapsed, inZone, front, flipAnim = -1f;
     private float tempSum; private int tempSamples;
     private bool back;
@@ -104,7 +102,7 @@ public class GrillStation : LabStation
         Outline(sizzle, .28f);
 
         BuildHud(recipe, steps, index, onExit);
-        BuildHeatKnob();
+        BuildHeatKnob(105, 600);
         BuildGauges();
         BuildChef(1545, 440, 345, 1270, 525);
 
@@ -122,26 +120,6 @@ public class GrillStation : LabStation
             "불 세기를 <color=#C8443A>중불</color>에 맞추기\n<color=#C8443A>→</color> 노릇해지면 <color=#1F7F8A>뒤집기</color>\n<color=#C8443A>→</color> 반대쪽도 굽고 <color=#1F7F8A>꺼내기</color>",
             $"제한 시간 {GrillRules.TimeLimit:0}초 · 팬 온도 {GrillRules.TempLow:0}~{GrillRules.TempHigh:0}°C",
             "팬이 충분히 달궈져야\n껍질이 안 달라붙어!");
-    }
-
-    private void BuildHeatKnob()
-    {
-        var card = DayLoopUI.Card(frame, DayLoopUI.Kit.Sail, "HeatKnob", 3f, 6f);
-        TopLeft(card.rectTransform, 105, 600, 300, 345);
-        Label(card.transform, "불 세기", 30, DayLoopUI.Kit.Ink, 0, 12, 300, 40, false, TextAlignmentOptions.Center);
-        var dial = DayLoopUI.Panel(card.transform, Color.white, "Dial", false);
-        dial.sprite = DesignArt.Load("Lab/LabDial"); dial.raycastTarget = false;
-        TopLeft(dial.rectTransform, 22, 62, 255, 150);
-        knob = DayLoopUI.Panel(card.transform, Color.white, "Knob", false).rectTransform;
-        knob.GetComponent<Image>().sprite = DesignArt.Load("Lab/LabKnob");
-        knob.GetComponent<Image>().raycastTarget = false;
-        DayLoopUI.Place(knob, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(150, -200), new Vector2(120, 120));
-        for (int i = 0; i < 3; i++)
-        {
-            int level = i;
-            heatButtons[i] = DayLoopUI.KitButton(card.transform, new[] { "약", "중", "강" }[i], DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 28, () => { heat = level; Refresh(); }, "Heat" + i);
-            TopLeft((RectTransform)heatButtons[i].transform, 22 + i * 88, 268, 80, 58);
-        }
     }
 
     private void BuildGauges()
@@ -241,12 +219,7 @@ public class GrillStation : LabStation
         cookFill.color = doneness > GrillRules.FlipHigh ? DayLoopUI.Kit.Alert : new Color32(0xD9, 0x96, 0x3F, 0xFF);
 
         SetTimer(GrillRules.TimeLimit - elapsed, GrillRules.TimeLimit);
-        knob.localEulerAngles = new Vector3(0, 0, (1 - heat) * 60f);
-        for (int i = 0; i < 3; i++)
-        {
-            heatButtons[i].image.color = i == heat ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand;
-            heatButtons[i].GetComponentInChildren<TMP_Text>().color = i == heat ? Color.white : DayLoopUI.Kit.Ink;
-        }
+        RefreshHeatKnob();
         chefLine.text = finished ? "다 구웠다!" : running ? GrillRules.ChefHint(temperature, doneness, back) : "준비되면\n[시작]을 눌러!";
         flipButton.interactable = running && !finished;
     }

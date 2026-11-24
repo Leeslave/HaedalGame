@@ -88,7 +88,7 @@ public class PlacementToolbar : MonoBehaviour
         _seats = DayLoopUI.Text(heading.transform, "", 26, DayLoopUI.Kit.SeaDeep, style: FontStyles.Bold);
         DayLoopUI.Layout(_seats, preferredHeight: 38);
         // 좌석 수 오른쪽 (i): 올리면(누르면) 최대 좌석을 늘리는 방법을 알려 준다.
-        var info = HoverTip.InfoIcon(_seats.transform, () => GameSession.IsActive ? RestaurantRules.SeatLimitHelp(GameSession.Current.restaurantLevel) : null);
+        var info = HoverTip.InfoIcon(_seats.transform, () => GameSession.IsActive ? RestaurantRules.SeatLimitHelp(GameSession.Current) : null);
         DayLoopUI.Place(info, new Vector2(1, .5f), new Vector2(1, .5f), Vector2.zero, new Vector2(34, 34));
         bool slots = SeaTableSlots.Instance != null;
         string help = slots ? "테이블을 고르고 빈 자리(+)를 누르면 놓여요. 놓인 테이블을 누르면 옮기거나 치워요."

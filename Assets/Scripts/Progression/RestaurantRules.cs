@@ -33,6 +33,14 @@ public static class RestaurantRules
     public static string SeatLimitHelp(int level) => level >= MaxLevel
         ? $"지금 최대 {SeatLimit(level)}석이에요. 식당 레벨이 가장 높아요."
         : $"최대 좌석은 식당 레벨로 정해져요.\n대장간에서 Lv.{level + 1}로 올리면 {SeatLimit(level + 1)}석이 돼요.";
+    /// <summary>공사 중이면 공사가 끝난 뒤 좌석을 알려 준다. (QA: 공사 중에도 "Lv.2로 올리면"이라고 나왔다)</summary>
+    public static string SeatLimitHelp(GameSaveData s)
+    {
+        int pending = s.progression.pendingRestaurantLevel;
+        if (pending > s.restaurantLevel && s.progression.constructionUntilDay > s.day)
+            return $"지금 Lv.{pending}로 공사 중이에요.\n공사가 끝나면 최대 {SeatLimit(pending)}석까지 놓을 수 있어요.";
+        return SeatLimitHelp(s.restaurantLevel);
+    }
     public static int MenuLimit(int level) => Menus[Index(level)];
     public static int StaffLimit(int level, PartTimerRole role) => role == PartTimerRole.Kitchen ? Chefs[Index(level)] : Servers[Index(level)];
     public static int CookingSpace(int level) => Chefs[Index(level)];
@@ -98,6 +106,8 @@ public class ProgressionState
     public List<string> unpaidEmployeeIds = new List<string>();
     public int missionIndex;
     public int missionProgress;
+    // 영업 밖(아침 장보기·도구·가구·고용·보상 등)에서 오간 골드. 결산 지출에 넣으려고 그날 것만 모은다.
+    public int moneyDay, daySpent, dayEarned;
     public int islandChapter;
     public List<string> boatParts = new List<string>();
     public bool endingSeen;

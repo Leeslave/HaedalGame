@@ -59,7 +59,7 @@ public class ResearchResultView : MonoBehaviour
         rays = Art("Lab/LabRays", 540, 610, 1000, 1000).rectTransform;
         Art("Lab/LabPlate", 540, 600, 900, 600);
         var food = Art(null, 540, 585, 560, 560);
-        food.sprite = DesignArt.Food(recipe); food.preserveAspect = true;
+        food.sprite = LabStation.DishArt(recipe); food.preserveAspect = true;
         food.enabled = food.sprite != null;
         food.rectTransform.localEulerAngles = new Vector3(0, 0, -8);
         if (!unlocked) food.color = new Color(.85f, .82f, .78f);

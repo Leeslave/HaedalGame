@@ -54,23 +54,26 @@ public abstract class LabStation : MonoBehaviour
         var icon = DayLoopUI.Card(card.transform, Color.white, "Icon", 3f, 0f);
         DayLoopUI.Place(icon.rectTransform, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(18, 0), new Vector2(78, 78));
         var iconArt = DayLoopUI.Panel(icon.transform, Color.white, "Art", false);
-        iconArt.sprite = DesignArt.Food(recipe); iconArt.preserveAspect = true; iconArt.raycastTarget = false;
+        iconArt.sprite = DishArt(recipe); iconArt.preserveAspect = true; iconArt.raycastTarget = false;
         iconArt.enabled = iconArt.sprite != null;
         DayLoopUI.Stretch(iconArt.rectTransform, 4, 4, 4, 4);
         Label(card.transform, recipe != null ? recipe.RecipeName : "연구", 40, DayLoopUI.Kit.Ink, 112, 14, 470, 48);
-        Label(card.transform, $"STEP {index + 1} · {steps[index].text}", 21, DayLoopUI.Kit.InkSoft, 114, 62, 470, 32);
+        var stepLine = Label(card.transform, $"STEP {index + 1} · {steps[index].text}", 21, DayLoopUI.Kit.InkSoft, 114, 62, 470, 32);
+        stepLine.textWrappingMode = TextWrappingModes.NoWrap; stepLine.overflowMode = TextOverflowModes.Ellipsis; // 긴 단계 글이 두 줄로 넘쳐 이름과 겹쳤다.
 
-        float x = 660;
-        for (int i = 0; i < steps.Length && i < 7; i++, x += 88)
+        // 단계가 6개 이상이면 점을 줄여 남은 시간 칸(x 1140)과 겹치지 않게 한다.
+        int count = Mathf.Min(steps.Length, 7);
+        float dotSize = count > 5 ? 54f : 66f, gap = count > 5 ? 70f : 88f, x = 660;
+        for (int i = 0; i < count; i++, x += gap)
         {
             bool past = i < index, now = i == index;
             var dot = DayLoopUI.Chunky(DayLoopUI.Panel(frame, past ? DayLoopUI.Kit.Kelp : now ? DayLoopUI.Kit.Coin : DayLoopUI.Kit.Divider, "Dot" + i), 4f, 0f);
-            TopLeft(dot.rectTransform, x, 18, 66, 66);
+            TopLeft(dot.rectTransform, x, 18 + (66 - dotSize) / 2, dotSize, dotSize);
             dot.raycastTarget = false;
-            var number = DayLoopUI.Text(dot.transform, past ? DayLoopUI.Glyph("✓", "V") : (i + 1).ToString(), 30,
+            var number = DayLoopUI.Text(dot.transform, past ? DayLoopUI.Glyph("✓", "V") : (i + 1).ToString(), dotSize * .45f,
                 past ? Color.white : now ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold, "Label");
             DayLoopUI.Stretch(number.rectTransform);
-            var name = Label(frame, ResearchPractice.StepLabel(steps[i].kind), 21, Color.white, x - 17, 86, 100, 28, true);
+            var name = Label(frame, ResearchPractice.StepLabel(steps[i]), count > 5 ? 19 : 21, Color.white, x + dotSize / 2 - 50, 86, 100, 28, true);
             Outline(name, .3f);
         }
 
@@ -203,6 +206,106 @@ public abstract class LabStation : MonoBehaviour
         DayLoopUI.Place((RectTransform)next.transform, new Vector2(.5f, 0), new Vector2(.5f, 0), new Vector2(560, 76), new Vector2(330, 114));
     }
 
+    // ───────────── 누르기 ─────────────
+    /// <summary>틀 위 왼쪽 위 기준 (x, y, w, h)를 누를 수 있는 투명한 자리로 만든다.</summary>
+    protected LabPointer AddPad(float x, float y, float w, float h)
+    {
+        var image = DayLoopUI.Panel(frame, new Color(0, 0, 0, 0), "Pad", false);
+        TopLeft(image.rectTransform, x, y, w, h);
+        image.raycastTarget = true;
+        return image.gameObject.AddComponent<LabPointer>();
+    }
+    /// <summary>손가락 자리를 틀의 왼쪽 위 기준 좌표(오른쪽 x+, 아래 y+)로.</summary>
+    protected bool PointerOnFrame(LabPointer pad, out Vector2 topLeft)
+    {
+        topLeft = default;
+        if (pad == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(frame, pad.Screen, pad.Cam, out var local)) return false;
+        topLeft = new Vector2(local.x + FrameW * .5f, FrameH * .5f - local.y);
+        return true;
+    }
+    /// <summary>왼쪽 위 기준 좌표에 가운데 기준 그림을 옮긴다(Art로 만든 그림).</summary>
+    protected static void MoveTo(RectTransform art, Vector2 topLeft) => art.anchoredPosition = new Vector2(topLeft.x, -topLeft.y);
+
+    // ───────────── 불 세기 ─────────────
+    protected int heat = 1;
+    private readonly Button[] heatButtons = new Button[3];
+    private RectTransform heatKnob;
+    /// <summary>약·중·강 불 세기 손잡이.</summary>
+    protected void BuildHeatKnob(float x, float y)
+    {
+        var card = DayLoopUI.Card(frame, DayLoopUI.Kit.Sail, "HeatKnob", 3f, 6f);
+        TopLeft(card.rectTransform, x, y, 300, 345);
+        Label(card.transform, "불 세기", 30, DayLoopUI.Kit.Ink, 0, 12, 300, 40, false, TextAlignmentOptions.Center);
+        var dial = DayLoopUI.Panel(card.transform, Color.white, "Dial", false);
+        dial.sprite = DesignArt.Load("Lab/LabDial"); dial.raycastTarget = false;
+        TopLeft(dial.rectTransform, 22, 62, 255, 150);
+        heatKnob = DayLoopUI.Panel(card.transform, Color.white, "Knob", false).rectTransform;
+        heatKnob.GetComponent<Image>().sprite = DesignArt.Load("Lab/LabKnob");
+        heatKnob.GetComponent<Image>().raycastTarget = false;
+        DayLoopUI.Place(heatKnob, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(150, -200), new Vector2(120, 120));
+        for (int i = 0; i < 3; i++)
+        {
+            int level = i;
+            heatButtons[i] = DayLoopUI.KitButton(card.transform, new[] { "약", "중", "강" }[i], DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 28, () => { heat = level; RefreshHeatKnob(); }, "Heat" + i);
+            TopLeft((RectTransform)heatButtons[i].transform, 22 + i * 88, 268, 80, 58);
+        }
+        RefreshHeatKnob();
+    }
+    protected void RefreshHeatKnob()
+    {
+        if (heatKnob == null) return;
+        heatKnob.localEulerAngles = new Vector3(0, 0, (1 - heat) * 60f);
+        for (int i = 0; i < 3; i++)
+        {
+            heatButtons[i].image.color = i == heat ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand;
+            heatButtons[i].GetComponentInChildren<TMP_Text>().color = i == heat ? Color.white : DayLoopUI.Kit.Ink;
+        }
+    }
+
+    // ───────────── 게이지 카드 ─────────────
+    protected class Gauge { public TMP_Text Title, Value, Hint; public Image Fill; public RectTransform Needle; }
+    /// <summary>오른쪽 위 게이지 카드. 줄마다 (이름, 초록 구간 시작·끝, 아래 설명).</summary>
+    protected Gauge[] BuildGaugeCard(float x, float y, params (string title, float zoneFrom, float zoneTo, string hint)[] rows)
+    {
+        var card = DayLoopUI.Card(frame, DayLoopUI.Kit.Sail, "Gauges", 3f, 6f);
+        TopLeft(card.rectTransform, x, y, 435, 30 + rows.Length * 125);
+        var gauges = new Gauge[rows.Length];
+        for (int i = 0; i < rows.Length; i++)
+        {
+            float top = i * 124;
+            var g = gauges[i] = new Gauge();
+            g.Title = Label(card.transform, rows[i].title, 24, DayLoopUI.Kit.Ink, 24, top + 16, 240, 34);
+            g.Value = Label(card.transform, "", 32, DayLoopUI.Kit.Ink, 200, top + 12, 212, 40, false, TextAlignmentOptions.MidlineRight);
+            g.Fill = GaugeBar(card.transform, top + 60, rows[i].zoneFrom, rows[i].zoneTo, out g.Needle);
+            g.Hint = Label(card.transform, rows[i].hint, 18, DayLoopUI.Kit.InkSoft, 24, top + 94, 387, 26, false, TextAlignmentOptions.MidlineRight);
+        }
+        return gauges;
+    }
+    protected static void SetGauge(Gauge g, float bar, string value, bool good, bool bad)
+    {
+        g.Value.text = value;
+        g.Value.color = bad ? DayLoopUI.Kit.WarnInk : good ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink;
+        DayLoopUI.SetBar(g.Fill, Mathf.Clamp01(bar));
+        g.Fill.color = bad ? DayLoopUI.Kit.Alert : good ? DayLoopUI.Kit.Kelp : DayLoopUI.Kit.Coin;
+        SetNeedle(g.Needle, bar);
+    }
+
+    /// <summary>큰 효과 글자(지글지글, 퐁당 등).</summary>
+    protected TMP_Text Pop(string text, float size, float x, float y, float w = 360, float h = 90)
+    {
+        var label = Label(frame, text, size, Color.white, x, y, w, h, true);
+        label.rectTransform.localEulerAngles = new Vector3(0, 0, -8);
+        Outline(label, .28f);
+        return label;
+    }
+
+    /// <summary>점수 구간(0~5) 하나: 초록 구간 안이면 5점, 벗어난 만큼 깎인다.</summary>
+    public static float ZoneScore(float value, float low, float high, float slope = 12.5f)
+    {
+        float miss = value < low ? low - value : value > high ? value - high : 0f;
+        return Mathf.Clamp(5f - miss * slope, 0f, 5f);
+    }
+
     // ───────────── 게이지 ─────────────
     /// <summary>초록 구간과 바늘이 있는 막대. 막대 길이는 387, 높이 26.</summary>
     protected Image GaugeBar(Transform parent, float y, float zoneFrom, float zoneTo, out RectTransform needle)
@@ -226,6 +329,9 @@ public abstract class LabStation : MonoBehaviour
     }
 
     // ───────────── 도우미 ─────────────
+    /// <summary>요리 그림. 아직 그림이 없는 요리는 주재료 그림으로 대신한다.</summary>
+    public static Sprite DishArt(RecipeData recipe) => DesignArt.Food(recipe)
+        ?? (recipe != null && recipe.Requirements.Count > 0 ? DesignArt.Ingredient(recipe.Requirements[0].IngredientId) : null);
     protected static Sprite RawFood(RecipeData recipe)
     {
         var cooked = DesignArt.Food(recipe);

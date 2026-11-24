@@ -129,7 +129,7 @@ public class SettlementPanel : MonoBehaviour
 
         string totals = $"매출 <b>{DayLoopUI.Gold(r.revenue)}</b>  ({totalCount}개" + (tips > 0 ? $" · 팁 {DayLoopUI.Gold(tips)} 포함)" : ")");
         if (r.otherIncome > 0) totals += $"   기타 수입 <b>{DayLoopUI.Gold(r.otherIncome)}</b>";
-        totals += $"   지출 <b>{DayLoopUI.Gold(r.expense)}</b>   순이익 <b>{DayLoopUI.SignedGold(r.netProfit)}</b>";
+        totals += $"   지출 <b>{DayLoopUI.Gold(r.expense)}</b>" + (r.prepExpense > 0 ? $" (장보기 등 {DayLoopUI.Gold(r.prepExpense)} 포함)" : "") + $"   순이익 <b>{DayLoopUI.SignedGold(r.netProfit)}</b>";
         int goldDelta = r.goldAtClose - r.goldAtOpen;
         if (goldDelta != r.netProfit)
             totals += $"\n<size=80%><color=#{ColorUtility.ToHtmlStringRGB(DayLoopUI.Warn)}>골드 변화 {DayLoopUI.SignedGold(goldDelta)}가 순이익과 달라요. (집계 밖 거래 확인 필요)</color></size>";

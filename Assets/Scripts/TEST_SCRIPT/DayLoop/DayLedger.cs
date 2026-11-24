@@ -36,6 +36,8 @@ public class DayLedger
     public int Visited { get; private set; }
     public int Served { get; private set; }
     public int NotServed { get; private set; }
+    /// <summary>미대접 중 재료가 떨어져 주문하지 못한 손님.</summary>
+    public int SoldOutLeft { get; private set; }
     public int ForcedLeave { get; private set; }
     public int PaymentCount { get; private set; }
 
@@ -57,7 +59,7 @@ public class DayLedger
         _saleOrder.Clear();
         _timelines.Clear();
         Revenue = OtherIncome = Expense = 0;
-        Visited = Served = NotServed = ForcedLeave = PaymentCount = 0;
+        Visited = Served = NotServed = ForcedLeave = PaymentCount = SoldOutLeft = 0;
         _firstSpawnTime = _firstRevenueSeconds = -1f;
         _seatWaitSum = _orderTakeSum = _foodWaitSum = 0f;
         _seatWaitSamples = _orderTakeSamples = _foodWaitSamples = 0;
@@ -164,7 +166,7 @@ public class DayLedger
         _timelines.Remove(customer);
 
         if (customer.WasServed) Served++;
-        else NotServed++;
+        else { NotServed++; if (customer.SoldOut) SoldOutLeft++; }
     }
 
     private void HandlePaid(CustomerAgent customer, RecipeData recipe, int amount)
@@ -233,6 +235,7 @@ public class DayLedger
             visitedCount = Visited,
             servedCount = Served,
             notServedCount = NotServed,
+            soldOutCount = SoldOutLeft,
             forcedLeaveCount = ForcedLeave,
             seatWaitSum = _seatWaitSum,
             seatWaitSamples = _seatWaitSamples,

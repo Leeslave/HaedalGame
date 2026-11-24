@@ -602,7 +602,7 @@ public partial class RestaurantManagementUI
         if (plan != null)
         {
             Copy(detail, $"실습 {plan.steps.Length}단계" + (unlocked ? "" : " · 평균 4점 이상 해금"), 28, 20, DayLoopUI.Kit.InkSoft);
-            Copy(detail, string.Join(" → ", plan.steps.Select(step => ResearchPractice.StepLabel(step.kind))), 30, 21);
+            Copy(detail, string.Join(" → ", plan.steps.Select(step => ResearchPractice.StepLabel(step))), 30, 21);
         }
         else Copy(detail, unlocked ? "처음부터 만들 줄 아는 메뉴예요." : "아직 연구할 수 없는 메뉴예요.", 34, 22);
         // QA #23: 연구를 시작하려면 조리도구가 있어야 하는데, 필요한 도구가 상세에 보이지 않았다.
@@ -780,7 +780,7 @@ public partial class RestaurantManagementUI
         Copy(detail, $"좌석 {chosen} · 창고에 {RestaurantProgress.FurnitureCount(s, chosen)}개", 60, 23);
         Copy(detail, $"배치함   {placedSeats.Count(n => n == chosen)}개\n창고      {RestaurantProgress.FurnitureCount(s, chosen)}개\n더 사기  {chosen * 40}G", 150, 24);
         // 최대 좌석을 늘리는 방법. 배치 화면의 (i)와 같은 글이다.
-        Copy(detail, RestaurantRules.SeatLimitHelp(s.restaurantLevel), 64, 19, DayLoopUI.Kit.InkSoft);
+        Copy(detail, RestaurantRules.SeatLimitHelp(s), 64, 19, DayLoopUI.Kit.InkSoft);
         DayLoopUI.Spacer(detail);
         DetailAction(detail, $"더 사기 · {chosen * 40}G", () => Run((out string error) => RestaurantProgress.TryBuyFurniture(chosen, out error)));
         DetailAction(detail, "놓으러 가기", () => PlaceTable(chosen), true, RestaurantProgress.FurnitureCount(s, chosen) > 0);

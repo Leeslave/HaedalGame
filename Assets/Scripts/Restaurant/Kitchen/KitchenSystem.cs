@@ -54,7 +54,8 @@ public class KitchenSystem : MonoBehaviour
         {
             if (customer.IngredientsReserved) return;
             var inventory = IngredientInventoryService.Instance;
-            if (inventory == null || !inventory.TryConsumeRecipe(data, out int quality)) { customer.ForceLeave(); return; }
+            // 주문을 고른 뒤 다른 손님이 마지막 재료를 먼저 써 버린 경우다.
+            if (inventory == null || !inventory.TryConsumeRecipe(data, out int quality)) { customer.MarkSoldOut(); customer.ForceLeave(); return; }
             customer.IngredientsReserved = true;
             customer.FoodQuality = RestaurantRules.CapFoodQuality(quality);   // 식당 레벨의 레시피 등급 상한
             var type = (CookingType)data.ClassId;

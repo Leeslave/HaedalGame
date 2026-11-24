@@ -14,6 +14,7 @@ public class Seasoning
     public string Name, Art;
     public SeasonKind Kind;
     public Color32 Color;
+    public bool Wash;   // 씻기: 흙이 묻어 있고 문지르면 지워진다.
 }
 
 /// <summary>
@@ -96,7 +97,7 @@ public static class SeasonRules
                 float d = Vector2.Distance(new Vector2((x + .5f) / w, (y + .5f) / h), uv) / BrushRadius;
                 if (d >= 1f) continue;
                 int i = y * w + x;
-                dose[i] = Mathf.Min(MaxDose, dose[i] + rate * (1f - d * d) * dt);
+                dose[i] = Mathf.Clamp(dose[i] + rate * (1f - d * d) * dt, 0f, MaxDose);
             }
     }
     public static float Coverage(float[] dose, bool[] mask)
@@ -166,6 +167,13 @@ public static class SeasonRules
         if (worstCoverage < TargetCoverage) return "덜 된 곳이 있어. 끝부분까지 골고루 문질러 줘.";
         return "잘했어! 조금만 더 골고루 하면 완벽해.";
     }
+    /// <summary>씻기 때 재료에 묻은 흙.</summary>
+    public static Seasoning Dirt() => new Seasoning { Name = "흙", Art = null, Kind = SeasonKind.Coat, Color = new Color32(0x7A, 0x5A, 0x3A, 255), Wash = true };
+    /// <summary>씻은 정도: 처음 흙(0.5)이 다 지워질수록 1에 가깝다.</summary>
+    public static float Cleanliness(float[] dose, bool[] mask) => 1f - Coverage(dose, mask);
+    public static string WashHint(float clean) => clean >= TargetCoverage ? "깨끗해졌어!\n이제 끝내자." : clean >= .45f ? "동그라미 친 곳도\n박박 문질러!" : "누른 채로\n박박 문질러 봐!";
+    public static string WashReview(float score) => score >= 4.5f ? "좋아! 모래 하나 없이 깨끗하게 씻었어!" : "덜 씻긴 곳이 있어. 구석구석 문질러 줘.";
+
     /// <summary>받침 있는 말 뒤에는 a, 없으면 b(을/를, 으로/로).</summary>
     public static string Josa(string word, string a, string b)
     {
@@ -192,7 +200,9 @@ public class SeasonStation : LabStation
     private Image coverFill, amountFill, shakerArt;
     private RectTransform coverNeedle, amountNeedle;
     private Button nextButton;
-    private RubPad pad;
+    private LabPointer pad;
+    private bool wash;
+    private RectTransform gaugeCard;
     private Texture2D overlay;
     private Color32[] pixels;
     private byte[] noise;
@@ -205,9 +215,11 @@ public class SeasonStation : LabStation
     private float elapsed, limit, redraw, ringCheck;
     private bool dirty;
 
-    public static SeasonStation Open(Transform screen, RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit)
+    /// <summary>wash가 켜지면 씻기: 물 그릇 속 재료에 묻은 흙을 문질러 지운다.</summary>
+    public static SeasonStation Open(Transform screen, RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit, bool wash = false)
     {
         var station = Create<SeasonStation>("SeasonStage", screen);
+        station.wash = wash;
         station.Build(recipe, steps, index, onDone, onExit);
         return station;
     }
@@ -216,13 +228,19 @@ public class SeasonStation : LabStation
     private void Build(RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit)
     {
         string text = steps[index].text;
-        layers = SeasonRules.Parse(text);
+        layers = wash ? new List<Seasoning> { SeasonRules.Dirt() } : SeasonRules.Parse(text);
         doses = layers.Select(_ => new float[GridW * GridH]).ToArray();
+        if (wash) for (int i = 0; i < doses[0].Length; i++) doses[0][i] = SeasonRules.CoveredDose;
         limit = SeasonRules.TimeLimit(layers.Count);
-        BuildStage(recipe, onDone, layers.Select(l => l.Art).Concat(new[] { "Ingredient/Salt", "Ingredient/Pepper", "Ingredient/Lemon" }).ToArray());
+        BuildStage(recipe, onDone, layers.Select(l => l.Art).Where(a => a != null).Concat(new[] { "Ingredient/Salt", "Ingredient/Pepper", "Ingredient/Lemon" }).ToArray());
 
-        // 도마와 재료
-        Art("Lab/LabBoard", 480, 262, 960, 585, true);
+        // 도마와 재료 (씻기는 물 그릇)
+        if (wash)
+        {
+            Art("Lab/LabBowl", 570, 225, 780, 660, true);
+            Art("Lab/LabWater", 658, 326, 604, 470, true).color = new Color(.75f, .9f, .96f, .85f);
+        }
+        else Art("Lab/LabBoard", 480, 262, 960, 585, true);
         Sprite target = TargetSprite(recipe, steps, text);
         var fish = Art(null, FishX, FishY, FishSize, FishSize, true);
         fish.sprite = target; fish.preserveAspect = true; fish.enabled = target != null;
@@ -241,17 +259,14 @@ public class SeasonStation : LabStation
         ring = Art("Lab/LabRing", 0, 0, 220, 170).rectTransform;
         var ringTag = DayLoopUI.Card(ring, DayLoopUI.Kit.Alert, "RingTag", 3f, 0f);
         DayLoopUI.Place(ringTag.rectTransform, new Vector2(.5f, 1), new Vector2(.5f, 0), new Vector2(0, 6), new Vector2(230, 44));
-        var ringText = DayLoopUI.Text(ringTag.transform, "여기 덜 됐어요", 22, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
+        var ringText = DayLoopUI.Text(ringTag.transform, wash ? "여기 덜 씻었어요" : "여기 덜 됐어요", 22, Color.white, TextAlignmentOptions.Center, FontStyles.Bold);
         DayLoopUI.Stretch(ringText.rectTransform);
         ringTag.raycastTarget = ringText.raycastTarget = false;
         ringTagRect = ringTag.rectTransform;
         ring.gameObject.SetActive(false);
 
         // 문지르는 자리: 도마 전체를 누를 수 있다.
-        var padImage = DayLoopUI.Panel(frame, new Color(0, 0, 0, 0), "RubPad", false);
-        TopLeft(padImage.rectTransform, 480, 262, 960, 585);
-        padImage.raycastTarget = true;
-        pad = padImage.gameObject.AddComponent<RubPad>();
+        pad = AddPad(480, 225, 960, 660);
 
         shaker = DayLoopUI.Rect("Shaker", frame);
         DayLoopUI.Place(shaker, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(370, 200), new Vector2(190, 190));
@@ -270,13 +285,25 @@ public class SeasonStation : LabStation
         layerText = Label(layerCard.transform, "", 28, DayLoopUI.Kit.Ink, 20, 0, 395, 84, true);
         layerCard.gameObject.SetActive(layers.Count > 1);
 
-        nextButton = DayLoopUI.KitButton(frame, "다 뿌렸어요", DayLoopUI.Kit.Sea, Color.white, 40, Next, "Done");
+        nextButton = DayLoopUI.KitButton(frame, wash ? "다 씻었어요" : "다 뿌렸어요", DayLoopUI.Kit.Sea, Color.white, 40, Next, "Done");
         TopLeft((RectTransform)nextButton.transform, 1530, 905, 355, 126);
         guide = BuildInstruction("");
 
         var first = layers[0];
         ShowLayer();
         Refresh();
+        if (wash)
+        {
+            ShowIntro(steps, index,
+                $"물 그릇 속 {targetName}에 묻은 흙과 모래를 문질러 씻어요. 구석구석 깨끗하게!\n다 되면 오른쪽 아래 버튼을 눌러요.",
+                preview => {
+                    PreviewArt(preview, DesignArt.Load("Lab/LabBowl"), 90, 20, 320, 271, false);
+                    PreviewArt(preview, target, 140, 40, 220, 220);
+                },
+                $"{targetName}{SeasonRules.Josa(targetName, "을", "를")} <color=#C8443A>누른 채</color>\n박박 문지르기\n<color=#C8443A>→</color> 깨끗하게 <color=#1F7F8A>{SeasonRules.TargetCoverage * 100f:0}%</color> 넘기기",
+                $"제한 시간 {limit:0}초 · 흙이 남으면 감점", "모래가 씹히면\n맛이 없어!");
+            return;
+        }
         string verb = first.Kind == SeasonKind.Grain ? "뿌려요" : "발라요";
         string all = string.Join(", ", layers.Select(l => l.Name));
         ShowIntro(steps, index,
@@ -318,7 +345,7 @@ public class SeasonStation : LabStation
         RenderTexture.active = previous;
         RenderTexture.ReleaseTemporary(rt);
         var data = read.GetPixels32();
-        Destroy(read);
+        if (Application.isPlaying) Destroy(read); else DestroyImmediate(read);
         var mask = data.Select(p => p.a > 140).ToArray();
         return mask.Count(m => m) >= 20 ? mask : SeasonRules.EllipseMask(GridW, GridH);
     }
@@ -326,7 +353,8 @@ public class SeasonStation : LabStation
     private void BuildGauges()
     {
         var card = DayLoopUI.Card(frame, DayLoopUI.Kit.Sail, "Gauges", 3f, 6f);
-        TopLeft(card.rectTransform, 1460, 150, 435, 285);
+        TopLeft(card.rectTransform, 1460, 150, 435, wash ? 140 : 285);
+        gaugeCard = card.rectTransform;
         coverTitle = Label(card.transform, "", 24, DayLoopUI.Kit.Ink, 24, 16, 260, 34);
         coverValue = Label(card.transform, "", 34, DayLoopUI.Kit.Ink, 240, 12, 172, 40, false, TextAlignmentOptions.MidlineRight);
         coverFill = GaugeBar(card.transform, 60, SeasonRules.TargetCoverage, 1f, out coverNeedle);
@@ -335,6 +363,7 @@ public class SeasonStation : LabStation
         amountValue = Label(card.transform, "", 30, DayLoopUI.Kit.Ink, 180, 136, 232, 40, false, TextAlignmentOptions.MidlineRight);
         amountFill = GaugeBar(card.transform, 184, SeasonRules.AmountLow / SeasonRules.AmountMax, SeasonRules.AmountHigh / SeasonRules.AmountMax, out amountNeedle);
         amountHint = Label(card.transform, "", 18, DayLoopUI.Kit.InkSoft, 24, 218, 387, 26, false, TextAlignmentOptions.MidlineRight);
+        if (wash) foreach (var g in new Component[] { amountTitle, amountValue, amountHint, amountFill.transform.parent }) g.gameObject.SetActive(false);
     }
 
     /// <summary>지금 겹(양념)에 맞춰 양념통 그림, 게이지 이름, 버튼, 안내 줄을 바꾼다.</summary>
@@ -342,12 +371,15 @@ public class SeasonStation : LabStation
     {
         var s = layers[layer];
         bool grain = s.Kind == SeasonKind.Grain, last = layer == layers.Count - 1;
-        shakerArt.sprite = DesignArt.Load(s.Art);
-        coverTitle.text = grain ? "골고루 뿌린 정도" : "골고루 바른 정도";
+        shakerArt.sprite = s.Art != null ? DesignArt.Load(s.Art) : null; // 씻기(흙)는 양념통이 없다.
+        shakerArt.enabled = shakerArt.sprite != null;
+        coverTitle.text = wash ? "깨끗하게 씻은 정도" : grain ? "골고루 뿌린 정도" : "골고루 바른 정도";
         amountTitle.text = $"{s.Name} 양";
         amountHint.text = grain ? "너무 많이 뿌리면 짜요" : "너무 두꺼우면 감점";
-        DayLoopUI.SetButtonLabel(nextButton, last ? (grain ? "다 뿌렸어요" : "다 발랐어요") : $"다음: {layers[layer + 1].Name}  ▶");
-        guide.text = $"{s.Name}{(grain ? "통" : "")}{SeasonRules.Josa(s.Name + (grain ? "통" : ""), "을", "를")} 누른 채 {targetName} 위로 문지르기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기";
+        DayLoopUI.SetButtonLabel(nextButton, wash ? "다 씻었어요" : last ? (grain ? "다 뿌렸어요" : "다 발랐어요") : $"다음: {layers[layer + 1].Name}  ▶");
+        if (wash) shaker.gameObject.SetActive(false);
+        guide.text = wash ? $"{targetName}{SeasonRules.Josa(targetName, "을", "를")} 누른 채 박박 문질러 씻기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기"
+            : $"{s.Name}{(grain ? "통" : "")}{SeasonRules.Josa(s.Name + (grain ? "통" : ""), "을", "를")} 누른 채 {targetName} 위로 문지르기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기";
         layerText.text = string.Join("   ", layers.Select((l, i) => i < layer ? $"<color=#3B8A5A>{DayLoopUI.Glyph("✓", "V")} {l.Name}</color>" : i == layer ? $"<color=#C8443A>▶ {l.Name}</color>" : $"<color=#8A7A6A>{l.Name}</color>"));
         dirty = true;
     }
@@ -361,9 +393,13 @@ public class SeasonStation : LabStation
         Finish();
     }
 
+    // 씻기는 흙이 지워진 정도가 진행이고, 양은 따지지 않는다.
+    private float Progress(int i) => wash ? SeasonRules.Cleanliness(doses[i], mask) : SeasonRules.Coverage(doses[i], mask);
+    private float AmountOf(int i) => wash ? 0f : SeasonRules.Amount(doses[i], mask);
+
     private void ScoreLayer(int i)
     {
-        float coverage = SeasonRules.Coverage(doses[i], mask), amount = SeasonRules.Amount(doses[i], mask);
+        float coverage = Progress(i), amount = AmountOf(i);
         coverages.Add(coverage); amounts.Add(amount);
         scores.Add(SeasonRules.LayerScore(coverage, amount));
     }
@@ -378,11 +414,11 @@ public class SeasonStation : LabStation
         nextButton.gameObject.SetActive(false);
         ring.gameObject.SetActive(false);
         sprinkle.gameObject.SetActive(false);
-        var chips = layers.Count == 1
+        var chips = wash ? new[] { $"깨끗하게 {coverages[0] * 100f:0}%" } : layers.Count == 1
             ? new[] { $"골고루 {coverages[0] * 100f:0}%", $"양 {SeasonRules.AmountLabel(amounts[0], layers[0].Kind)}" }
             : layers.Select((l, i) => $"{l.Name} {coverages[i] * 100f:0}%").Take(3).ToArray();
         int worst = Enumerable.Range(0, layers.Count).OrderBy(i => scores[i]).First();
-        ShowResult(score, chips, SeasonRules.ChefReview(score, coverages[worst], amounts[worst], layers[worst].Kind));
+        ShowResult(score, chips, wash ? SeasonRules.WashReview(score) : SeasonRules.ChefReview(score, coverages[worst], amounts[worst], layers[worst].Kind));
         Refresh();
     }
 
@@ -404,7 +440,7 @@ public class SeasonStation : LabStation
                 var uv = new Vector2((local.x - r.xMin) / r.width, (local.y - r.yMin) / r.height);
                 if (uv.x > -.1f && uv.x < 1.1f && uv.y > -.1f && uv.y < 1.1f)
                 {
-                    SeasonRules.Sprinkle(doses[layer], GridW, GridH, uv, dt);
+                    SeasonRules.Sprinkle(doses[layer], GridW, GridH, uv, dt, wash ? -SeasonRules.Rate * .8f : SeasonRules.Rate);
                     rubbing = true; dirty = true;
                 }
             }
@@ -414,7 +450,7 @@ public class SeasonStation : LabStation
         {
             float wiggle = rubbing ? Mathf.Sin(Time.unscaledTime * 30f) * 6f : 0f;
             shaker.localEulerAngles = new Vector3(0, 0, (pad != null && pad.Held ? 140f : 12f) + wiggle);
-            sprinkle.text = layers[layer].Kind == SeasonKind.Grain ? "솔솔~" : "쓱쓱~";
+            sprinkle.text = wash ? "뽀득뽀득!" : layers[layer].Kind == SeasonKind.Grain ? "솔솔~" : "쓱쓱~";
             sprinkle.gameObject.SetActive(rubbing);
         }
         if (running && !finished)
@@ -445,7 +481,7 @@ public class SeasonStation : LabStation
                         if (Grain(dose, x, y)) pixels[p] = s.Color;
                         else if (x > 0 && y < TexSize - 1 && Grain(dose, x - 1, y + 1)) pixels[p] = Blend(pixels[p], new Color32(70, 48, 30, 255), .45f);
                     }
-                    else pixels[p] = Blend(pixels[p], s.Color, Mathf.Clamp01(d * .75f) * .82f);
+                    else pixels[p] = Blend(pixels[p], s.Color, s.Wash ? Mathf.Clamp01(d * 1.8f) * .85f : Mathf.Clamp01(d * .75f) * .82f);
                 }
         }
         overlay.SetPixels32(pixels);
@@ -477,7 +513,7 @@ public class SeasonStation : LabStation
     {
         if (coverValue == null) return;
         var s = layers[layer];
-        float coverage = SeasonRules.Coverage(doses[layer], mask), amount = SeasonRules.Amount(doses[layer], mask);
+        float coverage = Progress(layer), amount = AmountOf(layer);
         coverValue.text = $"{coverage * 100f:0}%";
         coverValue.color = coverage >= SeasonRules.TargetCoverage ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink;
         DayLoopUI.SetBar(coverFill, coverage);
@@ -491,7 +527,7 @@ public class SeasonStation : LabStation
         SetNeedle(amountNeedle, bar);
         SetTimer(limit - elapsed, limit);
         nextButton.interactable = running && !finished;
-        chefLine.text = finished ? "다 됐다!" : running ? SeasonRules.ChefHint(coverage, amount, s, layer < layers.Count - 1 ? layers[layer + 1].Name : null) : "준비되면\n[시작]을 눌러!";
+        chefLine.text = finished ? "다 됐다!" : !running ? "준비되면\n[시작]을 눌러!" : wash ? SeasonRules.WashHint(coverage) : SeasonRules.ChefHint(coverage, amount, s, layer < layers.Count - 1 ? layers[layer + 1].Name : null);
 
         // 덜 된 곳 동그라미: 조금 해 본 뒤부터, 85%를 넘기 전까지.
         ringCheck -= Time.unscaledDeltaTime;
@@ -499,7 +535,9 @@ public class SeasonStation : LabStation
         {
             ringCheck = .3f;
             bool show = running && !finished && elapsed > 2.5f && coverage < SeasonRules.TargetCoverage && coverage > .15f;
-            int cell = show ? SeasonRules.Thinnest(doses[layer], mask, GridW, GridH) : -1;
+            // 씻기는 흙이 가장 많이 남은 곳을 짚는다.
+            var look = wash ? doses[layer].Select(d => Mathf.Max(0f, SeasonRules.CoveredDose - d)).ToArray() : doses[layer];
+            int cell = show ? SeasonRules.Thinnest(look, mask, GridW, GridH) : -1;
             show &= cell >= 0;
             if (show)
             {
@@ -520,16 +558,5 @@ public class SeasonStation : LabStation
     private void OnDestroy()
     {
         if (overlay != null) Destroy(overlay);
-    }
-
-    /// <summary>도마를 누르고 있는 동안 손가락(마우스) 자리를 기억한다.</summary>
-    private class RubPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
-    {
-        public bool Held;
-        public Vector2 Screen;
-        public Camera Cam;
-        public void OnPointerDown(PointerEventData e) { Held = true; Screen = e.position; Cam = e.pressEventCamera; }
-        public void OnDrag(PointerEventData e) { Screen = e.position; Cam = e.pressEventCamera; }
-        public void OnPointerUp(PointerEventData e) { Held = false; }
     }
 }

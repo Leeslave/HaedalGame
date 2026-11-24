@@ -65,9 +65,8 @@ public class ResearchPractice : MonoBehaviour
         hits = mistakes = expected = 0; transitioning = waiting = false; startButton = null; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
-        // 굽기와 염지(재료에 양념 뿌리기·바르기)는 전용 화면에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
-        bool grill = Kind == "Grill", season = Kind == "Mix" && SeasonRules.IsRub(steps[phase].text);
-        if ((grill || season) && surface.parent != null && surface.parent.parent != null)
+        // 단계마다 전용 화면(굽기·염지·손질·끓이기 등)에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
+        if (LabStations.StationFor(steps[phase]) != null && surface.parent != null && surface.parent.parent != null)
         {
             int index = phase;
             surface.gameObject.SetActive(false);
@@ -76,11 +75,10 @@ public class ResearchPractice : MonoBehaviour
                 surface.gameObject.SetActive(true);
                 CompletePhase(score);
             };
-            if (grill) GrillStation.Open(surface.parent.parent, recipe, steps, phase, back, ExitRequested);
-            else SeasonStation.Open(surface.parent.parent, recipe, steps, phase, back, ExitRequested);
-            return;
+            if (LabStations.TryOpen(surface.parent.parent, recipe, steps, phase, back, ExitRequested)) return;
+            surface.gameObject.SetActive(true);
         }
-        Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
+        Label($"{StepLabel(steps[phase])} · {phase + 1}/{steps.Length}", -24, 39);
         Label(steps[phase].text, -80, 24);
         instruction = Label("", -125, 21);
         instruction.color = DayLoopUI.Kit.WoodLight;
@@ -210,6 +208,26 @@ public class ResearchPractice : MonoBehaviour
     }
 
     // 단계 종류를 진행 표시용 짧은 이름으로 바꾼다.
+    /// <summary>단계 이름. 섞기 중 재료에 양념을 뿌리거나 바르는 단계는 하는 일로 부른다.</summary>
+    public static string StepLabel(ResearchStep step)
+    {
+        if (step == null) return "단계";
+        if (step.kind == "Mix" && SeasonRules.IsRub(step.text))
+        {
+            string t = step.text;
+            return t.Contains("염지") ? "염지" : t.Contains("밑간") ? "밑간" : t.Contains("튀김옷") || t.Contains("묻히") ? "튀김옷"
+                : t.Contains("버무리") ? "버무리기" : "바르기";
+        }
+        // 전용 화면이 다른 단계: "해산물을 볶기"(넣기)는 볶기, "소스 졸이기"(젓기)는 졸이기, 반죽 빚기는 빚기.
+        switch (LabStations.StationFor(step))
+        {
+            case "Stir" when (step.text ?? "").Contains("볶"): return "볶기";
+            case "Simmer" when step.kind != "Simmer": return "졸이기";
+            case "Shape": return "빚기";
+            case "Season" when step.kind == "Add": return "바르기";
+        }
+        return StepLabel(step.kind);
+    }
     public static string StepLabel(string kind)
     {
         switch (kind)
@@ -240,7 +258,7 @@ public class ResearchPractice : MonoBehaviour
                 bool done = i < scores.Count, current = i == phase;
                 var item = DayLoopUI.Card(stepRail, done ? DayLoopUI.Kit.Kelp : current ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand, "Step" + i, 4.5f, 6);
                 DayLoopUI.Layout(item, preferredHeight: current ? 84 : 63);
-                var label = DayLoopUI.Text(item.transform, $"{i + 1}  {StepLabel(steps[i].kind)}\n<size=70%>{(done ? scores[i].ToString("0.0") + "점" : current ? "지금 단계" : "대기 중")}</size>", 26,
+                var label = DayLoopUI.Text(item.transform, $"{i + 1}  {StepLabel(steps[i])}\n<size=70%>{(done ? scores[i].ToString("0.0") + "점" : current ? "지금 단계" : "대기 중")}</size>", 26,
                     current || done ? Color.white : DayLoopUI.Kit.InkSoft, style: FontStyles.Bold);
                 DayLoopUI.Stretch(label.rectTransform, 16, 8, 16, 8);
             }
@@ -278,7 +296,7 @@ public class ResearchPractice : MonoBehaviour
             DayLoopUI.Layout(dot, preferredHeight: 42);
             var number = DayLoopUI.Text(dot.transform, done ? DayLoopUI.Glyph("✓", "V") : (i + 1).ToString(), 21, done || current ? Color.white : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
             DayLoopUI.Stretch(number.rectTransform);
-            var stepName = DayLoopUI.Text(step, StepLabel(steps[i].kind), 20, current ? DayLoopUI.Kit.WarnInk : done ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
+            var stepName = DayLoopUI.Text(step, StepLabel(steps[i]), 20, current ? DayLoopUI.Kit.WarnInk : done ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
             stepName.rectTransform.sizeDelta = new Vector2(140, 24);
             if (done)
             {
