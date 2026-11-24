@@ -95,7 +95,8 @@ public class GrillStation : LabStation
         fishPivot = DayLoopUI.Rect("Fish", frame);
         DayLoopUI.Place(fishPivot, new Vector2(0, 1), new Vector2(.5f, .5f), new Vector2(855, -700), new Vector2(500, 500));
         fishPivot.localEulerAngles = new Vector3(0, 0, -6);
-        Sprite food = DesignArt.Food(recipe), rawFood = RawFood(recipe) ?? food;
+        // 날것·익은 것 짝이 있는 요리 그림만 팬에 올린다. 접시에 담긴 임시 그림(짝 없음)은 재료 그림으로 굽는다.
+        Sprite rawFood = RawFood(recipe), food = rawFood != null ? DesignArt.Food(recipe) : null;
         if (food == null && recipe != null && recipe.Requirements.Count > 0) food = rawFood = DesignArt.Ingredient(recipe.Requirements[0].IngredientId);
         cooked = Fill(fishPivot, food); raw = Fill(fishPivot, rawFood);
         var glaze = GrillRules.Glaze(steps, index);

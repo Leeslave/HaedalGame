@@ -23,6 +23,11 @@ public static class DesignArt
         { "광어회", "FlounderSashimi" }, { "문어숙회", "OctopusSukhoe" }, { "새우구이", "ShrimpGrill" },
         { "새우완자탕", "ShrimpBallSoup" }, { "새우튀김", "ShrimpTempura" }, { "생선가스", "FishCutlet" },
         { "연어간장구이", "SalmonSoyGrill" }, { "오징어숙회", "SquidSukhoe" }, { "조개찜", "ClamSteam" },
+        // 아래 10개는 기존 요리·재료 그림을 조합한 임시 그림이다. 디자이너 그림이 나오면 같은 이름 파일만 바꾼다.
+        { "가리비간장구이", "ScallopSoyGrill" }, { "광어간장찜", "FlounderSoySteam" }, { "문어초무침", "OctopusChomuchim" },
+        { "바다의진미플래터", "SeaPlatter" }, { "바지락술찜", "ClamSakeSteam" }, { "연어스테이크레몬소스", "SalmonLemon" },
+        { "해물된장구이모둠", "SeafoodDoenjangGrill" }, { "해물크림스튜", "SeafoodCreamStew" }, { "해물튀김모둠", "SeafoodTempura" },
+        { "해산물전골", "SeafoodHotpot" },
     };
     private static readonly Dictionary<string, string> IngredientArt = new Dictionary<string, string>
     {
