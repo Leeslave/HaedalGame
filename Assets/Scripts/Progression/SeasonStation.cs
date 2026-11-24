@@ -49,6 +49,23 @@ public static class SeasonRules
     public static bool UsesBrush(Seasoning s) => s != null && s.Kind == SeasonKind.Coat && !s.Wash && !Powders.Contains(s.Name);
     public static bool IsPowder(Seasoning s) => s != null && s.Kind == SeasonKind.Coat && Powders.Contains(s.Name);
 
+    /// <summary>
+    /// 앞 단계에서 재료에 마지막으로 입힌 양념 색. 굽기·튀기기 화면이 이어서 보여 준다.
+    /// 그사이 이미 굽거나 튀겼으면, 또는 입힌 것이 없으면 null. brushOnly면 붓으로 바른 것만 친다.
+    /// </summary>
+    public static Color32? LastCoat(ResearchStep[] steps, int index, bool brushOnly)
+    {
+        if (steps == null) return null;
+        for (int k = Mathf.Min(index, steps.Length) - 1; k >= 0; k--)
+        {
+            string station = LabStations.StationFor(steps[k]);
+            if (station == "Grill" || station == "Fry") return null;
+            if (station != "Season") continue;
+            var coats = Parse(steps[k].text).Where(s => brushOnly ? UsesBrush(s) : s.Kind == SeasonKind.Coat && !s.Wash).ToList();
+            if (coats.Count > 0) return coats[coats.Count - 1].Color;
+        }
+        return null;
+    }
     /// <summary>재료에 양념을 뿌리거나 바르는 단계인지. 양념을 섞어 만드는 단계는 아니다.</summary>
     public static bool IsRub(string text) => !string.IsNullOrEmpty(text) && RubWords.Any(text.Contains);
 

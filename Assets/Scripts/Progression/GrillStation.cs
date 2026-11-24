@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,20 +48,8 @@ public static class GrillRules
         if (doneness > .5f) return "조금만 더…\n색이 나고 있어!";
         return back ? "반대쪽도\n노릇하게 굽자." : "좋아, 껍질이\n천천히 익고 있어.";
     }
-    /// <summary>앞 단계에서 붓으로 바른 양념 색. 그사이 이미 굽거나 튀겼으면, 또는 바른 양념이 없으면 null.</summary>
-    public static Color32? Glaze(ResearchStep[] steps, int index)
-    {
-        if (steps == null) return null;
-        for (int k = Mathf.Min(index, steps.Length) - 1; k >= 0; k--)
-        {
-            string station = LabStations.StationFor(steps[k]);
-            if (station == "Grill" || station == "Fry") return null;
-            if (station != "Season") continue;
-            var brushed = SeasonRules.Parse(steps[k].text).Where(SeasonRules.UsesBrush).ToList();
-            if (brushed.Count > 0) return brushed[brushed.Count - 1].Color;
-        }
-        return null;
-    }
+    /// <summary>앞 단계에서 붓으로 바른 양념 색. 없으면 null.</summary>
+    public static Color32? Glaze(ResearchStep[] steps, int index) => SeasonRules.LastCoat(steps, index, true);
     /// <summary>끝난 뒤 셰프가 하는 말. 가장 아쉬운 부분을 짚어 준다.</summary>
     public static string ChefReview(float score, float front, float back, float tempRatio)
     {

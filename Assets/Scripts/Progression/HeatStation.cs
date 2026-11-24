@@ -118,6 +118,7 @@ public class HeatStation : LabStation
     private TMP_Text pop;
     private Button finishButton;
     private Color liquid, liquidDone = new Color32(0x6E, 0x3A, 0x1C, 0xFF);
+    private Color coatTint = Color.white;   // 튀길 때 앞에서 입힌 튀김옷 색
     private float temperature, progress, spill, spillPeak, elapsed, inZone;
 
     public static HeatStation Open(Transform screen, RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit)
@@ -137,6 +138,8 @@ public class HeatStation : LabStation
         BuildStage(recipe, onDone, items.Select(i => i.Art).Where(a => a != null).Select(a => a.name.Replace("Design ", "")).Where(a => !a.StartsWith("Lab/")).ToArray());
 
         bool fry = profile.Mode == HeatMode.Fry;
+        var coat = fry ? SeasonRules.LastCoat(steps, index, false) : null;
+        if (coat.HasValue) coatTint = Color.Lerp(Color.white, coat.Value, .8f);
         glow = Art("Lab/LabPanGlow", 510, 200, 900, 800);
         Vector2 center = new Vector2(960, 597);
         if (fry)
@@ -290,7 +293,7 @@ public class HeatStation : LabStation
             // 익을수록 색이 진해지고, 너무 오래 두면 어두워진다.
             float cook = Mathf.Clamp01(progress / HeatRules.DoneHigh), over = Mathf.Clamp01((progress - HeatRules.DoneHigh) / .3f);
             Color done = profile.Mode == HeatMode.Fry ? new Color(1f, .78f, .45f) : new Color(1f, .9f, .85f);
-            floaterArt[i].color = Color.Lerp(Color.Lerp(Color.white, done, cook), new Color(.45f, .3f, .2f), over);
+            floaterArt[i].color = Color.Lerp(Color.Lerp(coatTint, done, cook), new Color(.45f, .3f, .2f), over);
         }
         if (water != null && profile.Mode == HeatMode.Simmer)
             water.color = Color.Lerp(liquid, liquidDone, Mathf.Clamp01(progress));

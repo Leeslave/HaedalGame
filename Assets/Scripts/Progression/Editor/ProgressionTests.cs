@@ -772,6 +772,12 @@ public class ProgressionTests
         Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(11).steps, 1).HasValue, "양념만 섞어 두고 가리비는 그냥 굽는다");
         Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(17).steps, 1).HasValue, "소금·후추 밑간은 색을 입히지 않는다");
         Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(17).steps, 2).HasValue);
+        // 튀기기는 가루 튀김옷도 이어 보여 준다. 마지막에 입힌 튀김가루 색.
+        var fishCutlet = RecipeResearchPlan.Find(12).steps;
+        Assert.AreEqual(LabStations.StationFor(fishCutlet[3]), "Fry");
+        var coat = SeasonRules.LastCoat(fishCutlet, 3, false);
+        Assert.IsTrue(coat.HasValue);
+        Assert.AreEqual(SeasonRules.Parse("튀김가루")[0].Color, coat.Value);
     }
     [Test] public void Heat_CarriesFoodFromEarlierSteps()
     {
