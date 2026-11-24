@@ -620,4 +620,25 @@ public class ProgressionTests
         Assert.AreEqual(1.5f, GrillRules.SideScore(.5f), .001f);
         Assert.AreEqual(0f, GrillRules.CookRate(110f), .0001f, "덜 달군 팬에서는 익지 않아요");
     }
+
+    // 요리 완성 화면: 메달은 해금 기준(4점)과 같은 선에서 갈리고, 높을수록 좋은 메달이다.
+    [TestCase(5f, "금메달")]
+    [TestCase(4.75f, "금메달")]
+    [TestCase(4.5f, "은메달")]
+    [TestCase(4f, "동메달")]
+    [TestCase(3.99f, null)]
+    public void ResearchResult_MedalFollowsAverage(float average, string medal)
+    {
+        Assert.AreEqual(medal, ResearchResultRules.Medal(average));
+        Assert.AreEqual(medal == null ? "Lab/LabMedalNone" : "Lab/LabMedal" + (medal == "금메달" ? "Gold" : medal == "은메달" ? "Silver" : "Bronze"), ResearchResultRules.MedalArt(average));
+    }
+    [Test] public void ResearchResult_MedalOnlyWhenResearchCompletes()
+    {
+        var recipe = GameDatabase.Recipes.Recipes.First(r => !GameSession.Current.unlockedRecipeIds.Contains(r.RecipeId));
+        GameSession.Current.progression.research.Add(new ResearchEntry { recipeId = recipe.RecipeId, remainingDays = 0 });
+        Assert.IsFalse(RestaurantProgress.TryCompleteResearch(recipe.RecipeId, 3.99f, out _));
+        Assert.IsNull(ResearchResultRules.Medal(3.99f));
+        Assert.IsTrue(RestaurantProgress.TryCompleteResearch(recipe.RecipeId, ResearchResultRules.UnlockScore, out string error), error);
+        Assert.IsNotNull(ResearchResultRules.Medal(ResearchResultRules.UnlockScore));
+    }
 }

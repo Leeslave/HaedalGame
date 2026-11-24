@@ -757,10 +757,28 @@ public partial class RestaurantManagementUI : MonoBehaviour
         score.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         practice = gameObject.AddComponent<ResearchPractice>();
         practice.ExitRequested = () => { StopPractice(); window.gameObject.SetActive(true); Refresh(); };
+        var current = practice;
         practice.Begin(stage, recipe, average => {
             bool ok = RestaurantProgress.TryCompleteResearch(id, average, out string error);
-            window.gameObject.SetActive(true); Refresh();
-            message.text = $"실습 평균 {average:0.00}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
+            string summary = $"실습 평균 {average:0.00}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
+            // 요리 완성 화면을 실습 화면 위에 띄운다. 닫거나 다음 행동을 고르면 실습 화면도 함께 정리한다.
+            ResearchResultView.Open(canvas.transform, recipe, current.StepTexts, current.StepScores, average, ok, error,
+                () => { StopPractice(); if (ok) AddResearchedToMenu(id); else BeginChallenge(id); },
+                () => { StopPractice(); window.gameObject.SetActive(true); Refresh(); message.text = summary; });
         }, steps, score.transform);
+    }
+    // 결과 화면의 [메뉴에 올리기]: 빈 슬롯이 있으면 바로 올리고, 꽉 찼으면 메뉴 화면에서 고르게 한다.
+    private void AddResearchedToMenu(int id)
+    {
+        window.gameObject.SetActive(true);
+        var s = GameSession.Current;
+        int slot = s.menuSlots.IndexOf(-1);
+        if (slot < 0 && s.menuSlots.Count < RestaurantRules.MenuLimit(s.restaurantLevel)) slot = s.menuSlots.Count;
+        Open("메뉴");
+        if (s.menuSlots.Contains(id)) { message.text = "이미 오늘 메뉴에 있어요."; return; }
+        if (slot < 0) { message.text = "메뉴가 꽉 찼어요. 뺄 메뉴를 고른 뒤 새 요리를 올려 주세요."; return; }
+        bool ok = RestaurantProgress.TrySetMenu(slot, id, out string error);
+        Refresh();
+        message.text = ok ? "오늘 메뉴에 올렸어요." : error;
     }
 }

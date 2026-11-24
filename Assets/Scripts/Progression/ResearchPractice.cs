@@ -31,6 +31,9 @@ public class ResearchPractice : MonoBehaviour
     private readonly System.Collections.Generic.List<float> scores = new System.Collections.Generic.List<float>();
     /// <summary>전용 단계 화면의 [나가기]. 연구 화면의 [닫기 · 예약 유지]와 같게 동작한다.</summary>
     public Action ExitRequested;
+    /// <summary>끝난 단계의 설명과 점수(0~5). 결과 화면이 단계별 점수를 보여 줄 때 쓴다.</summary>
+    public string[] StepTexts => steps != null ? steps.Select(s => s.text).ToArray() : new string[0];
+    public float[] StepScores => scores.ToArray();
 
     public void Begin(RectTransform parent, RecipeData data, Action<float> onFinished, Transform phaseList = null, Transform scoreCard = null)
     {
