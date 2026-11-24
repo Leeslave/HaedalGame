@@ -641,4 +641,55 @@ public class ProgressionTests
         Assert.IsTrue(RestaurantProgress.TryCompleteResearch(recipe.RecipeId, ResearchResultRules.UnlockScore, out string error), error);
         Assert.IsNotNull(ResearchResultRules.Medal(ResearchResultRules.UnlockScore));
     }
+
+    // ───────────── 염지 ─────────────
+    // 타원 재료 위를 왼쪽에서 오른쪽으로 줄마다 문지른다. speed는 1초에 움직이는 uv 거리.
+    private static (float coverage, float amount) SimulateRub(float[] rows, float speed, int passes = 1)
+    {
+        var dose = new float[40 * 40];
+        var mask = SeasonRules.EllipseMask(40, 40);
+        for (int p = 0; p < passes; p++)
+            foreach (float v in rows)
+                for (float u = .06f; u < .94f; u += speed / 60f)
+                    SeasonRules.Sprinkle(dose, 40, 40, new Vector2(u, v), 1f / 60f);
+        return (SeasonRules.Coverage(dose, mask), SeasonRules.Amount(dose, mask));
+    }
+    private static readonly float[] EvenRows = { .26f, .34f, .42f, .5f, .58f, .66f, .74f };
+
+    [Test] public void Season_EvenRubIsPerfect_TooMuchIsSalty_HalfIsLow()
+    {
+        var even = SimulateRub(EvenRows, .8f);
+        Assert.GreaterOrEqual(even.coverage, SeasonRules.TargetCoverage);
+        Assert.GreaterOrEqual(SeasonRules.LayerScore(even.coverage, even.amount), 4.5f);
+
+        var salty = SimulateRub(EvenRows, .8f, 3);
+        Assert.Greater(salty.amount, SeasonRules.AmountHigh);
+        Assert.Less(SeasonRules.LayerScore(salty.coverage, salty.amount), 2f);
+        Assert.AreEqual("짜요!", SeasonRules.AmountLabel(salty.amount, SeasonKind.Grain));
+
+        var half = SimulateRub(new[] { .5f, .58f, .66f }, .8f);
+        Assert.Less(half.coverage, .7f);
+        Assert.Less(SeasonRules.LayerScore(half.coverage, half.amount), 2f);
+    }
+
+    [Test] public void Season_ParsesSeasoningsInOrder()
+    {
+        CollectionAssert.AreEqual(new[] { "소금", "후추" }, SeasonRules.Parse("연어에 소금과 후추로 밑간하기").Select(s => s.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "밀가루", "계란", "튀김가루" }, SeasonRules.Parse("밀가루, 계란, 튀김가루 순서로 튀김옷 입히기").Select(s => s.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "된장소스" }, SeasonRules.Parse("해산물마다 된장소스를 얇게 바르기").Select(s => s.Name).ToArray());
+        Assert.AreEqual(SeasonKind.Grain, SeasonRules.Parse("고등어에 소금으로 염지하기")[0].Kind);
+        Assert.AreEqual(SeasonKind.Coat, SeasonRules.Parse("새우에 튀김가루를 묻히기")[0].Kind);
+        Assert.AreEqual("소금", SeasonRules.Parse("재료에 밑간하기")[0].Name);
+        Assert.AreEqual(1, SeasonRules.TargetIndex("새우와 가리비에 소금으로 밑간하기", new[] { "가리비", "새우" }));
+        Assert.AreEqual("을", SeasonRules.Josa("소금", "을", "를"));
+        Assert.AreEqual("를", SeasonRules.Josa("후추", "을", "를"));
+    }
+
+    [Test] public void Season_OnlyRubStepsUseTheBoard()
+    {
+        Assert.IsTrue(SeasonRules.IsRub("고등어에 소금으로 염지하기"));
+        Assert.IsTrue(SeasonRules.IsRub("문어와 소스를 버무리기"));
+        Assert.IsFalse(SeasonRules.IsRub("간장과 설탕을 섞어 양념 만들기"));
+        Assert.IsFalse(SeasonRules.IsRub("새우, 전분, 소금, 후추를 섞기"));
+    }
 }

@@ -65,16 +65,19 @@ public class ResearchPractice : MonoBehaviour
         hits = mistakes = expected = 0; transitioning = waiting = false; startButton = null; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
-        // 굽기는 팬이 보이는 전용 화면에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
-        if (Kind == "Grill" && surface.parent != null && surface.parent.parent != null)
+        // 굽기와 염지(재료에 양념 뿌리기·바르기)는 전용 화면에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
+        bool grill = Kind == "Grill", season = Kind == "Mix" && SeasonRules.IsRub(steps[phase].text);
+        if ((grill || season) && surface.parent != null && surface.parent.parent != null)
         {
             int index = phase;
             surface.gameObject.SetActive(false);
-            GrillStation.Open(surface.parent.parent, recipe, steps, phase, score => {
+            Action<float> back = score => {
                 if (this == null || index != phase) return;
                 surface.gameObject.SetActive(true);
                 CompletePhase(score);
-            }, ExitRequested);
+            };
+            if (grill) GrillStation.Open(surface.parent.parent, recipe, steps, phase, back, ExitRequested);
+            else SeasonStation.Open(surface.parent.parent, recipe, steps, phase, back, ExitRequested);
             return;
         }
         Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
