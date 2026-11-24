@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,6 +49,20 @@ public static class GrillRules
         if (doneness > .5f) return "조금만 더…\n색이 나고 있어!";
         return back ? "반대쪽도\n노릇하게 굽자." : "좋아, 껍질이\n천천히 익고 있어.";
     }
+    /// <summary>앞 단계에서 붓으로 바른 양념 색. 그사이 이미 굽거나 튀겼으면, 또는 바른 양념이 없으면 null.</summary>
+    public static Color32? Glaze(ResearchStep[] steps, int index)
+    {
+        if (steps == null) return null;
+        for (int k = Mathf.Min(index, steps.Length) - 1; k >= 0; k--)
+        {
+            string station = LabStations.StationFor(steps[k]);
+            if (station == "Grill" || station == "Fry") return null;
+            if (station != "Season") continue;
+            var brushed = SeasonRules.Parse(steps[k].text).Where(SeasonRules.UsesBrush).ToList();
+            if (brushed.Count > 0) return brushed[brushed.Count - 1].Color;
+        }
+        return null;
+    }
     /// <summary>끝난 뒤 셰프가 하는 말. 가장 아쉬운 부분을 짚어 준다.</summary>
     public static string ChefReview(float score, float front, float back, float tempRatio)
     {
@@ -73,6 +88,7 @@ public class GrillStation : LabStation
     private float temperature = GrillRules.StartTemperature, doneness, elapsed, inZone, front, flipAnim = -1f;
     private float tempSum; private int tempSamples;
     private bool back;
+    private Color rawTint = Color.white, cookedTint = Color.white;   // 앞에서 바른 양념 색
 
     public static GrillStation Open(Transform screen, RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit)
     {
@@ -95,6 +111,8 @@ public class GrillStation : LabStation
         Sprite food = DesignArt.Food(recipe), rawFood = RawFood(recipe) ?? food;
         if (food == null && recipe != null && recipe.Requirements.Count > 0) food = rawFood = DesignArt.Ingredient(recipe.Requirements[0].IngredientId);
         cooked = Fill(fishPivot, food); raw = Fill(fishPivot, rawFood);
+        var glaze = GrillRules.Glaze(steps, index);
+        if (glaze.HasValue) { rawTint = Color.Lerp(Color.white, glaze.Value, .65f); cookedTint = Color.Lerp(Color.white, glaze.Value, .3f); }
         bubbles = Art("Lab/LabBubbles", 555, 475, 600, 450);
         steam = Art("Lab/LabSteam", 630, 300, 450, 180);
         sizzle = Label(frame, "지글지글!", 66, Color.white, 1110, 360, 360, 90, true);
@@ -203,9 +221,9 @@ public class GrillStation : LabStation
 
         // 덜 익은 그림 위에 익은 그림이 서서히 나타나고, 너무 익으면 어두워진다.
         float cook = Mathf.Clamp01(doneness / GrillRules.FlipLow);
-        raw.color = new Color(1, 1, 1, 1f - cook);
+        raw.color = new Color(rawTint.r, rawTint.g, rawTint.b, 1f - cook);
         float burn = Mathf.Clamp01((doneness - GrillRules.FlipHigh) / (GrillRules.BurnAt + .3f - GrillRules.FlipHigh));
-        cooked.color = Color.Lerp(Color.white, new Color(.42f, .3f, .24f), burn);
+        cooked.color = Color.Lerp(cookedTint, new Color(.42f, .3f, .24f), burn);
 
         tempValue.text = $"{temperature:0}°C";
         DayLoopUI.SetBar(tempFill, Mathf.InverseLerp(100f, 250f, temperature));

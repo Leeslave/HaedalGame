@@ -765,6 +765,14 @@ public class ProgressionTests
     }
 
     /// <summary>재료 이름 없이 "양념을 넣고 졸이기"면 앞에서 구운 재료를 냄비에 보인다. 육수만 끓일 때는 비운다.</summary>
+    [Test] public void Grill_KeepsBrushedSauce()
+    {
+        Assert.IsTrue(GrillRules.Glaze(RecipeResearchPlan.Find(10).steps, 2).HasValue, "연어에 바른 양념이 굽기에도 보인다");
+        Assert.IsTrue(GrillRules.Glaze(RecipeResearchPlan.Find(21).steps, 3).HasValue, "된장소스를 바른 해산물");
+        Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(11).steps, 1).HasValue, "양념만 섞어 두고 가리비는 그냥 굽는다");
+        Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(17).steps, 1).HasValue, "소금·후추 밑간은 색을 입히지 않는다");
+        Assert.IsFalse(GrillRules.Glaze(RecipeResearchPlan.Find(17).steps, 2).HasValue);
+    }
     [Test] public void Heat_CarriesFoodFromEarlierSteps()
     {
         GameDatabase.TryGetRecipe(11, out var scallop);

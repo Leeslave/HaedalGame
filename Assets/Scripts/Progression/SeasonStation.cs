@@ -165,9 +165,9 @@ public static class SeasonRules
         if (coverage >= .45f) return "동그라미 친 곳에도\n골고루!";
         return "누른 채로\n쓱쓱 문질러 봐!";
     }
-    public static string ChefReview(float score, float worstCoverage, float worstAmount, SeasonKind kind)
+    public static string ChefReview(float score, float worstCoverage, float worstAmount, SeasonKind kind, bool brushed = false)
     {
-        if (score >= 4.5f) return kind == SeasonKind.Grain ? "좋아! 간이 골고루 잘 뱄어. 맛있게 구워지겠다!" : "좋아! 빈틈없이 골고루 잘 입혔어!";
+        if (score >= 4.5f) return kind == SeasonKind.Grain ? "좋아! 간이 골고루 잘 뱄어. 맛있게 구워지겠다!" : (brushed ? "좋아! 빈틈없이 골고루 잘 발랐어!" : "좋아! 빈틈없이 골고루 잘 입혔어!");
         if (worstAmount > AmountHigh) return kind == SeasonKind.Grain ? "너무 많이 뿌렸어. 짜지 않게 딱 적당히만!" : "너무 두껍게 발랐어. 얇고 고르게!";
         if (worstCoverage < TargetCoverage) return "덜 된 곳이 있어. 끝부분까지 골고루 문질러 줘.";
         return "잘했어! 조금만 더 골고루 하면 완벽해.";
@@ -326,7 +326,7 @@ public class SeasonStation : LabStation
             },
             $"{(SeasonRules.UsesBrush(first) ? "붓을" : "양념통을")} <color=#C8443A>누른 채</color>\n{targetName} 위를 문지르기\n<color=#C8443A>→</color> 골고루 <color=#1F7F8A>{SeasonRules.TargetCoverage * 100f:0}%</color> 넘기기",
             $"제한 시간 {limit:0}초 · " + (first.Kind == SeasonKind.Grain ? "너무 많이 뿌리면 짜요" : "너무 두꺼우면 감점"),
-            first.Kind == SeasonKind.Grain ? "끝부분까지\n골고루 뿌려 줘!" : "얇고 고르게\n입혀 줘!");
+            first.Kind == SeasonKind.Grain ? "끝부분까지\n골고루 뿌려 줘!" : (layers.All(SeasonRules.UsesBrush) ? "얇고 고르게\n발라 줘!" : "얇고 고르게\n입혀 줘!"));
     }
 
     private Sprite TargetSprite(RecipeData recipe, ResearchStep[] steps, string text)
@@ -446,7 +446,7 @@ public class SeasonStation : LabStation
             ? new[] { $"골고루 {coverages[0] * 100f:0}%", $"양 {SeasonRules.AmountLabel(amounts[0], layers[0].Kind)}" }
             : layers.Select((l, i) => $"{l.Name} {coverages[i] * 100f:0}%").Take(3).ToArray();
         int worst = Enumerable.Range(0, layers.Count).OrderBy(i => scores[i]).First();
-        ShowResult(score, chips, wash ? SeasonRules.WashReview(score) : SeasonRules.ChefReview(score, coverages[worst], amounts[worst], layers[worst].Kind));
+        ShowResult(score, chips, wash ? SeasonRules.WashReview(score) : SeasonRules.ChefReview(score, coverages[worst], amounts[worst], layers[worst].Kind, layers.All(SeasonRules.UsesBrush)));
         Refresh();
     }
 
