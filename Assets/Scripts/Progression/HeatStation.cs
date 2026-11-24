@@ -117,7 +117,7 @@ public class HeatStation : LabStation
     private Gauge tempGauge, progressGauge, spillGauge;
     private TMP_Text pop;
     private Button finishButton;
-    private Color liquid;
+    private Color liquid, liquidDone = new Color32(0x6E, 0x3A, 0x1C, 0xFF);
     private float temperature, progress, spill, spillPeak, elapsed, inZone;
 
     public static HeatStation Open(Transform screen, RecipeData recipe, ResearchStep[] steps, int index, Action<float> onDone, Action onExit)
@@ -133,9 +133,7 @@ public class HeatStation : LabStation
         profile = HeatRules.Profile(LabStations.StationFor(steps[index]), text);
         temperature = profile.Start;
         var items = LabItems.FromText(recipe, text);
-        var solids = items.Where(i => !i.Liquid && i.Art != null && !LabItems.IsSeasoning(i.Name)).Take(3).ToList();
-        // "물과 간장을 넣어 육수 끓이기"처럼 국물만 끓이는 단계는 재료를 띄우지 않는다.
-        if (solids.Count == 0 && !items.Any(i => i.Liquid)) solids.AddRange(LabItems.MainIngredients(recipe).Take(1));
+        var solids = PotSolids(recipe, steps, index);
         BuildStage(recipe, onDone, items.Select(i => i.Art).Where(a => a != null).Select(a => a.name.Replace("Design ", "")).Where(a => !a.StartsWith("Lab/")).ToArray());
 
         bool fry = profile.Mode == HeatMode.Fry;
@@ -149,9 +147,11 @@ public class HeatStation : LabStation
         else
         {
             Art("Lab/LabPot", 510, 260, 900, 668, true);
-            liquid = profile.Mode == HeatMode.Simmer ? new Color32(0xC9, 0x8A, 0x4E, 0xFF)
+            liquid = profile.Mode == HeatMode.Simmer && items.Any(i => i.Name == "레몬" || i.Name == "꿀") ? new Color32(0xF2, 0xC4, 0x4E, 0xFF)
+                : profile.Mode == HeatMode.Simmer ? new Color32(0xC9, 0x8A, 0x4E, 0xFF)
                 : items.Any(i => i.Name == "간장" || i.Name == "된장" || i.Name == "육수" || i.Name == "양념") ? new Color32(0xD9, 0xB7, 0x7A, 0xFF)
                 : new Color32(0xCF, 0xE9, 0xF4, 0xFF);
+            if (items.Any(i => i.Name == "레몬" || i.Name == "꿀")) liquidDone = new Color32(0xC9, 0x84, 0x2A, 0xFF); // 레몬·꿀 소스는 호박색으로
             water = Art("Lab/LabWater", 659, 337, 602, 520, true);
             water.color = liquid;
         }
@@ -213,6 +213,36 @@ public class HeatStation : LabStation
             fry ? "기름이 충분히\n달궈져야 바삭해!" : profile.Mode == HeatMode.Simmer ? "자주 들여다보면서\n천천히 졸이자!" : "끓어 넘치지\n않게 조심해!");
     }
 
+    /// <summary>냄비·튀김기에 띄울 재료(최대 3개).</summary>
+    public static List<LabItem> PotSolids(RecipeData recipe, ResearchStep[] steps, int index)
+    {
+        var items = LabItems.FromText(recipe, steps[index].text);
+        var solids = items.Where(i => !i.Liquid && i.Art != null && !LabItems.IsSeasoning(i.Name)).Take(3).ToList();
+        // "양념을 넣고 졸이기"처럼 레시피 재료 이름이 하나도 없으면 앞 단계에서 굽거나 넣은 재료를 이어서 끓인다.
+        // "레몬과 꿀을 넣고 소스 졸이기"처럼 재료를 따로 끓이는 단계는 이어받지 않는다.
+        var names = recipe != null ? recipe.Requirements.Select(r => r.IngredientName).ToList() : new List<string>();
+        if (solids.Count == 0 && !items.Any(i => names.Contains(i.Name))) solids.AddRange(CarriedSolids(recipe, steps, index));
+        // "물과 간장을 넣어 육수 끓이기"처럼 국물만 끓이는 단계는 재료를 띄우지 않는다.
+        // "레몬과 꿀을 넣고 소스 졸이기"처럼 양념만 끓이는 단계도 비워 둔다.
+        if (solids.Count == 0 && !items.Any(i => i.Liquid || names.Contains(i.Name))) solids.AddRange(LabItems.MainIngredients(recipe).Take(1));
+        return solids;
+    }
+
+    private static readonly string[] CookingStations = { "Grill", "Fry", "Add", "Boil", "Simmer", "Stir" };
+    /// <summary>앞 단계 중 불에 올렸거나 냄비에 넣은 재료(가까운 단계부터, 최대 3개).</summary>
+    public static List<LabItem> CarriedSolids(RecipeData recipe, ResearchStep[] steps, int index)
+    {
+        var found = new List<LabItem>();
+        for (int k = index - 1; k >= 0 && found.Count < 3; k--)
+        {
+            if (!CookingStations.Contains(LabStations.StationFor(steps[k]))) continue;
+            foreach (var item in LabItems.FromText(recipe, steps[k].text))
+                if (!item.Liquid && item.Art != null && !LabItems.IsSeasoning(item.Name) && found.Count < 3 && found.All(f => f.Name != item.Name))
+                    found.Add(item);
+        }
+        return found;
+    }
+
     private void Finish()
     {
         if (!running || finished) return;
@@ -263,7 +293,7 @@ public class HeatStation : LabStation
             floaterArt[i].color = Color.Lerp(Color.Lerp(Color.white, done, cook), new Color(.45f, .3f, .2f), over);
         }
         if (water != null && profile.Mode == HeatMode.Simmer)
-            water.color = Color.Lerp(liquid, new Color32(0x6E, 0x3A, 0x1C, 0xFF), Mathf.Clamp01(progress));
+            water.color = Color.Lerp(liquid, liquidDone, Mathf.Clamp01(progress));
         if (burnt.gameObject.activeSelf) burnt.color = new Color(.15f, .08f, .04f, spill * .55f);
         if (foam.gameObject.activeSelf) foam.color = new Color(1, 1, 1, spill * .8f);
 

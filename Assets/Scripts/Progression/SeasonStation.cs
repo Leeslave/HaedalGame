@@ -44,6 +44,11 @@ public static class SeasonRules
         ("소스", "Ingredient/SoySauce", SeasonKind.Coat, 0x9A5A2E),
     };
 
+    private static readonly string[] Powders = { "튀김가루", "밀가루", "전분" };
+    /// <summary>붓으로 바르는 양념(계란·양념·소스). 가루는 통을 기울여 묻히고, 소금·후추는 뿌린다.</summary>
+    public static bool UsesBrush(Seasoning s) => s != null && s.Kind == SeasonKind.Coat && !s.Wash && !Powders.Contains(s.Name);
+    public static bool IsPowder(Seasoning s) => s != null && s.Kind == SeasonKind.Coat && Powders.Contains(s.Name);
+
     /// <summary>재료에 양념을 뿌리거나 바르는 단계인지. 양념을 섞어 만드는 단계는 아니다.</summary>
     public static bool IsRub(string text) => !string.IsNullOrEmpty(text) && RubWords.Any(text.Contains);
 
@@ -197,7 +202,7 @@ public class SeasonStation : LabStation
     private const float FishX = 650f, FishY = 245f, FishSize = 620f;
     private RectTransform fishRect, shaker, ring, ringTagRect;
     private TMP_Text coverValue, amountValue, coverTitle, amountTitle, amountHint, sprinkle, guide, layerText;
-    private Image coverFill, amountFill, shakerArt;
+    private Image coverFill, amountFill, shakerArt, brushTip;
     private RectTransform coverNeedle, amountNeedle;
     private Button nextButton;
     private LabPointer pad;
@@ -273,6 +278,10 @@ public class SeasonStation : LabStation
         shakerArt = DayLoopUI.Panel(shaker, Color.white, "Art", false);
         shakerArt.preserveAspect = true; shakerArt.raycastTarget = false;
         DayLoopUI.Stretch(shakerArt.rectTransform);
+        // 붓 끝은 지금 바르는 양념 색으로 물든다.
+        brushTip = DayLoopUI.Panel(shaker, Color.white, "BrushTip", false);
+        brushTip.sprite = DesignArt.Load("Lab/LabBrushTip"); brushTip.preserveAspect = true; brushTip.raycastTarget = false;
+        DayLoopUI.Stretch(brushTip.rectTransform);
         sprinkle = Label(frame, "", 44, Color.white, 0, 0, 220, 70, true);
         Outline(sprinkle, .28f);
 
@@ -307,14 +316,15 @@ public class SeasonStation : LabStation
         string verb = first.Kind == SeasonKind.Grain ? "뿌려요" : "발라요";
         string all = string.Join(", ", layers.Select(l => l.Name));
         ShowIntro(steps, index,
-            $"도마 위 {targetName}에 {all}{SeasonRules.Josa(layers.Last().Name, "을", "를")} 골고루 {verb}. 덜 된 곳이 없게, 너무 많지도 않게!\n다 되면 오른쪽 아래 버튼을 눌러요.",
+            $"도마 위 {targetName}에 {all}{SeasonRules.Josa(layers.Last().Name, "을", "를")} {(layers.Count > 1 ? "차례로 한 겹씩" : "골고루")} {verb}. 덜 된 곳이 없게, 너무 많지도 않게!\n다 되면 오른쪽 아래 버튼을 눌러요.",
             preview => {
                 PreviewArt(preview, DesignArt.Load("Lab/LabBoard"), 20, 40, 400, 244, false);
                 PreviewArt(preview, target, 70, 20, 290, 290);
                 var jar = PreviewArt(preview, DesignArt.Load(first.Art), 330, 20, 150, 150);
                 jar.rectTransform.localEulerAngles = new Vector3(0, 0, 30);
+                if (SeasonRules.UsesBrush(first)) PreviewArt(preview, DesignArt.Load("Lab/LabBrush"), 250, 170, 230, 66, false).rectTransform.localEulerAngles = new Vector3(0, 0, 35);
             },
-            $"양념통을 <color=#C8443A>누른 채</color>\n{targetName} 위를 문지르기\n<color=#C8443A>→</color> 골고루 <color=#1F7F8A>{SeasonRules.TargetCoverage * 100f:0}%</color> 넘기기",
+            $"{(SeasonRules.UsesBrush(first) ? "붓을" : "양념통을")} <color=#C8443A>누른 채</color>\n{targetName} 위를 문지르기\n<color=#C8443A>→</color> 골고루 <color=#1F7F8A>{SeasonRules.TargetCoverage * 100f:0}%</color> 넘기기",
             $"제한 시간 {limit:0}초 · " + (first.Kind == SeasonKind.Grain ? "너무 많이 뿌리면 짜요" : "너무 두꺼우면 감점"),
             first.Kind == SeasonKind.Grain ? "끝부분까지\n골고루 뿌려 줘!" : "얇고 고르게\n입혀 줘!");
     }
@@ -322,12 +332,24 @@ public class SeasonStation : LabStation
     private Sprite TargetSprite(RecipeData recipe, ResearchStep[] steps, string text)
     {
         if (recipe == null || recipe.Requirements.Count == 0) { targetName = "재료"; return null; }
-        var names = recipe.Requirements.Select(r => r.IngredientName).ToList();
-        int index = SeasonRules.TargetIndex(text, names);
-        targetName = names[index];
+        int index = TargetFor(recipe, text);
+        targetName = recipe.Requirements[index].IngredientName;
         // 뒤에 굽는 단계가 있는 주재료라면 구이 직전 모습(손질된 살)을 보여 준다.
         if (index == 0 && steps.Any(s => s.kind == "Grill")) { var raw = RawFood(recipe); if (raw != null) return raw; }
         return DesignArt.Ingredient(recipe.Requirements[index].IngredientId) ?? RawFood(recipe) ?? DesignArt.Food(recipe);
+    }
+
+    /// <summary>
+    /// 양념을 바를 재료 번호. 단계 글에 먼저 나온 재료를 고르되, 밀가루·계란처럼 바르는 쪽 재료는 빼고
+    /// ("밀가루, 계란, 튀김가루 순서로 튀김옷 입히기"가 밀가루 포대에 바르는 화면이 됐었다), 없으면 첫 주재료.
+    /// </summary>
+    public static int TargetFor(RecipeData recipe, string text)
+    {
+        if (recipe == null || recipe.Requirements.Count == 0) return 0;
+        var targets = recipe.Requirements.Select(r => LabItems.IsSeasoning(r.IngredientName) ? null : r.IngredientName).ToList();
+        int index = SeasonRules.TargetIndex(text, targets);
+        if (targets[index] == null) index = Mathf.Max(0, targets.FindIndex(n => n != null));
+        return index;
     }
 
     // 그림의 투명하지 않은 곳만 재료 칸으로 친다. 그림 텍스처를 읽을 수 없어 작은 렌더 텍스처에 옮겨 읽는다.
@@ -371,15 +393,21 @@ public class SeasonStation : LabStation
     {
         var s = layers[layer];
         bool grain = s.Kind == SeasonKind.Grain, last = layer == layers.Count - 1;
-        shakerArt.sprite = s.Art != null ? DesignArt.Load(s.Art) : null; // 씻기(흙)는 양념통이 없다.
+        bool brush = SeasonRules.UsesBrush(s), powder = SeasonRules.IsPowder(s);
+        // 계란·양념·소스는 붓으로 바르고, 나머지는 통을 기울여 뿌린다. 씻기(흙)는 도구가 없다.
+        shakerArt.sprite = brush ? DesignArt.Load("Lab/LabBrush") : s.Art != null ? DesignArt.Load(s.Art) : null;
         shakerArt.enabled = shakerArt.sprite != null;
+        brushTip.gameObject.SetActive(brush && brushTip.sprite != null);
+        brushTip.color = new Color32(s.Color.r, s.Color.g, s.Color.b, 230);
+        shaker.sizeDelta = brush ? new Vector2(320, 92) : new Vector2(190, 190);
         coverTitle.text = wash ? "깨끗하게 씻은 정도" : grain ? "골고루 뿌린 정도" : "골고루 바른 정도";
         amountTitle.text = $"{s.Name} 양";
         amountHint.text = grain ? "너무 많이 뿌리면 짜요" : "너무 두꺼우면 감점";
-        DayLoopUI.SetButtonLabel(nextButton, wash ? "다 씻었어요" : last ? (grain ? "다 뿌렸어요" : "다 발랐어요") : $"다음: {layers[layer + 1].Name}  ▶");
+        DayLoopUI.SetButtonLabel(nextButton, wash ? "다 씻었어요" : last ? (grain ? "다 뿌렸어요" : powder ? "다 묻혔어요" : "다 발랐어요") : $"다음: {layers[layer + 1].Name}  ▶");
         if (wash) shaker.gameObject.SetActive(false);
         guide.text = wash ? $"{targetName}{SeasonRules.Josa(targetName, "을", "를")} 누른 채 박박 문질러 씻기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기"
-            : $"{s.Name}{(grain ? "통" : "")}{SeasonRules.Josa(s.Name + (grain ? "통" : ""), "을", "를")} 누른 채 {targetName} 위로 문지르기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기";
+            : brush ? $"붓을 누른 채 {targetName} 위로 {s.Name} 바르기 <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기"
+            : $"{s.Name}통을 누른 채 {targetName} 위로 문질러 {(grain ? "뿌리기" : "묻히기")} <color=#C8443A>→</color> {SeasonRules.TargetCoverage * 100f:0}% 넘기기";
         layerText.text = string.Join("   ", layers.Select((l, i) => i < layer ? $"<color=#3B8A5A>{DayLoopUI.Glyph("✓", "V")} {l.Name}</color>" : i == layer ? $"<color=#C8443A>▶ {l.Name}</color>" : $"<color=#8A7A6A>{l.Name}</color>"));
         dirty = true;
     }
@@ -430,8 +458,8 @@ public class SeasonStation : LabStation
         {
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(frame, pad.Screen, pad.Cam, out var onFrame))
             {
-                // 양념통은 손가락 오른쪽 위에서 거꾸로 기울어 손가락 자리로 쏟는다.
-                shaker.anchoredPosition = onFrame + new Vector2(85, 105);
+                // 양념통은 손가락 오른쪽 위에서 거꾸로 기울어 손가락 자리로 쏟는다. 붓은 붓끝이 손가락 자리에 닿는다.
+                shaker.anchoredPosition = onFrame + (Brushing ? new Vector2(122, 100) : new Vector2(85, 105));
                 sprinkle.rectTransform.anchoredPosition = new Vector2(onFrame.x + FrameW * .5f + 170, onFrame.y - FrameH * .5f + 150);
             }
             if (running && !finished && RectTransformUtility.ScreenPointToLocalPointInRectangle(fishRect, pad.Screen, pad.Cam, out var local))
@@ -449,8 +477,9 @@ public class SeasonStation : LabStation
         if (shaker != null)
         {
             float wiggle = rubbing ? Mathf.Sin(Time.unscaledTime * 30f) * 6f : 0f;
-            shaker.localEulerAngles = new Vector3(0, 0, (pad != null && pad.Held ? 140f : 12f) + wiggle);
-            sprinkle.text = wash ? "뽀득뽀득!" : layers[layer].Kind == SeasonKind.Grain ? "솔솔~" : "쓱쓱~";
+            bool held = pad != null && pad.Held;
+            shaker.localEulerAngles = new Vector3(0, 0, (Brushing ? (held ? 40f : 20f) : held ? 140f : 12f) + wiggle);
+            sprinkle.text = wash ? "뽀득뽀득!" : layers[layer].Kind == SeasonKind.Grain ? "솔솔~" : SeasonRules.IsPowder(layers[layer]) ? "톡톡~" : "쓱쓱~";
             sprinkle.gameObject.SetActive(rubbing);
         }
         if (running && !finished)
@@ -462,6 +491,8 @@ public class SeasonStation : LabStation
         if (dirty && redraw <= 0f) { Redraw(); redraw = .06f; dirty = false; }
         Refresh();
     }
+
+    private bool Brushing => !wash && layers != null && SeasonRules.UsesBrush(layers[layer]);
 
     // 양념 칸 값을 그림으로. 알갱이 양념은 알갱이 수가, 바르는 양념은 진하기가 양을 따라간다.
     private void Redraw()
@@ -481,7 +512,13 @@ public class SeasonStation : LabStation
                         if (Grain(dose, x, y)) pixels[p] = s.Color;
                         else if (x > 0 && y < TexSize - 1 && Grain(dose, x - 1, y + 1)) pixels[p] = Blend(pixels[p], new Color32(70, 48, 30, 255), .45f);
                     }
-                    else pixels[p] = Blend(pixels[p], s.Color, s.Wash ? Mathf.Clamp01(d * 1.8f) * .85f : Mathf.Clamp01(d * .75f) * .82f);
+                    else if (SeasonRules.IsPowder(s))
+                    {
+                        // 가루: 흰 생선 위 흰 밀가루도 보이게 옅은 막 위에 조금 어두운 알갱이를 섞는다.
+                        pixels[p] = Blend(pixels[p], s.Color, Mathf.Clamp01(d * 1.2f) * .7f);
+                        if (noise[p] < Mathf.Clamp01(d * .45f) * 255f) pixels[p] = Blend(pixels[p], Shade(s.Color, .8f), .85f);
+                    }
+                    else pixels[p] = Blend(pixels[p], s.Color, s.Wash ? Mathf.Clamp01(d * 1.8f) * .85f : Mathf.Clamp01(d * 1.3f) * .8f);
                 }
         }
         overlay.SetPixels32(pixels);
@@ -500,6 +537,7 @@ public class SeasonStation : LabStation
         float a = Mathf.Lerp(dose[y0 * GridW + x0], dose[y0 * GridW + x1], tx), b = Mathf.Lerp(dose[y1 * GridW + x0], dose[y1 * GridW + x1], tx);
         return Mathf.Lerp(a, b, ty);
     }
+    private static Color32 Shade(Color32 c, float k) => new Color32((byte)(c.r * k), (byte)(c.g * k), (byte)(c.b * k), c.a);
     private static Color32 Blend(Color32 under, Color32 over, float alpha)
     {
         if (alpha <= 0f) return under;

@@ -329,8 +329,17 @@ public abstract class LabStation : MonoBehaviour
     }
 
     // ───────────── 도우미 ─────────────
-    /// <summary>요리 그림. 아직 그림이 없는 요리는 주재료 그림으로 대신한다.</summary>
+    // 디자이너 그림이 아직 없는 요리는 기존 요리·재료 그림을 조합한 임시 그림(Food/)을 쓴다.
+    private static readonly Dictionary<string, string> MixedDishArt = new Dictionary<string, string>
+    {
+        { "가리비간장구이", "ScallopSoyGrill" }, { "광어간장찜", "FlounderSoySteam" }, { "문어초무침", "OctopusChomuchim" },
+        { "바다의진미플래터", "SeaPlatter" }, { "바지락술찜", "ClamSakeSteam" }, { "연어스테이크레몬소스", "SalmonLemon" },
+        { "해물된장구이모둠", "SeafoodDoenjangGrill" }, { "해물크림스튜", "SeafoodCreamStew" }, { "해물튀김모둠", "SeafoodTempura" },
+        { "해산물전골", "SeafoodHotpot" },
+    };
+    /// <summary>요리 그림. 디자이너 그림 → 조합한 임시 그림 → 주재료 그림 순으로 찾는다.</summary>
     public static Sprite DishArt(RecipeData recipe) => DesignArt.Food(recipe)
+        ?? (recipe != null && MixedDishArt.TryGetValue(recipe.RecipeName.Replace(" ", ""), out var file) ? DesignArt.Load("Food/" + file) : null)
         ?? (recipe != null && recipe.Requirements.Count > 0 ? DesignArt.Ingredient(recipe.Requirements[0].IngredientId) : null);
     protected static Sprite RawFood(RecipeData recipe)
     {

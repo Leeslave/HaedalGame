@@ -741,6 +741,58 @@ public class ProgressionTests
         Assert.AreEqual("Season", LabStations.StationFor(new ResearchStep { kind = "Mix", text = "고등어에 소금으로 염지하기" }));
     }
 
+    /// <summary>계란·양념·소스는 붓으로 바르고, 가루와 소금·후추는 통으로 뿌린다.</summary>
+    [Test] public void Season_BrushOnlyForWetCoats()
+    {
+        var coat = SeasonRules.Parse("밀가루, 계란, 튀김가루 순서로 튀김옷 입히기");
+        CollectionAssert.AreEqual(new[] { false, true, false }, coat.Select(SeasonRules.UsesBrush).ToArray());
+        Assert.IsTrue(SeasonRules.UsesBrush(SeasonRules.Parse("연어에 양념을 바르기")[0]));
+        Assert.IsTrue(SeasonRules.UsesBrush(SeasonRules.Parse("해산물마다 된장소스를 얇게 바르기")[0]));
+        Assert.IsFalse(SeasonRules.UsesBrush(SeasonRules.Parse("연어에 소금과 후추로 밑간하기")[0]));
+        Assert.IsFalse(SeasonRules.UsesBrush(SeasonRules.Dirt()));
+        Assert.IsTrue(SeasonRules.IsPowder(coat[0]));
+        // 튀김옷은 밀가루 포대가 아니라 생선에 입힌다.
+        GameDatabase.TryGetRecipe(12, out var cutlet);
+        var text = RecipeResearchPlan.Find(12).steps[2].text;
+        Assert.IsFalse(LabItems.IsSeasoning(cutlet.Requirements[SeasonStation.TargetFor(cutlet, text)].IngredientName), text);
+        foreach (var recipe in GameDatabase.Recipes.Recipes)
+        {
+            var plan = RecipeResearchPlan.Find(recipe.RecipeId);
+            if (plan == null) continue;
+            foreach (var step in plan.steps.Where(s => LabStations.StationFor(s) == "Season"))
+                Assert.IsFalse(LabItems.IsSeasoning(recipe.Requirements[SeasonStation.TargetFor(recipe, step.text)].IngredientName), $"{recipe.RecipeName}: {step.text}");
+        }
+    }
+
+    /// <summary>재료 이름 없이 "양념을 넣고 졸이기"면 앞에서 구운 재료를 냄비에 보인다. 육수만 끓일 때는 비운다.</summary>
+    [Test] public void Heat_CarriesFoodFromEarlierSteps()
+    {
+        GameDatabase.TryGetRecipe(11, out var scallop);
+        var plan = RecipeResearchPlan.Find(11).steps;
+        CollectionAssert.AreEqual(new[] { "가리비" }, HeatStation.PotSolids(scallop, plan, 2).Select(i => i.Name).ToArray());
+        GameDatabase.TryGetRecipe(17, out var salmon);
+        Assert.IsFalse(HeatStation.PotSolids(salmon, RecipeResearchPlan.Find(17).steps, 3).Any(i => i.Name == "연어"), "레몬소스는 따로 졸인다");
+        GameDatabase.TryGetRecipe(14, out var mackerel);
+        CollectionAssert.AreEqual(new[] { "고등어" }, HeatStation.PotSolids(mackerel, RecipeResearchPlan.Find(14).steps, 3).Select(i => i.Name).ToArray());
+        GameDatabase.TryGetRecipe(13, out var soup);
+        Assert.IsEmpty(HeatStation.PotSolids(soup, RecipeResearchPlan.Find(13).steps, 3), "육수만 끓일 때는 재료를 띄우지 않는다");
+        GameDatabase.TryGetRecipe(21, out var mix);
+        var carried = HeatStation.CarriedSolids(mix, RecipeResearchPlan.Find(21).steps, 5).Select(i => i.Name).ToList();
+        CollectionAssert.AreEquivalent(new[] { "가리비", "새우", "연어" }, carried);
+    }
+
+    /// <summary>연구할 수 있는 모든 요리에 완성 그림이 있다(주재료 그림으로 대신하지 않는다).</summary>
+    [Test] public void LabStations_EveryResearchDishHasArt()
+    {
+        foreach (var recipe in GameDatabase.Recipes.Recipes)
+        {
+            if (RecipeResearchPlan.Find(recipe.RecipeId) == null) continue;
+            var art = LabStation.DishArt(recipe);
+            Assert.IsNotNull(art, recipe.RecipeName);
+            StringAssert.Contains("Food/", art.name, recipe.RecipeName);
+        }
+    }
+
     /// <summary>모든 연구 레시피의 모든 단계 화면을 실제로 만들어 본다. (씻기 화면이 양념통 그림 없이 멈춘 일이 있었다)</summary>
     [Test] public void LabStations_EveryStepScreenBuildsWithoutErrors()
     {
