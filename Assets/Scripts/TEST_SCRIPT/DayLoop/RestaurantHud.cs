@@ -7,12 +7,12 @@ using UnityEngine.UI;
 /// <summary>
 /// [TEST 하루 루프] 영업 HUD. (HUD-01, HUD-02, CLOSE-01) 캐주얼 시안: 글자를 줄이고 네 귀퉁이에 카드만 둔다.
 /// 카드 겉모양은 플레이씬 시안(Figma 386:73)의 나무 테·끼운 종이 조각을 쓴다. (DesignArt.WoodCard, Resources/UIDesign/Art/PlayHud)
-///  - 왼쪽 위: 해 아이콘 · n일차 · 단계 칩 · 방문 게이지(마감 중에는 남은 손님)
+///  - 왼쪽 위: 영업 팻말(시안 386:318). n일차 · 방문 손님 a / b(마감 중에는 남은 손님) · 오른쪽에 대기 중 n명(마감 중에는 입장 마감)
 ///  - 왼쪽 위 일차 카드 아래: 직원별 상태 카드(시안 386:263). 초상 · 역할 · 상태 칩(대기 중/조리 중/서빙 중/잠듦) · 체력 막대,
 ///    잠들면 카드가 분홍빛이 되고 체력 막대 자리에 [깨우기]. 직원이 많으면 카드 줄을 줄여 메뉴판에 닿지 않게 한다.
 ///  - 오른쪽 위: 보유 골드 · 평점 · 배속(눌러서 x1 → x2 → x3) · 일시정지
-///  - 왼쪽 아래: 오늘의 메뉴. 음식 그림에 남은 인분 스티커 (2인분 이하 코랄, 0이면 품절). 5개부터 작게 두 줄.
-///    제목 옆 버튼으로 접으면 메뉴 슬롯 앞 2개만 남고, 숨은 메뉴가 2인분 이하면 버튼이 코랄색으로 바뀐다.
+///  - 왼쪽 아래: 탁상 메뉴판(시안 386:328). 요리 하나씩 이름 · 남은 인분 · 그림을 보여 주고, 메뉴가 여럿이면 몇 초마다(또는 누르면) 넘긴다.
+///    아래 점이 메뉴 수와 지금 보이는 메뉴를 알려 주고, 2인분 이하 메뉴는 코랄, 품절은 회색 점이 된다.
 ///  - 오른쪽 아래: 왼쪽으로 펼치는 주문 서랍 (받은 주문 · 조리 중, OrderDrawer)
 /// 가운데는 월드(주방·식탁·밧줄·손님 길·웨이팅석)를 가리지 않게 비운다. 자리 대기 인원은 웨이팅석 아래 팻말(SeaRestaurantLayout)이 보여 준다.
 /// 평점: 오늘 받은 평가의 평균(평가 전에는 식당 평점). 평가가 들어올 때마다 강조 이펙트와 점수 팝업.
@@ -20,14 +20,15 @@ using UnityEngine.UI;
 public class RestaurantHud : MonoBehaviour
 {
     private const float Margin = 24f;                   // 화면 끝과 귀퉁이 카드 사이
-    private const int MenuPerRow = 4;                   // 왼쪽 아래 메뉴 카드가 웨이팅석까지 뻗지 않게 한 줄에 이만큼만 둔다
-    private const float MenuSize = 84f;                 // 메뉴 MenuPerRow개까지의 음식 크기
-    private const float MenuSizeCompact = 64f;          // 메뉴가 두 줄일 때의 음식 크기 (카드가 손님 길에 닿지 않게)
-    private const int MenuCollapsedCount = 2;           // 메뉴 카드를 접었을 때 남기는 메뉴 수 (슬롯 앞에서부터)
+    private const float MenuFlipSeconds = 4f;           // 탁상 메뉴판이 다음 요리로 넘어가는 간격
 
-    // 대기석이 두 줄이면 메뉴 카드를 접어 통로를 더 보여 준다. 직접 펼치거나 접은 선택은 다음 날에도 유지한다.
-    private static bool? s_menuExpanded;
-    private static bool MenuExpanded => s_menuExpanded ?? (SeaRestaurantLayout.Instance?.HasSecondWaitingRow != true);
+    // 시안 크기 (영업 팻말 386:318, 탁상 메뉴판 386:328)
+    private static readonly Vector2 SignSize = new Vector2(464f, 120f);
+    private static readonly Vector2 MenuCardSize = new Vector2(360f, 144f);
+    private static readonly Color SignSoft = new Color32(0x51, 0x3A, 0x2B, 0xFF);   // 대기 중
+    private static readonly Color SignCount = new Color32(0x38, 0x25, 0x1B, 0xFF);  // 2명
+    private static readonly Color MenuSoft = new Color32(0x7D, 0x66, 0x54, 0xFF);   // 오늘의 메뉴 (보조 글씨)
+    private static readonly Color DotIdle = new Color32(0xD8, 0xC2, 0x9F, 0xFF);
 
     // 캐주얼 시안 색 (Kit 색보다 밝은 파스텔)
     private static readonly Color Mint = new Color32(0x7F, 0xD1, 0xA0, 0xFF);
@@ -71,30 +72,23 @@ public class RestaurantHud : MonoBehaviour
     private static readonly Color WakeTipLine = new Color32(0x4A, 0x2E, 0x1B, 0xFF);
     private static readonly Color WakeTipDrop = new Color32(0x3A, 0x27, 0x18, 0xBF);
 
-    private class MenuSlot
-    {
-        public RecipeData recipe;
-        public Image bubble;
-        public Image icon;
-        public Image badge;
-        public TMP_Text count;
-    }
-
     private DayCycleController _day;
     private Canvas _canvas;
     private RectTransform _bar;
-    private TMP_Text _dayText, _phaseText, _progressText, _goldText, _ratingText;
-    private Image _phaseChip, _progressFill;
+    private TMP_Text _dayText, _progressText, _waitLabel, _waitCount, _goldText, _ratingText;
+    private TMP_Text _menuName, _menuPortions;
+    private Image _menuCard, _menuFood;
+    private RectTransform _menuDots;
+    private readonly List<Image> _menuDot = new List<Image>();
+    private int _menuIndex;
+    private float _menuNextFlip;
     private RectTransform _ratingBlock;
     private RestaurantRatingManager _rating;
     private float _lastRatingAverage;
     private int _lastRatingCount;
     private Coroutine _ratingPunch;
     private Button _speedButton, _pauseButton;
-    private RectTransform _menuRow, _staffRow, _wakeLayer;
-    private GridLayoutGroup _menuGrid;
-    private Button _menuToggle;
-    private Image _menuChevron;
+    private RectTransform _staffRow, _wakeLayer;
     private OrderDrawer _orderDrawer;
     private RectTransform _topRight;
 
@@ -103,7 +97,6 @@ public class RestaurantHud : MonoBehaviour
     public bool IsShowing => _bar != null && _bar.gameObject.activeInHierarchy;
     public float TopRightWidth => _topRight != null ? _topRight.rect.width : 0f;           // 오른쪽 위 알약 줄의 폭
     public float TopRightBottom => _topRight != null ? Margin + _topRight.rect.height : 0f; // 오른쪽 위 알약 줄 아랫변 (화면 위에서)
-    private readonly List<MenuSlot> _menu = new List<MenuSlot>();
     private readonly List<StaffSlot> _staff = new List<StaffSlot>();
     private readonly List<int> _menuIds = new List<int>();
     private readonly List<RecipeData> _menuRecipes = new List<RecipeData>();
@@ -150,26 +143,6 @@ public class RestaurantHud : MonoBehaviour
         _bar.gameObject.SetActive(operating);
         if (!operating) SetPauseOverlay(false);
 
-        switch (phase)
-        {
-            case DayLoopPhase.Open:
-                _phaseText.text = "영업 중";
-                _phaseChip.color = Leaf;
-                break;
-            case DayLoopPhase.Closing:
-                _phaseText.text = "입장 마감";
-                _phaseChip.color = Peach;
-                break;
-            case DayLoopPhase.Settlement:
-                _phaseText.text = "영업 종료";
-                _phaseChip.color = Muted;
-                break;
-            default:
-                _phaseText.text = "준비 중";
-                _phaseChip.color = Muted;
-                break;
-        }
-
         _nextStaffScan = 0f;
         Refresh();
     }
@@ -195,11 +168,17 @@ public class RestaurantHud : MonoBehaviour
         CustomerSpawner spawner = _day.Spawner;
         int planned = spawner != null ? spawner.PlannedCount : 0;
         int visited = _day.Ledger.Visited;
-        if (_day.Phase == DayLoopPhase.Closing)
-            _progressText.text = $"남은 손님 {(spawner != null ? spawner.ActiveCustomerCount : 0)}";
+        bool closing = _day.Phase == DayLoopPhase.Closing;
+        if (closing)
+            _progressText.text = $"남은 손님  {(spawner != null ? spawner.ActiveCustomerCount : 0)}";
         else
-            _progressText.text = planned > 0 ? $"손님 {visited}/{planned}" : $"손님 {visited}";
-        DayLoopUI.SetBar(_progressFill, planned > 0 ? (float)visited / planned : 0f);
+            _progressText.text = planned > 0 ? $"방문 손님  {visited} / {planned}" : $"방문 손님  {visited}";
+
+        // 팻말 오른쪽: 자리를 기다리는 손님 수. 마감 중에는 더 받지 않는다는 표시로 바꾼다.
+        SeatManager seats = RestaurantGameManager.instance != null ? RestaurantGameManager.instance.seatManager : null;
+        _waitLabel.text = closing ? "입장 마감" : "대기 중";
+        _waitLabel.color = closing ? WakeRed : SignSoft;
+        _waitCount.text = closing ? "" : $"{(seats != null ? seats.WaitingCount : 0)}명";
 
         int gold = _day.CurrentGold;
         _goldText.text = gold >= 0 ? gold.ToString("N0") : "-";
@@ -218,7 +197,7 @@ public class RestaurantHud : MonoBehaviour
     {
         if (!GameSession.IsActive) return;
 
-        // 메뉴 구성이 바뀌었을 때만 다시 만든다.
+        // 메뉴 구성이 바뀌었을 때만 점을 다시 만든다.
         List<int> slots = GameSession.Current.menuSlots;
         bool changed = slots.Count != _menuIds.Count;
         for (int i = 0; !changed && i < slots.Count; i++) changed = slots[i] != _menuIds[i];
@@ -226,78 +205,69 @@ public class RestaurantHud : MonoBehaviour
         {
             _menuIds.Clear();
             _menuIds.AddRange(slots);
-            foreach (MenuSlot slot in _menu) Destroy(slot.bubble.gameObject);
-            _menu.Clear();
-            _menuRow.parent.gameObject.SetActive(true);
             _menuRecipes.Clear();
             foreach (int id in slots)
                 if (GameDatabase.TryGetRecipe(id, out RecipeData recipe)) _menuRecipes.Add(recipe);
-            int shown = MenuExpanded ? _menuRecipes.Count : Mathf.Min(MenuCollapsedCount, _menuRecipes.Count);
-            bool twoRows = shown > MenuPerRow;
-            float size = twoRows ? MenuSizeCompact : MenuSize;
-            _menuGrid.cellSize = new Vector2(size, size);
-            _menuGrid.spacing = new Vector2(twoRows ? 10f : 18f, 14f);
-            _menuGrid.constraintCount = Mathf.Clamp(shown, 1, MenuPerRow);
-            for (int i = 0; i < shown; i++) _menu.Add(CreateMenuSlot(_menuRecipes[i], size));
-            _menuRow.parent.gameObject.SetActive(_menu.Count > 0);
-        }
 
-        foreach (MenuSlot slot in _menu)
-        {
-            int count = Portions(slot.recipe);
-            bool soldOut = count <= 0, low = !soldOut && count <= 2;
-            slot.count.text = soldOut ? "품절" : count.ToString();
-            slot.count.color = soldOut || low ? Color.white : DayLoopUI.Kit.Ink;
-            slot.badge.color = soldOut ? Muted : low ? Peach : Color.white;
-            slot.badge.rectTransform.sizeDelta = new Vector2(soldOut ? 58 : count >= 10 ? 44 : 36, 36);
-            slot.bubble.color = soldOut ? new Color32(0xED, 0xE3, 0xD3, 0xFF) : Color.white;
-            if (slot.icon != null) slot.icon.color = soldOut ? new Color(0.6f, 0.6f, 0.6f, 0.55f) : Color.white;
+            foreach (Image dot in _menuDot) Destroy(dot.gameObject);
+            _menuDot.Clear();
+            if (_menuRecipes.Count > 1)
+                for (int i = 0; i < _menuRecipes.Count; i++) _menuDot.Add(Disc(_menuDots, DotIdle, 8f, "Dot"));
+            _menuCard.gameObject.SetActive(_menuRecipes.Count > 0);
+            _menuIndex = 0;
+            ShowMenuDish();
         }
-        RefreshMenuToggle();
+        if (_menuRecipes.Count == 0) return;
+
+        if (_menuRecipes.Count > 1 && Time.unscaledTime >= _menuNextFlip) NextMenuDish();
+        RefreshMenuPortions();
+    }
+
+    // 메뉴판을 누르면 바로 다음 요리로 넘긴다.
+    private void NextMenuDish()
+    {
+        if (_menuRecipes.Count == 0) return;
+        _menuIndex = (_menuIndex + 1) % _menuRecipes.Count;
+        ShowMenuDish();
+        RefreshMenuPortions();
+    }
+
+    // 지금 요리의 이름·그림을 바꿔 끼운다. 그림이 없는 요리는 첫 글자 접시(DayLoopUI.FoodIcon)로 대신한다.
+    private void ShowMenuDish()
+    {
+        _menuNextFlip = Time.unscaledTime + MenuFlipSeconds;
+        if (_menuFood != null) Destroy(_menuFood.gameObject);
+        _menuFood = null;
+        if (_menuRecipes.Count == 0) return;
+
+        RecipeData recipe = _menuRecipes[_menuIndex];
+        _menuName.text = recipe.RecipeName;
+        _menuFood = DayLoopUI.FoodIcon(_menuCard.transform, recipe, 120f, "Dish");
+        _menuFood.GetComponent<LayoutElement>().ignoreLayout = true;
+        DayLoopUI.Place(_menuFood.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(217f, -8f), new Vector2(120f, 120f));
+        _menuFood.transform.SetSiblingIndex(2);   // 메뉴지·받침목 바로 위, 글자보다 뒤
+    }
+
+    private void RefreshMenuPortions()
+    {
+        RecipeData current = _menuRecipes[_menuIndex];
+        int count = Portions(current);
+        bool soldOut = count <= 0, low = !soldOut && count <= 2;
+        _menuPortions.text = soldOut ? "품절" : $"{count}인분";
+        _menuPortions.color = soldOut ? Muted : low ? WakeRed : DayLoopUI.Kit.Ink;
+        if (_menuFood != null) _menuFood.color = soldOut ? new Color(0.6f, 0.6f, 0.6f, 0.55f) : Color.white;
+
+        for (int i = 0; i < _menuDot.Count; i++)
+        {
+            int left = Portions(_menuRecipes[i]);
+            _menuDot[i].color = left <= 0 ? Muted : left <= 2 ? Peach : i == _menuIndex ? DayLoopUI.Kit.Ink : DotIdle;
+            _menuDot[i].rectTransform.localScale = Vector3.one * (i == _menuIndex ? 1.25f : 1f);
+        }
     }
 
     private static int Portions(RecipeData recipe)
     {
         return IngredientInventoryService.Instance != null ? IngredientInventoryService.Instance.CraftableCount(recipe) : 0;
-    }
-
-    // 접기 버튼: 숨길 메뉴가 있을 때만 보인다. 접혀 있으면 숨은 메뉴 수를 보여 주고, 그중 2인분 이하가 있으면 코랄색으로 알린다.
-    private void RefreshMenuToggle()
-    {
-        bool usable = _menuRecipes.Count > MenuCollapsedCount;
-        if (_menuToggle.gameObject.activeSelf != usable) _menuToggle.gameObject.SetActive(usable);
-        if (!usable) return;
-
-        int hidden = _menuRecipes.Count - _menu.Count;
-        bool alert = false;
-        for (int i = _menu.Count; i < _menuRecipes.Count; i++) alert |= Portions(_menuRecipes[i]) <= 2;
-        DayLoopUI.SetButtonLabel(_menuToggle, hidden > 0 ? "+" + hidden : "접기");
-        DayLoopUI.SetButtonColors(_menuToggle, alert ? Peach : DayLoopUI.Kit.WoodLight, Color.white);
-        _menuChevron.rectTransform.localEulerAngles = new Vector3(0f, 0f, hidden > 0 ? 0f : 180f);   // 접혀 있으면 → (펼치기), 펼쳐 있으면 ← (접기)
-    }
-
-    private void ToggleMenu()
-    {
-        s_menuExpanded = !MenuExpanded;
-        _menuIds.Clear();   // 메뉴 구성이 바뀐 것으로 쳐서 칸을 다시 만든다
-        RefreshMenu();
-    }
-
-    private MenuSlot CreateMenuSlot(RecipeData recipe, float size)
-    {
-        MenuSlot slot = new MenuSlot { recipe = recipe };
-        slot.bubble = Disc(_menuRow, Color.white, size, recipe.RecipeName);
-        DayLoopUI.Chunky(slot.bubble, 3f, 0f);
-        float iconSize = Mathf.Round(size * 60f / MenuSize);
-        slot.icon = DayLoopUI.FoodIcon(slot.bubble.transform, recipe, iconSize);
-        DayLoopUI.Place(slot.icon.rectTransform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(iconSize, iconSize));
-
-        slot.badge = Pill(slot.bubble.transform, Color.white, "Count", 3f, 0f);
-        DayLoopUI.Place(slot.badge.rectTransform, new Vector2(1f, 1f), new Vector2(.5f, .5f), new Vector2(-8, -8), new Vector2(36, 36));
-        if (size < MenuSize) slot.badge.rectTransform.localScale = Vector3.one * .75f;   // 작은 음식 칸에서 그림을 덮지 않게
-        slot.count = Jua(DayLoopUI.Text(slot.badge.transform, "", 18, DayLoopUI.Kit.Ink, TextAlignmentOptions.Center));
-        DayLoopUI.Stretch(slot.count.rectTransform);
-        return slot;
     }
 
     // ───── 직원 ─────
@@ -644,35 +614,30 @@ public class RestaurantHud : MonoBehaviour
         BuildStaffTray(group);
     }
 
-    // 해 · n일차 · 단계 칩 / 방문 게이지
+    // 시안 386:318 영업 팻말. 좌표는 시안 그대로(카드 왼쪽 위 기준, 아래로 +). 제목 글씨는 주아체, 작은 글씨는 본문체.
     private void BuildToday(Transform parent)
     {
-        // 시안의 영업 팻말: 나무 테에 끼운 종이와 황동 핀
         Image today = DesignArt.WoodCard(parent, "Today", "PlayHud/SignPaper", pins: true);
-        HorizontalLayoutGroup row = DayLoopUI.Horizontal(today, 0, 14);
-        row.padding = new RectOffset(22, 34, 18, 20);
+        DayLoopUI.Layout(today, preferredWidth: SignSize.x, preferredHeight: SignSize.y);
+        today.rectTransform.sizeDelta = SignSize;
 
-        Image sun = Disc(today.transform, Butter, 52, "Sun");
-        DayLoopUI.Chunky(sun, 3f, 0f);
+        _dayText = SignText(today.transform, 29f, DayLoopUI.Kit.Ink, true, new Vector2(39f, 28f), "Day");
+        _progressText = SignText(today.transform, 16f, DayLoopUI.Kit.Ink, false, new Vector2(39f, 65f), "Visits");
+        _waitLabel = SignText(today.transform, 16f, SignSoft, false, new Vector2(SignSize.x / 2f + 127f, 74.5f), "WaitLabel", true);
+        _waitCount = SignText(today.transform, 24f, SignCount, true, new Vector2(SignSize.x / 2f + 184f, 74.5f), "WaitCount", true);
+    }
 
-        RectTransform info = DayLoopUI.Rect("Info", today.transform);
-        DayLoopUI.Vertical(info, 0, 6).childForceExpandWidth = false;
-
-        RectTransform heading = DayLoopUI.Rect("DayAndPhase", info);
-        DayLoopUI.Horizontal(heading, 0, 10);
-        _dayText = Jua(DayLoopUI.Text(heading, "", 30, DayLoopUI.Kit.Ink));
-        _dayText.textWrappingMode = TextWrappingModes.NoWrap;
-        _phaseChip = Pill(heading, Leaf, "Phase", 0f, 0f);
-        DayLoopUI.Horizontal(_phaseChip, 0, 0, TextAnchor.MiddleCenter).padding = new RectOffset(14, 14, 3, 3);
-        _phaseText = Jua(DayLoopUI.Text(_phaseChip.transform, "", 18, Color.white, TextAlignmentOptions.Center));
-        _phaseText.textWrappingMode = TextWrappingModes.NoWrap;
-
-        RectTransform progress = DayLoopUI.Rect("Visits", info);
-        DayLoopUI.Horizontal(progress, 0, 10);
-        _progressFill = Gauge(progress, "Bar");
-        DayLoopUI.Layout(_progressFill.transform.parent, preferredWidth: 150, preferredHeight: 12);
-        _progressText = Jua(DayLoopUI.Text(progress, "", 19, DayLoopUI.Kit.InkSoft));
-        _progressText.textWrappingMode = TextWrappingModes.NoWrap;
+    /// <summary>카드 안 한 줄 글자. center면 position이 글자 가운데, 아니면 왼쪽 위 (시안 좌표).</summary>
+    private static TMP_Text SignText(Transform parent, float size, Color color, bool heading, Vector2 position, string name, bool center = false)
+    {
+        TMP_Text text = DayLoopUI.Text(parent, "", size, color, center ? TextAlignmentOptions.Center : TextAlignmentOptions.TopLeft, FontStyles.Normal, name);
+        if (heading) Jua(text);
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.raycastTarget = false;
+        Vector2 pivot = center ? new Vector2(.5f, .5f) : new Vector2(0f, 1f);
+        DayLoopUI.Place(text.rectTransform, new Vector2(0f, 1f), pivot, new Vector2(position.x, -position.y), new Vector2(center ? 120f : 260f, Mathf.Ceil(size * 1.4f)));
+        return text;
     }
 
     // 오른쪽 위: 골드 · 평점 · 배속 · 일시정지
@@ -719,42 +684,34 @@ public class RestaurantHud : MonoBehaviour
         DayLoopUI.Layout(_pauseButton, preferredWidth: 64, preferredHeight: 64);
     }
 
-    // 왼쪽 아래: 오늘의 메뉴
+    // 왼쪽 아래: 시안 386:328 탁상 메뉴판. 나무 테에 메뉴지를 끼우고 아래에 받침목, 오른쪽에 요리 그림.
     private void BuildMenuTray()
     {
-        // 시안의 탁상 메뉴판: 나무 테에 메뉴지를 끼우고 아래에 받침목
-        Image tray = DesignArt.WoodCard(_bar, "TodayMenu", "PlayHud/MenuCardPaper", paperBottom: 16f, pins: true);
-        DayLoopUI.Place(tray.rectTransform, Vector2.zero, Vector2.zero, new Vector2(Margin, Margin), Vector2.zero);
-        DayLoopUI.Vertical(tray, 0, 10).padding = new RectOffset(28, 30, 18, 30);
-        Fit(tray);
-        Image stand = DesignArt.Backing(tray.transform, "PlayHud/MenuCardStand", 0f, 0f, 0f, 0f, "Stand");
+        _menuCard = DesignArt.WoodCard(_bar, "TodayMenu", "PlayHud/MenuCardPaper", paperBottom: 16f, pins: true);
+        DayLoopUI.Place(_menuCard.rectTransform, Vector2.zero, Vector2.zero, new Vector2(Margin, Margin), MenuCardSize);
+        Image stand = DesignArt.Backing(_menuCard.transform, "PlayHud/MenuCardStand", 0f, 0f, 0f, 0f, "Stand");
         stand.transform.SetSiblingIndex(1);   // 종이 위, 내용 아래
         stand.rectTransform.anchorMax = new Vector2(1f, 0f);   // 아래 끝에 높이 16으로 깐다
         stand.rectTransform.offsetMax = new Vector2(0f, 16f);
 
-        RectTransform header = DayLoopUI.Rect("Header", tray.transform);
-        DayLoopUI.Horizontal(header, 0, 10);
-        DayLoopUI.Layout(header, preferredHeight: 28);
-        TMP_Text title = Jua(DayLoopUI.Text(header, "오늘의 메뉴", 18, DayLoopUI.Kit.InkSoft));
-        title.textWrappingMode = TextWrappingModes.NoWrap;
-        DayLoopUI.Layout(title, flexibleWidth: 1);
+        // 메뉴가 여럿이면 눌러서 넘긴다. 나무 테 전체가 누르는 자리.
+        _menuCard.raycastTarget = true;
+        _menuCard.gameObject.AddComponent<Button>().onClick.AddListener(NextMenuDish);
 
-        _menuToggle = DayLoopUI.KitButton(header, "", DayLoopUI.Kit.WoodLight, Color.white, 15, ToggleMenu, "MenuToggle");
-        Round(_menuToggle.image);
-        DayLoopUI.Layout(_menuToggle, preferredWidth: 64, preferredHeight: 28);
-        TMP_Text toggleText = Jua(_menuToggle.GetComponentInChildren<TMP_Text>());
-        toggleText.textWrappingMode = TextWrappingModes.NoWrap;
-        DayLoopUI.Stretch(toggleText.rectTransform, 6f, 0f, 24f, 0f);
-        _menuChevron = DayLoopUI.Panel(_menuToggle.transform, Color.white, "Chevron", false);
-        _menuChevron.sprite = DesignArt.Load("IconChevronRight");
-        _menuChevron.preserveAspect = true;
-        _menuChevron.raycastTarget = false;
-        DayLoopUI.Place(_menuChevron.rectTransform, new Vector2(1f, .5f), new Vector2(.5f, .5f), new Vector2(-14f, 0f), new Vector2(14f, 14f));
+        SignText(_menuCard.transform, 20f, MenuSoft, true, new Vector2(30f, 22f), "Title").text = "오늘의 메뉴";
+        _menuName = SignText(_menuCard.transform, 29f, DayLoopUI.Kit.Ink, true, new Vector2(30f, 48f), "Dish Name");
+        _menuName.rectTransform.sizeDelta = new Vector2(190f, _menuName.rectTransform.sizeDelta.y);   // 그림(217~)에 닿지 않게
+        _menuName.enableAutoSizing = true;
+        _menuName.fontSizeMin = 18f;
+        _menuName.fontSizeMax = 29f;
+        _menuPortions = SignText(_menuCard.transform, 24f, DayLoopUI.Kit.Ink, false, new Vector2(31f, 85f), "Portions");
+        _menuPortions.rectTransform.sizeDelta = new Vector2(100f, _menuPortions.rectTransform.sizeDelta.y);
 
-        _menuRow = DayLoopUI.Rect("Dishes", tray.transform);
-        _menuGrid = _menuRow.gameObject.AddComponent<GridLayoutGroup>();
-        _menuGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        tray.gameObject.SetActive(false);
+        // 메뉴 수 점: 인분 글자 오른쪽, 그림 왼쪽
+        _menuDots = DayLoopUI.Rect("Dots", _menuCard.transform);
+        DayLoopUI.Horizontal(_menuDots, 0, 5, TextAnchor.MiddleLeft).childForceExpandWidth = false;
+        DayLoopUI.Place(_menuDots, new Vector2(0f, 1f), new Vector2(0f, .5f), new Vector2(132f, -100f), new Vector2(84f, 12f));
+        _menuCard.gameObject.SetActive(false);
     }
 
     // 왼쪽 위 일차 카드 아래: 직원별 상태 카드 줄. 위쪽 모서리를 기준으로 줄일 수 있게 pivot을 왼쪽 위에 둔다.
