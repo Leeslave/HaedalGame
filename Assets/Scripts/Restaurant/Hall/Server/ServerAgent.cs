@@ -27,7 +27,7 @@ public class ServerAgent : PartTimerAgent
     {
         get
         {
-            if (IsSleeping) return "잠듦 · 눌러서 깨우기";
+            if (IsSleeping) return $"잠듦 {Mathf.CeilToInt(SleepRemaining)}초 · 눌러서 깨우기";
             switch (state)
             {
                 case ServerState.ApproachingCustomerForOrder: return "주문 받으러 이동";

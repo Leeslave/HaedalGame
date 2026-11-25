@@ -120,6 +120,7 @@ public class DayCycleController : MonoBehaviour
     private void OnDestroy()
     {
         Ledger.Stop();
+        CustomerAgent.OnAnySoldOut -= HandleSoldOut;
         if (_rgm != null)
         {
             _rgm.OnOperationStarted -= HandleOperationStarted;
@@ -202,6 +203,18 @@ public class DayCycleController : MonoBehaviour
         chefs = FindObjectsByType<ChefAgent>(FindObjectsSortMode.None).Length;
     }
 
+    /// <summary>오늘 메뉴 중 재료가 없어 품절인 메뉴 이름. (재료 창고가 없으면 전부 품절로 본다)</summary>
+    public List<string> SoldOutMenus()
+    {
+        var names = new List<string>();
+        var menu = MenuManager.Instance;
+        if (menu == null) return names;
+        var inventory = IngredientInventoryService.Instance;
+        foreach (var food in menu.DailyFoods)
+            if (food != null && (inventory == null || inventory.CraftableCount(food) < 1)) names.Add(food.RecipeName);
+        return names;
+    }
+
     /// <summary>실제로 영업할 수 없는 조건만 이유를 돌려준다. 영업 가능하면 null.</summary>
     public string GetStartBlockReason()
     {
@@ -211,10 +224,10 @@ public class DayCycleController : MonoBehaviour
             return "오늘의 메뉴가 없어요. 섬의 메뉴판에서 메뉴를 등록해 주세요.";
 
         foreach (var food in menu.DailyFoods)
-        {
-            if (GameSession.IsActive && !CookwareRules.CanCook(GameSession.Current, food)) return "메뉴에 필요한 도구 또는 도구 강화가 부족해요.";
-            if (IngredientInventoryService.Instance == null || IngredientInventoryService.Instance.CraftableCount(food) < 1) return "메뉴 재료가 부족해요.";
-        }
+            if (GameSession.IsActive && !CookwareRules.CanCook(GameSession.Current, food)) return $"'{food.RecipeName}'에 필요한 도구 또는 도구 강화가 부족해요.";
+        // QA #15: 재료가 없는 메뉴는 품절로 두고 영업한다. 손님은 남은 메뉴에서만 주문한다. 모든 메뉴의 재료가 없을 때만 막는다.
+        if (SoldOutMenus().Count >= menu.DailyFoods.Count)
+            return "오늘의 메뉴를 만들 재료가 하나도 없어요. 상점에서 재료를 사 주세요.";
         if (ChefManager.Instance != null)
         {
             bool anyCookable = false;
@@ -260,9 +273,23 @@ public class DayCycleController : MonoBehaviour
         HideLegacyOperationCanvas();
 
         Ledger.Begin(CurrentGold);
+        _soldOutToasted = false;
+        CustomerAgent.OnAnySoldOut -= HandleSoldOut;
+        CustomerAgent.OnAnySoldOut += HandleSoldOut;
         GameFlow.SetPhase(GamePhase.Operation);
         SetPhase(DayLoopPhase.Open);
-        Toast($"{_openDay}일차 영업을 시작해요!");
+        var soldOut = SoldOutMenus();
+        Toast(soldOut.Count == 0 ? $"{_openDay}일차 영업을 시작해요!"
+            : $"{_openDay}일차 영업을 시작해요! 재료가 없어 오늘 품절: {string.Join(", ", soldOut)}");
+    }
+
+    private bool _soldOutToasted;
+    // 재료가 떨어져 손님이 그냥 돌아가기 시작하면 한 번 알린다.
+    private void HandleSoldOut(CustomerAgent customer)
+    {
+        if (_soldOutToasted || Phase == DayLoopPhase.Preparation) return;
+        _soldOutToasted = true;
+        Toast("메뉴 재료가 떨어졌어요! 손님이 주문을 못 하고 돌아가요.");
     }
 
     private void HandleEntryClosed()
@@ -322,6 +349,17 @@ public class DayCycleController : MonoBehaviour
         Ledger.Stop();
         int day = _openDay > 0 ? _openDay : Day;
         _record = Ledger.BuildRecord(day, CurrentGold);
+        // QA: 아침에 산 재료값은 CurrencyManager를 거치지 않아 지출이 0G로 나왔다. 영업 밖 거래를 더하고,
+        // 시작 골드도 장보기 전으로 되돌려 골드 변화와 순이익이 맞게 한다.
+        if (GameSession.IsActive && GameSession.Current.progression.moneyDay == day)
+        {
+            var p = GameSession.Current.progression;
+            _record.prepExpense = p.daySpent;
+            _record.expense += p.daySpent;
+            _record.otherIncome += p.dayEarned;
+            _record.netProfit = _record.revenue + _record.otherIncome - _record.expense;
+            _record.goldAtOpen += p.daySpent - p.dayEarned;
+        }
 
         RestaurantRatingManager rating = RestaurantRatingManager.Instance;
         if (rating != null)
@@ -329,6 +367,7 @@ public class DayCycleController : MonoBehaviour
             _record.previousRating = rating.RestaurantRating;
             _record.todayRating = rating.TodayAverage;
             _record.ratingCount = rating.TodayScoreCount;
+            _record.litterLeft = RestaurantLitter.Count;
             rating.CommitTodayRating(day);   // 같은 날은 한 번만 확정된다
             _record.totalRating = rating.RestaurantRating;
             _record.seedRatingIncluded = rating.HasSeedRating;

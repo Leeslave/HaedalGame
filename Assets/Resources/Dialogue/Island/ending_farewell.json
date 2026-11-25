@@ -1,0 +1,74 @@
+{
+  "id": "island_ending_farewell",
+  "backgroundStyle": "SeasideDay",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "fairy",
+      "name": "요정",
+      "color": "#9FE0A0",
+      "side": "Right"
+    },
+    {
+      "id": "dolphin",
+      "name": "돌고래 셰프",
+      "color": "#8EC5FF",
+      "side": "Right"
+    },
+    {
+      "id": "engineer",
+      "name": "왕국 엔지니어",
+      "color": "#E8C27F",
+      "side": "Right"
+    },
+    {
+      "id": "farmer",
+      "name": "곡물 섬 농부",
+      "color": "#F2D16B",
+      "side": "Right"
+    },
+    {
+      "id": "rancher",
+      "name": "목장 장인",
+      "color": "#F5E6C8",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "마침내 배가 완성됐다. 떠나는 날 아침, 선착장이 북적였다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "요정과 돌고래 셰프, 왕국의 엔지니어, 곡물 섬 농부와 목장 장인까지. 그동안 만난 얼굴들이 모두 배웅을 나왔다."
+    },
+    {
+      "text": "그런데 해달만 보이지 않았다."
+    },
+    {
+      "text": "…늦었지. 이거, 퇴직 기념이야.",
+      "speaker": "haedal",
+      "backgroundStyle": "SeasideDusk",
+      "transition": "Fade"
+    },
+    {
+      "text": "작은 상자 안에는 섬마다 받은 작은 기념품과 짧은 편지가 들어 있었다."
+    },
+    {
+      "text": "'다시 요리하게 해 줘서 고마웠어. 언제든 돌아와도 돼. 네 자리는 비워 둘게.'"
+    },
+    {
+      "text": "돛이 바람을 가득 머금었다. 나는 섬에서 보낸 날들을 떠올리며 바다로 나아갔다."
+    }
+  ]
+}

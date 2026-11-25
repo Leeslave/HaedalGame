@@ -5,7 +5,8 @@ using UnityEngine.Playables;
 /// <summary>
 /// 새 게임 시작 연출. 실제 재생 완료 이벤트로 끝을 판단한다. (시간을 재서 추정하지 않는다)
 ///  1) PlayableDirector가 연결되어 있으면 Timeline 재생 → stopped 이벤트
-///  2) 없으면 대화 시스템으로 임시 인트로 스크립트 재생 → 재생 완료 콜백
+///  2) 없으면 만화 인트로(ComicIntro, 흰 종이에 한 컷씩) → 마지막 컷을 넘기면 완료 콜백
+///  3) 만화 그림도 없으면 대화 시스템으로 임시 인트로 스크립트 재생 → 재생 완료 콜백
 /// 스킵을 넣게 되면 Skip()을 호출하면 된다. 완료 처리는 같은 경로로 한 번만 실행된다.
 /// </summary>
 public class IntroController : MonoBehaviour
@@ -22,6 +23,7 @@ public class IntroController : MonoBehaviour
     private Action _onFinished;
     private bool _playing;
     private bool _finished;
+    private ComicIntro _comic;
 
     public bool IsPlaying => _playing;
 
@@ -54,6 +56,10 @@ public class IntroController : MonoBehaviour
             return;
         }
 
+        _comic = ComicIntro.TryPlay(Finish);
+        if (_comic != null)
+            return;
+
         if (DialogueManager.Instance != null && DialogueManager.Instance.PlayFromResources(_fallbackDialoguePath, Finish))
             return;
 
@@ -69,6 +75,12 @@ public class IntroController : MonoBehaviour
         if (_director != null)
         {
             _director.Stop(); // stopped 이벤트로 Finish가 호출된다.
+            return;
+        }
+
+        if (_comic != null)
+        {
+            _comic.Skip(); // 닫히면서 Finish가 호출된다.
             return;
         }
 
@@ -105,6 +117,7 @@ public class IntroController : MonoBehaviour
 
         _finished = true;
         _playing = false;
+        _comic = null;
 
         if (_director != null)
             _director.stopped -= HandleDirectorStopped;

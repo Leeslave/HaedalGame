@@ -1,0 +1,44 @@
+{
+  "id": "island_fairy_done",
+  "backgroundStyle": "SeasideDusk",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "fairy",
+      "name": "요정",
+      "color": "#9FE0A0",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "요정은 그릇을 깨끗이 비우고 만족스럽게 웃었다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "좋아, 숲의 버섯이랑 과일은 내가 책임질게. 친구 가게니까!",
+      "speaker": "fairy"
+    },
+    {
+      "text": "그런데 배를 만들 목재 말인데… 숲의 큰 나무는 쉽게 내줄 수가 없어.",
+      "speaker": "fairy"
+    },
+    {
+      "text": "요정은 해달 쪽을 힐끗 보더니 서둘러 말을 돌렸다."
+    },
+    {
+      "text": "…됐어. 그 얘긴 나중에 해.",
+      "speaker": "haedal"
+    }
+  ]
+}

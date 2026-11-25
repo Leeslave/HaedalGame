@@ -320,7 +320,7 @@ public class SeaTableSlots : MonoBehaviour
             int used = PlacedTable.Active.Sum(t => t.tableData.chairTiles.Length);
             if (used + seats > RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel))
             {
-                DayCycleController.Instance?.Toast("현재 식당의 좌석 한도를 초과했어요.");
+                DayCycleController.Instance?.Toast("좌석 한도를 넘어요. 대장간에서 식당을 증축하면 한도가 늘어요.");
                 return;
             }
             TableSaveLoadManager.Instance?.RememberEdit();

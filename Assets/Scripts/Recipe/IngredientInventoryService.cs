@@ -7,7 +7,6 @@ public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
 {
     [SerializeField] private List<Ingredient> _initialIngredients = new List<Ingredient>();
     private readonly List<IngredientGradeEntry> _stacks = new List<IngredientGradeEntry>();
-    private readonly Dictionary<int, int> _dailyGrades = new Dictionary<int, int>();
     private readonly Dictionary<int, Ingredient> _metadata = new Dictionary<int, Ingredient>();
     public static IngredientInventoryService Instance { get; private set; }
     public event Action OnChanged;
@@ -23,14 +22,8 @@ public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
     public static bool IsUnlimited(int id) => GameDatabase.Recipes != null && GameDatabase.Recipes.TryGetIngredientById(id, out var item) && item.IsBasicSeasoning;
     public int GetCount(int id) => IsUnlimited(id) ? 999999 : _stacks.Where(s => s.ingredientId == id).Sum(s => s.amount);
     public int HighestGrade(int id) => _stacks.Where(s => s.ingredientId == id && s.amount > 0).Select(s => s.grade).DefaultIfEmpty(0).Max();
-    public int ActiveGrade(int id) => _dailyGrades.TryGetValue(id, out var grade) ? grade : HighestGrade(id);
-    public int UsableCount(int id) => IsUnlimited(id) ? 999999 : _stacks.Where(s => s.ingredientId == id && s.grade == ActiveGrade(id)).Sum(s => s.amount);
-    public void BeginOperation()
-    {
-        _dailyGrades.Clear();
-        foreach (var s in _stacks) _dailyGrades[s.ingredientId] = HighestGrade(s.ingredientId);
-    }
-    public void EndOperation() => _dailyGrades.Clear();
+    /// <summary>등급과 상관없이 쓸 수 있는 개수. 높은 등급부터 쓰고, 떨어지면 낮은 등급으로 넘어간다.</summary>
+    public int UsableCount(int id) => GetCount(id);
     public Dictionary<int, int> GetIngrdients() => _stacks.Select(s => s.ingredientId).Distinct().ToDictionary(id => id, GetCount);
     public List<Ingredient> GetIngredientList() => GetIngrdients().Select(p => new Ingredient(p.Key, p.Value,
         _metadata.TryGetValue(p.Key, out var m) ? m.Source : "", _metadata.TryGetValue(p.Key, out m) ? m.AcquiredTime : 0)).ToList();
@@ -52,11 +45,19 @@ public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
     public void AddSilently(int id, int amount) => AddStack(id, 0, amount);
     public void SetCount(int id, int amount) { _stacks.RemoveAll(s => s.ingredientId == id); AddStack(id, 0, amount); NotifyChanged(); }
     public bool HasEnough(int id, int amount) => amount <= 0 || UsableCount(id) >= amount;
-    public bool ConsumeSilently(int id, int amount)
+    public bool ConsumeSilently(int id, int amount) => ConsumeHighestFirst(id, amount, out _);
+    /// <summary>높은 등급 묶음부터 차감한다. gradeSum은 쓴 재료 등급의 합(품질 계산용).</summary>
+    private bool ConsumeHighestFirst(int id, int amount, out int gradeSum)
     {
+        gradeSum = 0;
         if (amount <= 0 || IsUnlimited(id)) return true;
         if (!HasEnough(id, amount)) return false;
-        _stacks.Find(s => s.ingredientId == id && s.grade == ActiveGrade(id)).amount -= amount;
+        foreach (var stack in _stacks.Where(s => s.ingredientId == id && s.amount > 0).OrderByDescending(s => s.grade).ToList())
+        {
+            int used = Mathf.Min(amount, stack.amount);
+            stack.amount -= used; amount -= used; gradeSum += stack.grade * used;
+            if (amount == 0) break;
+        }
         return true;
     }
     public bool Consume(int id, int amount) { if (!ConsumeSilently(id, amount)) return false; NotifyChanged(); return true; }
@@ -75,8 +76,8 @@ public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
         var needs = recipe.Requirements.GroupBy(r => r.IngredientId).Select(g => new { Id = g.Key, Amount = g.Sum(r => r.Amount) }).ToArray();
         foreach (var req in needs)
         {
-            if (!IsUnlimited(req.Id)) { sum += ActiveGrade(req.Id) * req.Amount; count += req.Amount; }
-            ConsumeSilently(req.Id, req.Amount);
+            ConsumeHighestFirst(req.Id, req.Amount, out int gradeSum);
+            if (!IsUnlimited(req.Id)) { sum += gradeSum; count += req.Amount; }
         }
         quality = count > 0 ? Mathf.FloorToInt(sum / count) : 0;
         NotifyChanged(); return true;
@@ -103,7 +104,7 @@ public class IngredientInventoryService : MonoBehaviour, ISaveParticipant
     }
     public void RestoreState(GameSaveData data)
     {
-        _stacks.Clear(); _metadata.Clear(); _dailyGrades.Clear();
+        _stacks.Clear(); _metadata.Clear();
         if (data.progression.ingredientGrades.Count > 0)
             foreach (var s in data.progression.ingredientGrades) AddStack(s.ingredientId, s.grade, s.amount);
         else foreach (var s in data.ingredients) AddStack(s.ingredientId, 0, s.amount, s.source);

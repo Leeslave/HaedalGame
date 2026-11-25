@@ -19,6 +19,9 @@ public class ResearchPractice : MonoBehaviour
     private int phase, hits, mistakes, expected;
     private float total, started, lastHit, value;
     private bool transitioning;
+    // QA #6·#24: 게이지 단계는 [시작]을 누르기 전까지 멈춰 있다. 안내를 읽는 동안 게이지가 지나가 버리지 않게 한다.
+    private bool waiting;
+    private GameObject startButton;
     private Image fill;
     private ResearchStep[] steps;
     private string Kind => steps[phase].kind;
@@ -26,6 +29,11 @@ public class ResearchPractice : MonoBehaviour
     private float temperature = .5f, heat = .5f, heatScore, heatElapsed;
     private TMP_Text heatLabel;
     private readonly System.Collections.Generic.List<float> scores = new System.Collections.Generic.List<float>();
+    /// <summary>전용 단계 화면의 [나가기]. 연구 화면의 [닫기 · 예약 유지]와 같게 동작한다.</summary>
+    public Action ExitRequested;
+    /// <summary>끝난 단계의 설명과 점수(0~5). 결과 화면이 단계별 점수를 보여 줄 때 쓴다.</summary>
+    public string[] StepTexts => steps != null ? steps.Select(s => s.text).ToArray() : new string[0];
+    public float[] StepScores => scores.ToArray();
 
     public void Begin(RectTransform parent, RecipeData data, Action<float> onFinished, Transform phaseList = null, Transform scoreCard = null)
     {
@@ -46,7 +54,7 @@ public class ResearchPractice : MonoBehaviour
     }
     private Button Button(string text, Vector2 position, Action action)
     {
-        var button = DayLoopUI.KitButton(surface, text, DayLoopUI.Kit.Sea, Color.white, 26, () => { if (!transitioning) action(); });
+        var button = DayLoopUI.KitButton(surface, text, DayLoopUI.Kit.Sea, Color.white, 26, () => { if (!transitioning && !waiting) action(); });
         position.x *= .72f;
         DayLoopUI.Place((RectTransform)button.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), position, new Vector2(173, 70));
         return button;
@@ -54,10 +62,23 @@ public class ResearchPractice : MonoBehaviour
     private void ShowPhase()
     {
         foreach (Transform child in surface) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
-        hits = mistakes = expected = 0; transitioning = false; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
+        hits = mistakes = expected = 0; transitioning = waiting = false; startButton = null; fill = null; value = 0; heatLabel = null; heatElapsed = heatScore = 0; temperature = heat = .5f;
         started = Time.unscaledTime; lastHit = -100;
         Steps();
-        Label($"{StepLabel(steps[phase].kind)} · {phase + 1}/{steps.Length}", -24, 39);
+        // 단계마다 전용 화면(굽기·염지·손질·끓이기 등)에서 한다. 연구 화면 전체를 덮고, 끝나면 점수만 돌려받는다.
+        if (LabStations.StationFor(steps[phase]) != null && surface.parent != null && surface.parent.parent != null)
+        {
+            int index = phase;
+            surface.gameObject.SetActive(false);
+            Action<float> back = score => {
+                if (this == null || index != phase) return;
+                surface.gameObject.SetActive(true);
+                CompletePhase(score);
+            };
+            if (LabStations.TryOpen(surface.parent.parent, recipe, steps, phase, back, ExitRequested)) return;
+            surface.gameObject.SetActive(true);
+        }
+        Label($"{StepLabel(steps[phase])} · {phase + 1}/{steps.Length}", -24, 39);
         Label(steps[phase].text, -80, 24);
         instruction = Label("", -125, 21);
         instruction.color = DayLoopUI.Kit.WoodLight;
@@ -114,10 +135,17 @@ public class ResearchPractice : MonoBehaviour
                 break;
             case 4:
                 instruction.text = Kind == "Grill" ? "앞면과 뒷면을 각각 초록 구간에서 뒤집고 꺼내세요." :
-                    Kind == "Fry" ? "기름 온도를 초록 구간에 유지하고 8초 이상 튀기세요." :
+                    Kind == "Fry" ? "기름 온도를 초록 구간에 유지하고 8초 이상 튀기세요. 초록 구간에 머문 시간 비율이 점수예요." :
                     Kind == "Simmer" ? "소스 농도가 초록 구간에 도달하면 꺼내세요." :
-                    Kind == "Stir" ? "젓기 버튼을 일정한 간격으로 눌러 8번 저으세요." : "물의 양을 맞추고 끓는 온도를 8초 이상 유지하세요.";
+                    Kind == "Stir" ? "젓기 버튼을 일정한 간격으로 눌러 8번 저으세요." : "물의 양을 맞추고 끓는 온도를 8초 이상 유지하세요. 초록 구간에 머문 시간 비율이 점수예요.";
                 Gauge();
+                waiting = true;
+                var start = DayLoopUI.KitButton(surface, "준비됐으면 시작", DayLoopUI.Kit.Awning, Color.white, 26, () => {
+                    waiting = false; started = lastHit = Time.unscaledTime;
+                    if (startButton != null) { startButton.SetActive(false); Destroy(startButton); }
+                });
+                DayLoopUI.Place((RectTransform)start.transform, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(300, 76));
+                startButton = start.gameObject;
                 if (Kind == "Stir")
                 {
                     Button("젓기", new Vector2(0, -90), () => {
@@ -143,7 +171,11 @@ public class ResearchPractice : MonoBehaviour
                     Button("불 높이기", new Vector2(0, -90), () => heat = Mathf.Clamp01(heat + .15f));
                     Button("꺼내기", new Vector2(280, -90), () => FinishPhase(heatElapsed < 8 ? 0 : 5 * heatScore / Mathf.Max(1, heatElapsed)));
                     if (Kind == "Boil" || Kind == "Add")
-                        Button("물 맞추기", new Vector2(0, 0), () => { temperature = .5f; heat = .5f; });
+                    {
+                        // QA #24: 예전에는 누를 때마다 온도·화력이 정답으로 돌아가 버튼만 연타해도 5점이었다. 한 번만 쓸 수 있고 물 온도만 맞춘다.
+                        Button water = null;
+                        water = Button("물 맞추기", new Vector2(0, -175), () => { temperature = .5f; water.interactable = false; });
+                    }
                 }
                 break;
             case 5:
@@ -176,7 +208,27 @@ public class ResearchPractice : MonoBehaviour
     }
 
     // 단계 종류를 진행 표시용 짧은 이름으로 바꾼다.
-    private static string StepLabel(string kind)
+    /// <summary>단계 이름. 섞기 중 재료에 양념을 뿌리거나 바르는 단계는 하는 일로 부른다.</summary>
+    public static string StepLabel(ResearchStep step)
+    {
+        if (step == null) return "단계";
+        if (step.kind == "Mix" && SeasonRules.IsRub(step.text))
+        {
+            string t = step.text;
+            return t.Contains("염지") ? "염지" : t.Contains("밑간") ? "밑간" : t.Contains("튀김옷") || t.Contains("묻히") ? "튀김옷"
+                : t.Contains("버무리") ? "버무리기" : "바르기";
+        }
+        // 전용 화면이 다른 단계: "해산물을 볶기"(넣기)는 볶기, "소스 졸이기"(젓기)는 졸이기, 반죽 빚기는 빚기.
+        switch (LabStations.StationFor(step))
+        {
+            case "Stir" when (step.text ?? "").Contains("볶"): return "볶기";
+            case "Simmer" when step.kind != "Simmer": return "졸이기";
+            case "Shape": return "빚기";
+            case "Season" when step.kind == "Add": return "바르기";
+        }
+        return StepLabel(step.kind);
+    }
+    public static string StepLabel(string kind)
     {
         switch (kind)
         {
@@ -206,7 +258,7 @@ public class ResearchPractice : MonoBehaviour
                 bool done = i < scores.Count, current = i == phase;
                 var item = DayLoopUI.Card(stepRail, done ? DayLoopUI.Kit.Kelp : current ? DayLoopUI.Kit.Awning : DayLoopUI.Kit.Sand, "Step" + i, 4.5f, 6);
                 DayLoopUI.Layout(item, preferredHeight: current ? 84 : 63);
-                var label = DayLoopUI.Text(item.transform, $"{i + 1}  {StepLabel(steps[i].kind)}\n<size=70%>{(done ? scores[i].ToString("0.0") + "점" : current ? "지금 단계" : "대기 중")}</size>", 26,
+                var label = DayLoopUI.Text(item.transform, $"{i + 1}  {StepLabel(steps[i])}\n<size=70%>{(done ? scores[i].ToString("0.0") + "점" : current ? "지금 단계" : "대기 중")}</size>", 26,
                     current || done ? Color.white : DayLoopUI.Kit.InkSoft, style: FontStyles.Bold);
                 DayLoopUI.Stretch(label.rectTransform, 16, 8, 16, 8);
             }
@@ -214,7 +266,7 @@ public class ResearchPractice : MonoBehaviour
             {
                 foreach (Transform child in scorePanel) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
                 ScoreLabel("지금까지 평균", 30, 40);
-                ScoreLabel(scores.Count > 0 ? scores.Average().ToString("0.0") + " / 5" : "— / 5", 72, 90);
+                ScoreLabel(scores.Count > 0 ? scores.Average().ToString("0.00") + " / 5" : "— / 5", 72, 90);
                 var gauge = DayLoopUI.Bar(scorePanel, scores.Count > 0 ? scores.Average() / 5 : 0, DayLoopUI.Kit.Kelp);
                 DayLoopUI.Layout(gauge.transform.parent, preferredHeight: 21);
                 ScoreLabel("평균 4점 이상이면 메뉴가 해금돼요.", 19.5f, 42);
@@ -244,7 +296,7 @@ public class ResearchPractice : MonoBehaviour
             DayLoopUI.Layout(dot, preferredHeight: 42);
             var number = DayLoopUI.Text(dot.transform, done ? DayLoopUI.Glyph("✓", "V") : (i + 1).ToString(), 21, done || current ? Color.white : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
             DayLoopUI.Stretch(number.rectTransform);
-            var stepName = DayLoopUI.Text(step, StepLabel(steps[i].kind), 20, current ? DayLoopUI.Kit.WarnInk : done ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
+            var stepName = DayLoopUI.Text(step, StepLabel(steps[i]), 20, current ? DayLoopUI.Kit.WarnInk : done ? DayLoopUI.Kit.Ink : DayLoopUI.Kit.InkSoft, TextAlignmentOptions.Center, FontStyles.Bold);
             stepName.rectTransform.sizeDelta = new Vector2(140, 24);
             if (done)
             {
@@ -253,7 +305,7 @@ public class ResearchPractice : MonoBehaviour
             }
         }
         if (scores.Count == 0) return;
-        var summary = DayLoopUI.Chip(surface, $"지금까지 평균 {average:0.0} / 5 · 4점 이상 해금", average >= 4f ? DayLoopUI.Kit.GoodTint : DayLoopUI.Kit.Sand, average >= 4f ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, 17, "Average");
+        var summary = DayLoopUI.Chip(surface, $"지금까지 평균 {average:0.00} / 5 · 4점 이상 해금", average >= 4f ? DayLoopUI.Kit.GoodTint : DayLoopUI.Kit.Sand, average >= 4f ? DayLoopUI.Kit.GoodInk : DayLoopUI.Kit.Ink, 17, "Average");
         var summaryRect = (RectTransform)summary.transform.parent;
         var fit = summaryRect.gameObject.AddComponent<ContentSizeFitter>();
         fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -268,7 +320,7 @@ public class ResearchPractice : MonoBehaviour
     public static float TimingScore(float position) => Mathf.Clamp(5 - Mathf.Max(0, Mathf.Abs(position - .5f) - .1f) * 12.5f, 0, 5);
     private void Update()
     {
-        if (transitioning || fill == null) return;
+        if (transitioning || waiting || fill == null) return;
         if (Mode == 4)
         {
             if (Kind == "Grill" || Kind == "Simmer") value = Mathf.Clamp01((Time.unscaledTime - started) * (Kind == "Grill" ? .25f : .1f));
@@ -285,6 +337,13 @@ public class ResearchPractice : MonoBehaviour
         }
         fill.rectTransform.anchorMin = fill.rectTransform.anchorMax = new Vector2(value, .5f);
         fill.rectTransform.anchoredPosition = Vector2.zero;
+    }
+    // 전용 화면(굽기)이 결과와 [다음 단계]를 이미 보여 줬으므로 점수만 넣고 바로 다음으로 간다.
+    private void CompletePhase(float score)
+    {
+        total += score; scores.Add(score);
+        if (++phase < steps.Length) ShowPhase();
+        else { var callback = finished; finished = null; callback?.Invoke(total / steps.Length); Destroy(this); }
     }
     private void FinishPhase(float score)
     {

@@ -69,8 +69,9 @@ public class GameTutorial : MonoBehaviour
 
     private Scene _scene;
     private Canvas _canvas;
-    private RectTransform _root, _frame, _bubble;
+    private RectTransform _root, _frame, _arrow, _bubble;
     private readonly Image[] _dims = new Image[4];
+    private Image _dimCorners; // 네모난 구멍의 네 모서리 중 둥근 테두리 바깥을 어둡게 채운다.
     private TMP_Text _bubbleTitle, _bubbleBody, _bubbleChip;
     private Button _bubbleAction, _skip;
     private Lesson _lesson;                                           // 진행 중인 안내
@@ -264,11 +265,29 @@ public class GameTutorial : MonoBehaviour
 
     private Step ExpansionStep()
     {
-        if (!OnIsland || GameSession.Current.day < 8) return Step.None;
+        if (!OnIsland || !ExpansionGuideNeeded(GameSession.Current)) return Step.None;
         return RestaurantManagementUI.OpenTab == "대장간" ? Step.ExpandLevel : Step.ExpandForge;
     }
+    /// <summary>
+    /// 8일차 증축 안내는 아직 한 번도 증축하지 않았을 때만 띄운다.
+    /// 예전에는 이미 Lv.3인데도 "대장간에서 식당 레벨을 올릴 수 있어요"라고 안내했다.
+    /// </summary>
+    public static bool ExpansionGuideNeeded(GameSaveData s) =>
+        s.day >= 8 && s.restaurantLevel <= 1 && s.progression.pendingRestaurantLevel == 0;
 
     private static int DaysToWage(GameSaveData s) => (7 - s.day % 7) % 7;
+    /// <summary>
+    /// 테이블 안내의 좌석 한 줄. 1레벨은 한도까지 놓고 시작하므로, 꽉 찼으면 증축해야 늘어난다고 말한다.
+    /// </summary>
+    public static string SeatRoomText(GameSaveData s)
+    {
+        int limit = RestaurantRules.SeatLimit(s.restaurantLevel);
+        int seats = RestaurantManagementUI.PlacedTableSeats(s).Sum();
+        if (seats < limit) return $"좌석은 식당 레벨마다 한도가 있어요. 지금 {seats}석이라 {limit - seats}석 더 놓을 수 있어요.";
+        return s.restaurantLevel >= RestaurantRules.MaxLevel
+            ? $"지금 최대 {limit}석이 다 찼어요."
+            : $"지금 최대 {limit}석이 다 찼어요. 대장간에서 식당을 증축하면 {RestaurantRules.SeatLimit(s.restaurantLevel + 1)}석까지 늘어요.";
+    }
 
     /// <summary>말풍선 머리의 단계 표시. (번호, 전체 단계 수)</summary>
     private static (int number, int total) Position(Step step) => step switch
@@ -370,7 +389,7 @@ public class GameTutorial : MonoBehaviour
                 return MapOrAsk("재료 채우기", need, "상점", "상점 열기", "상점");
 
             case Step.RestockBuy:
-                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누를 때마다 1개씩 장바구니에 담겨요. 하나만 담아도 돼요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
+                return Target("재료 사기", "오늘 메뉴에 필요한 재료만 모아 뒀어요.\n재료 카드를 누르면 수량 창이 떠요. 개수를 정해 담고, 하나만 담아도 돼요. 다 담았으면 오른쪽 아래 [사기]를 눌러요.",
                     Find("Restaurant management", "ContentFrame"), "shop");
 
             case Step.RestockDone:
@@ -394,7 +413,7 @@ public class GameTutorial : MonoBehaviour
             case Step.RatingExplain:
             {
                 float threshold = RatingWarningUI.Threshold(GameSession.Current.restaurantLevel);
-                var rating = Acknowledge(Target("평점과 폐업", $"식당 평점은 최근 7일 영업 평점의 평균이에요. 평점이 {DayLoopUI.Rating(threshold)}보다 낮아지면 식당이 문을 닫아요.\n좋은 등급 재료로 만든 음식과 손님이 좋아하는 메뉴가 평점을 올리고, 식당에 쓰레기가 남으면 그날 평점이 깎여요.",
+                var rating = Acknowledge(Target("평점과 폐업", $"식당 평점은 최근 7일 영업 평점의 평균이에요. 평점이 {DayLoopUI.Rating(threshold)}보다 낮아지면 식당이 문을 닫아요.\n좋은 등급 재료로 만든 음식과 손님이 좋아하는 메뉴가 평점을 올려요. 손님이 너무 오래 기다리다 돌아가면 1점을 남기고, 식당에 쓰레기가 남으면 그날 평점이 깎여요.",
                     Find("[DayLoop] Settlement", "Stat 식당 평점")), "알겠어요", () => Finish(Lesson.Rating));
                 if (rating == null) return null;
                 var calm = rating.Value; calm.soft = true;   // 결산은 읽을 거리가 많아 막지 않는다
@@ -441,7 +460,7 @@ public class GameTutorial : MonoBehaviour
 
             case Step.GrowthFurniture:
                 if (RestaurantManagementUI.OpenTab == "가구")
-                    return Explain("테이블 늘리기", $"테이블을 사서 [놓으러 가기]를 누르면 식당에 놓을 수 있어요.\n좌석은 식당 레벨마다 한도가 있어요. 지금은 최대 {RestaurantRules.SeatLimit(GameSession.Current.restaurantLevel)}석이에요.",
+                    return Explain("테이블 늘리기", $"테이블을 사서 [놓으러 가기]를 누르면 식당에 놓을 수 있어요.\n{SeatRoomText(GameSession.Current)}",
                         "알겠어요", () => Finish(Lesson.Growth));
                 return Ask("테이블 늘리기", "자리가 늘면 한 번에 더 많은 손님을 받을 수 있어요.", "가구 보기", () => RestaurantManagementUI.OpenSection("가구"));
 
@@ -569,11 +588,21 @@ public class GameTutorial : MonoBehaviour
             _dims[i] = DayLoopUI.Panel(_root, new Color(0.05f, 0.08f, 0.10f, 0.62f), "Dim", false);
             Corner(_dims[i].rectTransform);
         }
+        _dimCorners = DayLoopUI.Panel(_root, new Color(0.05f, 0.08f, 0.10f, 0.62f), "DimCorners", false);
+        _dimCorners.sprite = CornerMaskSprite; _dimCorners.type = Image.Type.Sliced; _dimCorners.raycastTarget = false;
+        Corner(_dimCorners.rectTransform);
 
         var ring = DayLoopUI.Panel(_root, DayLoopUI.Kit.Coin, "Focus");
         ring.sprite = RingSprite; ring.raycastTarget = false;
         _frame = ring.rectTransform;
         Corner(_frame);
+        // 짚은 곳 위(위가 모자라면 아래)에서 까딱이는 화살표. 고리만으로는 눈에 덜 띈다.
+        var arrow = ReferenceTitleView.Picture(_root, "IconChevronDown");
+        arrow.color = DayLoopUI.Kit.Coin; arrow.preserveAspect = true;
+        arrow.gameObject.AddComponent<Outline>().effectColor = DayLoopUI.Kit.Line;
+        _arrow = arrow.rectTransform;
+        _arrow.anchorMin = _arrow.anchorMax = Vector2.zero; _arrow.pivot = new Vector2(.5f, .5f);
+        _arrow.sizeDelta = new Vector2(56, 56);
 
         var bubble = DayLoopUI.Card(_root, DayLoopUI.Kit.Sail, "Bubble", 4f, 6f);
         bubble.GetComponent<Outline>().effectColor = DayLoopUI.Kit.Line;
@@ -637,19 +666,30 @@ public class GameTutorial : MonoBehaviour
             _nextLookup = 0f;
         }
 
+        // 어둡게 할 구멍은 둥근 테두리의 바깥선까지. 네 장은 그 네모 바깥을, 모서리 판은 네모 안의 둥근 모서리 바깥을 덮는다.
+        float pulse = 6f + Mathf.Sin(Time.unscaledTime * 5f) * 4f;
+        Rect lit = hasHole ? new Rect(hole.xMin - pulse, hole.yMin - pulse, hole.width + pulse * 2, hole.height + pulse * 2) : hole;
         float alpha = _hint.soft ? 0f : 1f;
-        foreach (var dim in _dims) dim.color = new Color(0.05f, 0.08f, 0.10f, 0.62f * alpha);
-        SetRect(_dims[0], 0, 0, size.x, hole.yMin);
-        SetRect(_dims[1], 0, hole.yMax, size.x, size.y);
-        SetRect(_dims[2], 0, hole.yMin, hole.xMin, hole.yMax);
-        SetRect(_dims[3], hole.xMax, hole.yMin, size.x, hole.yMax);
+        var dimColor = new Color(0.05f, 0.08f, 0.10f, 0.62f * alpha);
+        foreach (var dim in _dims) dim.color = dimColor;
+        SetRect(_dims[0], 0, 0, size.x, lit.yMin);
+        SetRect(_dims[1], 0, lit.yMax, size.x, size.y);
+        SetRect(_dims[2], 0, lit.yMin, lit.xMin, lit.yMax);
+        SetRect(_dims[3], lit.xMax, lit.yMin, size.x, lit.yMax);
+        _dimCorners.gameObject.SetActive(hasHole);
+        _dimCorners.color = dimColor;
+        SetRect(_dimCorners, lit.xMin, lit.yMin, lit.xMax, lit.yMax);
 
         _frame.gameObject.SetActive(hasHole);
+        _arrow.gameObject.SetActive(hasHole && hole.width < size.x * .5f);
         if (hasHole)
         {
-            float pulse = 6f + Mathf.Sin(Time.unscaledTime * 5f) * 4f;
-            _frame.anchoredPosition = new Vector2(hole.xMin - pulse, hole.yMin - pulse);
-            _frame.sizeDelta = new Vector2(hole.width + pulse * 2, hole.height + pulse * 2);
+            _frame.anchoredPosition = lit.position;
+            _frame.sizeDelta = lit.size;
+            float bob = Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f)) * 12f;
+            bool above = hole.yMax + 80f < size.y;
+            _arrow.localEulerAngles = new Vector3(0, 0, above ? 0f : 180f);
+            _arrow.anchoredPosition = new Vector2(hole.center.x, above ? hole.yMax + 44f + bob : hole.yMin - 44f - bob);
         }
 
         if (_bubbleAction.gameObject.activeSelf) _bubbleAction.interactable = _actionEnabled == null || _actionEnabled();
@@ -767,10 +807,46 @@ public class GameTutorial : MonoBehaviour
 
     // ───── 강조 테두리 ─────
 
+    private static Sprite _cornerMask;
+
+    /// <summary>
+    /// RingSprite와 같은 크기·반지름의 9-slice. 둥근 사각형 바깥만 칠해져 있어, 네모난 어둠 사이로 보이던
+    /// 테두리 모서리 바깥을 어둡게 메운다. 경계는 테두리 굵기의 절반만큼 안쪽이라 테두리 밑에 숨는다.
+    /// </summary>
+    internal static Sprite CornerMaskSprite
+    {
+        get
+        {
+            if (_cornerMask != null) return _cornerMask;
+            const int size = 128, radius = 48;
+            const float inset = 7f, soft = 2.6f;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, true)
+            {
+                name = "TutorialCornerMask", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, hideFlags = HideFlags.DontSave,
+            };
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + .5f, py = y + .5f;
+                    float cx = Mathf.Clamp(px, radius, size - radius), cy = Mathf.Clamp(py, radius, size - radius);
+                    float d = Vector2.Distance(new Vector2(px, py), new Vector2(cx, cy)) - radius;
+                    float alpha = Mathf.Clamp01(.5f + (d + inset) / soft);
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255));
+                }
+            texture.SetPixels32(pixels);
+            texture.Apply(true);
+            _cornerMask = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(.5f, .5f), size, 0, SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            _cornerMask.hideFlags = HideFlags.DontSave;
+            return _cornerMask;
+        }
+    }
+
     private static Sprite _ring;
 
     /// <summary>둥근 사각형 테두리만 있는 9-slice. 가운데가 비어 짚은 버튼이 그대로 보인다.</summary>
-    private static Sprite RingSprite
+    internal static Sprite RingSprite
     {
         get
         {

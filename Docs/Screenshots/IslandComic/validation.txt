@@ -1,0 +1,1 @@
+PASS: opening and 10 resident comics rendered at 1920x1080; all captions fit.

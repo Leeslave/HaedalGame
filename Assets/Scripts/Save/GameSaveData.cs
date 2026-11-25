@@ -184,8 +184,9 @@ public class DaySettlementRecord
     // 장부 (모두 실제 거래 이벤트에서 집계)
     public List<DaySaleEntry> sales = new List<DaySaleEntry>();
     public int revenue;             // 손님 결제 합계 (팁 포함)
-    public int otherIncome;         // 영업 중 손님 결제 외 수입
-    public int expense;             // 영업 중 지출
+    public int otherIncome;         // 손님 결제 외 수입 (영업 전 보상 등 포함)
+    public int expense;             // 지출 (영업 전 구매 포함)
+    public int prepExpense;         // 그중 영업 전(장보기·도구 등) 지출
     public int netProfit;           // revenue + otherIncome - expense
     public int goldAtOpen;
     public int goldAtClose;
@@ -194,6 +195,7 @@ public class DaySettlementRecord
     public int visitedCount;        // 입장(생성) 기준
     public int servedCount;         // 계산 완료 후 퇴장
     public int notServedCount;      // 계산 없이 퇴장 (대기 포기·주문 불가 등)
+    public int soldOutCount;        // 재료가 떨어져 주문하지 못한 손님 (notServedCount에 포함)
     public int forcedLeaveCount;    // 마감 정지 방지로 내보낸 손님 (notServedCount에 포함)
 
     // 평점
@@ -202,6 +204,7 @@ public class DaySettlementRecord
     public float previousRating;    // 결산 전 식당 평점
     public float totalRating;       // 결산 후 식당 평점
     public bool seedRatingIncluded; // 시작 평판(시드)이 아직 평균에 포함되어 있는지
+    public int litterLeft;          // 마감 때 치우지 않은 쓰레기 수 (하나라도 있으면 오늘 평점 감점)
 
     // 운영 측정값 (평균 = 합계 / 표본 수)
     public float seatWaitSum;

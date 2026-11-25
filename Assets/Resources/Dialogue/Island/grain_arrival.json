@@ -1,0 +1,41 @@
+{
+  "id": "island_grain_arrival",
+  "backgroundStyle": "WarmInterior",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "farmer",
+      "name": "곡물 섬 농부",
+      "color": "#F2D16B",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "밀짚모자를 쓴 농부가 커다란 곡물 자루를 끌고 들어왔다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "우리 섬엔 밀이며 쌀이며 옥수수가 넘쳐나는데, 다들 맨날 똑같이 삶아만 먹어요.",
+      "speaker": "farmer"
+    },
+    {
+      "text": "소문난 셰프님이라면 뭔가 다른 걸 만들어 주실 수 있지 않을까 해서요.",
+      "speaker": "farmer"
+    },
+    {
+      "text": "곡물 요리라… 이건 네 전문이잖아.",
+      "speaker": "haedal"
+    }
+  ]
+}

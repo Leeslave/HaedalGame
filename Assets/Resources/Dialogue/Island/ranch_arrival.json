@@ -1,0 +1,41 @@
+{
+  "id": "island_ranch_arrival",
+  "backgroundStyle": "WarmInterior",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "rancher",
+      "name": "목장 장인",
+      "color": "#F5E6C8",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "우유 냄새를 풍기는 장인이 치즈 한 덩이를 탁자에 올려놓았다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "우리 목장 치즈는 어디 내놔도 안 빠지는데, 정작 이걸 살린 요리가 없어요.",
+      "speaker": "rancher"
+    },
+    {
+      "text": "이 치즈가 제일 빛날 요리를 만들어 주세요.",
+      "speaker": "rancher"
+    },
+    {
+      "text": "…냄새 좋다. 이건 좀 기대되는데.",
+      "speaker": "haedal"
+    }
+  ]
+}

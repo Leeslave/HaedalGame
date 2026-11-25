@@ -10,13 +10,14 @@ public static class DesignFonts
     {
         get
         {
-            if (heading != null) return heading;
+            // 에디터 테스트에서 다른 테스트가 글자 머티리얼을 지우면 폰트를 다시 만든다.
+            if (heading != null && heading.material != null) return heading;
             heading = Create("Jua-Regular");
             heading.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset> { Body };
             return heading;
         }
     }
-    public static TMP_FontAsset Body => body != null ? body : body = Create("NanumGothic-Bold");
+    public static TMP_FontAsset Body => body != null && body.material != null ? body : body = Create("NanumGothic-Bold");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset() { heading = null; body = null; }

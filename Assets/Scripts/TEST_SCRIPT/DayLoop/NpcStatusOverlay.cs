@@ -7,11 +7,11 @@ using UnityEngine;
 /// [TEST 하루 루프] 월드 상태 표시. (NPC-01, NPC-02, ECON-01, ART-10/11 임시 표현) 캐주얼 시안: 글자 대신 그림과 링.
 ///  - 주문: 머리 위 동그란 말풍선에 주문한 음식 그림, 둘레 링이 남은 인내심(초록 → 노랑 → 코랄).
 ///          손님 프리팹의 기존 말풍선 캔버스는 겹치므로 끈다.
-///  - 웨이팅석: 머리에 대기 번호 스티커, 아래에 인내심 게이지
+///  - 웨이팅석: 머리에 대기 번호 배지(시안 PlayHud/QueueBadge), 아래에 인내심 막대(PlayHud/PatienceBar)
 ///  - 인내심이 5초 이하로 남았을 때와 퇴장 반응(평점)만 글자로 띄운다.
 ///  - 식사 중: 주문한 메뉴 아이콘을 좌석 앞 식탁 위치에 놓고 머리 위에 하트
 ///  - 홀 직원: 음식 운반 중에는 머리 위에 같은 메뉴 아이콘. 서빙 순간 직원 쪽 아이콘이 사라지고 식탁에 나타난다.
-///    주방 직원: 조리 중인 메뉴 아이콘. 잠든 직원은 Zz. (역할·작업 글자 칩은 띄우지 않는다)
+///    주방 직원: 조리 중인 메뉴 아이콘. 잠든 직원은 Zz(영업 HUD가 떠 있으면 HUD의 [직원 깨우기] 말풍선이 대신한다). (역할·작업 글자 칩은 띄우지 않는다)
 ///    메뉴 아이콘이 아직 없는 음식은 아이콘 대신 음식 이름표를 같은 자리에 띄운다.
 ///  - 계산: 실제 지급 이벤트 금액으로 동전 알약 팝업 (오늘 첫 수익은 크게)
 /// 표시만 담당하며 손님·직원의 행동이나 지급에는 관여하지 않는다.
@@ -21,7 +21,14 @@ public class NpcStatusOverlay : MonoBehaviour
     private const float ChipHeight = 0.5f;
     private const float ChipFontSize = 3.0f;
     private const float IconSize = 0.6f;
+    /// <summary>식탁에 놓인 음식 크기. 머리 위 아이콘(0.6)과 같으면 접시가 너무 작아 보였다.</summary>
+    public const float TableFoodSize = 1.0f;
     private const int ChipOrder = 4000;
+    /// <summary>대기 번호 배지 한 변. 시안(24px)과 같은 비율로 손님 머리 모서리에 붙는다.</summary>
+    private const float QueueBadgeSize = 0.4f;
+    /// <summary>인내심 막대. 시안 PatienceBar(48×8)와 같은 6:1 비율.</summary>
+    private const float GaugeWidth = 0.9f;
+    private const float GaugeHeight = 0.15f;
 
     private static readonly Color Mint = new Color32(0x7F, 0xD1, 0xA0, 0xFF);
     private static readonly Color Butter = new Color32(0xFF, 0xD4, 0x5E, 0xFF);
@@ -84,6 +91,8 @@ public class NpcStatusOverlay : MonoBehaviour
     private readonly Dictionary<float, Sprite> _pills = new Dictionary<float, Sprite>();
     private Transform _root;
     private Sprite _chipSprite;
+    private static Sprite _patienceSprite;
+    private static Sprite _queueBadgeSprite;
     private Material _lineMaterial;
     private string _heartGlyph;
     private int _layerId;
@@ -101,6 +110,7 @@ public class NpcStatusOverlay : MonoBehaviour
         Sprite ui = DayLoopUI.Rounded;
         // 예전 48px 텍스처를 PPU 160으로 쓰던 크기를 유지한다.
         _chipSprite = Sprite.Create(ui.texture, ui.rect, new Vector2(0.5f, 0.5f), 160f * ui.rect.width / 48f, 0, SpriteMeshType.FullRect, ui.border);
+        LoadDesignPieces();
         _lineMaterial = new Material(Shader.Find("Sprites/Default")) { hideFlags = HideFlags.DontSave };
         _heartGlyph = DayLoopUI.Glyph("♥", "");
 
@@ -254,9 +264,9 @@ public class NpcStatusOverlay : MonoBehaviour
         {
             Vector2 facing = seat.GetFacingDirection();
             Vector3 basePos = seat.GetSeatPoint() != null ? seat.GetSeatPoint().position : customer.transform.position;
-            tablePos = basePos + (Vector3)(facing.normalized * 0.6f);
+            tablePos = TableFoodPosition(seat, basePos, facing);
         }
-        ShowFood(view.food, view.foodTag, eating ? order : null, tablePos);
+        ShowFood(view.food, view.foodTag, eating ? order : null, tablePos, TableFoodSize);
 
         // 먹는 동안 머리 위에 하트가 콩콩
         bool heart = state == CustomerState.Eating && _heartGlyph.Length > 0;
@@ -291,7 +301,7 @@ public class NpcStatusOverlay : MonoBehaviour
             case CustomerState.Exit:
                 if (customer.WasServed) return new[] { "아쉬워요", "괜찮았어요", "잘 먹었어요", "맛있어요!", "최고예요!" }[Mathf.Clamp(Mathf.FloorToInt(customer.LastRating), 0, 4)] + $" {customer.LastRating:0.0}";
                 color = DayLoopUI.Warn;
-                return "그냥 돌아가요";
+                return customer.LeftAngry ? $"너무 오래 기다렸어요 {customer.LastRating:0.0}" : "그냥 돌아가요";
             default:
                 return "입장";
         }
@@ -337,22 +347,45 @@ public class NpcStatusOverlay : MonoBehaviour
         if (agent is ServerAgent server) food = server.CarriedFood;
         else if (agent is ChefAgent chef) food = chef.CookingRecipe;
 
-        SetChip(view.chip, agent.IsSleeping ? "Zz" : "", SleepInk);
+        // 영업 HUD가 떠 있으면 그 자리에 [직원 깨우기] 말풍선을 띄우므로 Zz는 겹치지 않게 뺀다.
+        bool hudWakeTip = RestaurantHud.Current != null && RestaurantHud.Current.IsShowing;
+        SetChip(view.chip, agent.IsSleeping && !hudWakeTip ? "Zz" : "", SleepInk);
         view.chip.root.position = new Vector3(bounds.center.x, bounds.max.y + ChipHeight * 0.6f, 0f);
         SetGauge(view.chip, false, 1f);
 
         ShowFood(view.food, view.foodTag, agent.IsSleeping ? null : food, new Vector3(bounds.center.x, bounds.max.y + IconSize * 0.45f, 0f));
     }
 
+    /// <summary>
+    /// 식탁 위 접시 자리: 앉은 자리에서 식탁 가운데 쪽으로, 자기 몫의 식탁 절반 위.
+    /// 예전에는 자리에서 0.6만 떨어져 손님 얼굴에 겹쳤다. 식탁 가운데는 같은 식탁 좌석들의 가운데로 잡는다.
+    /// </summary>
+    private static Vector3 TableFoodPosition(Seat seat, Vector3 seatPos, Vector2 facing)
+    {
+        TableGroup table = seat.GetComponentInParent<TableGroup>();
+        Seat[] seats = table != null ? table.GetSeats() : null;
+        Vector3 center;
+        if (seats != null && seats.Length >= 2)
+        {
+            center = Vector3.zero;
+            foreach (Seat s in seats) center += s.GetSeatPoint().position;
+            center /= seats.Length;
+        }
+        else center = seatPos + (Vector3)(facing.normalized * 0.9f);
+        Vector3 position = Vector3.Lerp(seatPos, center, 0.72f);
+        position.z = 0f;
+        return position;
+    }
+
     // 음식 아이콘을 보여 준다. 아이콘이 없는 메뉴는 같은 자리에 음식 이름표를 띄운다. food가 null이면 모두 숨긴다.
-    private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position)
+    private static void ShowFood(SpriteRenderer icon, Chip tag, RecipeData food, Vector3 position, float size = IconSize)
     {
         Sprite designIcon = DesignArt.Food(food);
         bool hasIcon = designIcon != null;
         icon.gameObject.SetActive(hasIcon);
         if (hasIcon)
         {
-            SetIcon(icon, food.Icon);
+            SetIcon(icon, designIcon, size);
             icon.transform.position = position;
         }
 
@@ -482,8 +515,19 @@ public class NpcStatusOverlay : MonoBehaviour
     {
         Sticker sticker = new Sticker { root = new GameObject("WaitingNumber").transform };
         sticker.root.SetParent(_root, false);
-        Disc(sticker.root, "Line", DayLoopUI.Kit.Line, 0.4f, ChipOrder + 2);
-        Disc(sticker.root, "Back", Butter, 0.34f, ChipOrder + 3);
+        if (_queueBadgeSprite != null)
+        {
+            SpriteRenderer badge = new GameObject("Badge").AddComponent<SpriteRenderer>();
+            badge.transform.SetParent(sticker.root, false);
+            badge.sprite = _queueBadgeSprite;
+            badge.sortingLayerID = _layerId;
+            badge.sortingOrder = ChipOrder + 3;
+        }
+        else
+        {
+            Disc(sticker.root, "Line", DayLoopUI.Kit.Line, QueueBadgeSize, ChipOrder + 2);
+            Disc(sticker.root, "Back", Butter, QueueBadgeSize - 0.06f, ChipOrder + 3);
+        }
         sticker.text = CreateWorldText("Number", 2.2f, ChipOrder + 4);
         sticker.text.transform.SetParent(sticker.root, false);
         sticker.text.font = DesignFonts.Heading;
@@ -597,16 +641,49 @@ public class NpcStatusOverlay : MonoBehaviour
         chip.gaugeFill.gameObject.SetActive(visible);
         if (!visible) return;
 
-        const float width = 0.9f;
-        const float height = 0.11f;
+        const float width = GaugeWidth;
+        const float height = GaugeHeight;
         float y = -ChipHeight * 0.5f - height;
         chip.gaugeBack.size = new Vector2(width, height);
         chip.gaugeBack.transform.localPosition = new Vector3(0f, y, 0f);
 
         float fillWidth = Mathf.Max(height, width * Mathf.Clamp01(ratio));
+        // 넉넉할 때는 시안 막대(민트)를 그대로, 줄어들면 흰 알약에 노랑 → 코랄을 입힌다. (민트 그림에는 더 밝은 색을 곱할 수 없다)
+        bool design = ratio > 0.6f && _patienceSprite != null;
+        chip.gaugeFill.sprite = design ? _patienceSprite : chip.gaugeBack.sprite;
         chip.gaugeFill.size = new Vector2(fillWidth, height);
         chip.gaugeFill.transform.localPosition = new Vector3(-width * 0.5f + fillWidth * 0.5f, y, 0f);
-        chip.gaugeFill.color = ratio > 0.6f ? Mint : ratio > 0.3f ? Butter : Peach;
+        chip.gaugeFill.color = design ? Color.white : ratio > 0.6f ? Mint : ratio > 0.3f ? Butter : Peach;
+    }
+
+    /// <summary>
+    /// 시안 조각을 월드 크기로 다시 자른다. 막대는 텍스처 높이가 GaugeHeight가 되게, 좌우 끝 반원만 늘리지 않는다.
+    /// 배지는 한 변이 QueueBadgeSize가 되게 한다. 조각이 없으면 null로 두고 예전 원·알약으로 그린다.
+    /// </summary>
+    private static void LoadDesignPieces()
+    {
+        if (_patienceSprite == null)
+        {
+            Sprite bar = DesignArt.Load("PlayHud/PatienceBar");
+            if (bar != null)
+            {
+                Texture2D tex = bar.texture;
+                float half = tex.height * 0.5f;
+                _patienceSprite = Sprite.Create(tex, bar.rect, new Vector2(0.5f, 0.5f), tex.height / GaugeHeight, 0, SpriteMeshType.FullRect, new Vector4(half, 0f, half, 0f));
+                _patienceSprite.name = "World PatienceBar";
+                _patienceSprite.hideFlags = HideFlags.DontSave;
+            }
+        }
+        if (_queueBadgeSprite == null)
+        {
+            Sprite badge = DesignArt.Load("PlayHud/QueueBadge");
+            if (badge != null)
+            {
+                _queueBadgeSprite = Sprite.Create(badge.texture, badge.rect, new Vector2(0.5f, 0.5f), badge.texture.width / QueueBadgeSize);
+                _queueBadgeSprite.name = "World QueueBadge";
+                _queueBadgeSprite.hideFlags = HideFlags.DontSave;
+            }
+        }
     }
 
     private static Bounds GetBounds(Transform target, SpriteRenderer body)

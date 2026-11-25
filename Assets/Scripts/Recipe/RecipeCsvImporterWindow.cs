@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.IO;
 using System.Collections.Generic;
 #if UNITY_EDITOR
@@ -124,3 +125,4 @@ public sealed class RecipeCsvImporterWindow : EditorWindow
         }
     }
 }
+#endif

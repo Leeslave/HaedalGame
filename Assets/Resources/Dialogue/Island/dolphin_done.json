@@ -1,0 +1,44 @@
+{
+  "id": "island_dolphin_done",
+  "backgroundStyle": "DeepSea",
+  "canSkip": true,
+  "pauseGameTime": false,
+  "playOnce": false,
+  "typeSpeed": 26,
+  "allowFastForward": true,
+  "characters": [
+    {
+      "id": "haedal",
+      "name": "해달",
+      "color": "#7FD4E8",
+      "side": "Left"
+    },
+    {
+      "id": "dolphin",
+      "name": "돌고래 셰프",
+      "color": "#8EC5FF",
+      "side": "Right"
+    }
+  ],
+  "nodes": [
+    {
+      "text": "돌고래 셰프는 마지막 한 입을 천천히 음미했다.",
+      "transition": "Fade"
+    },
+    {
+      "text": "…인정하지. 다시 칼을 잡은 지 얼마 안 된 솜씨치고는 훌륭해.",
+      "speaker": "dolphin"
+    },
+    {
+      "text": "답례로 하나 알려 주지. 우리 바다 깊은 곳에 사람의 배가 가라앉아 있어. 엔진이 아직 남아 있을 거다.",
+      "speaker": "dolphin"
+    },
+    {
+      "text": "우리는 돌고래의 안내로 잔해에서 녹슨 엔진을 건져 올렸다."
+    },
+    {
+      "text": "완전히 망가졌네. 이걸 고칠 수 있는 곳은… 한 군데밖에 없어.",
+      "speaker": "haedal"
+    }
+  ]
+}

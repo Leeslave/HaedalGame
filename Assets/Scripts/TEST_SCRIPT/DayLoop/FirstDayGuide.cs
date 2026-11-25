@@ -47,6 +47,9 @@ public class FirstDayGuide : MonoBehaviour
     private Step _step;
     private int _paidAmount;
     private float _nextFollowSearch;
+    // 안내가 말하는 대상(손님·직원)을 식당 화면 위에서 짚는 고리와 화살표.
+    private RectTransform _focusRing, _focusArrow;
+    private PartTimerAgent _sleepingAgent;
 
     public void Init(DayCycleController day)
     {
@@ -139,6 +142,87 @@ public class FirstDayGuide : MonoBehaviour
             UpdateGuide();
         else
             CheckStaffSleep();
+        UpdateFocus();
+    }
+
+    // ───── 대상 짚기 ─────
+
+    /// <summary>지금 안내 단계가 말하는 손님·직원. 짚을 대상이 없으면 null.</summary>
+    private Component FocusTarget()
+    {
+        if (_sleepGuideActive) return _sleepingAgent;
+        if (!_guideActive || _followed == null) return null;
+        switch (_step)
+        {
+            case Step.OrderReady:
+            case Step.Carrying:
+                foreach (ServerAgent server in _day.Servers)
+                    if (server != null && server.CurrentCustomer == _followed) return server;
+                return _followed;
+            case Step.Cooking:
+                return FindFirstObjectByType<ChefAgent>();
+            case Step.None:
+            case Step.Done:
+                return null;
+            default:
+                return _followed;
+        }
+    }
+
+    private void UpdateFocus()
+    {
+        if (_focusRing == null) return;
+        Component target = FocusTarget();
+        Camera camera = Camera.main;
+        bool visible = target != null && target.gameObject.activeInHierarchy && camera != null && !Placing;
+        Rect rect = default;
+        if (visible) visible = TryScreenRect(target.transform, camera, out rect);
+        _focusRing.gameObject.SetActive(visible);
+        _focusArrow.gameObject.SetActive(visible);
+        if (!visible) return;
+
+        var canvasRect = (RectTransform)_canvas.transform;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, rect.min, null, out Vector2 min);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, rect.max, null, out Vector2 max);
+        Vector2 size = Vector2.Max(max - min + new Vector2(24, 24), new Vector2(90, 90));
+        Vector2 center = (min + max) / 2f;
+        float bob = Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f)) * 14f;
+        Rect screen = canvasRect.rect;
+        if (!screen.Contains(center))
+        {
+            // 대상이 화면 밖(예: 입구로 막 들어오는 손님)이면 고리는 숨기고 화살표를 가장자리에 붙여 그쪽을 가리킨다.
+            _focusRing.gameObject.SetActive(false);
+            const float edge = 56f;
+            Vector2 pinned = new Vector2(Mathf.Clamp(center.x, screen.xMin + edge, screen.xMax - edge), Mathf.Clamp(center.y, screen.yMin + edge, screen.yMax - edge));
+            Vector2 toward = (center - pinned).normalized;
+            _focusArrow.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(toward.y, toward.x) * Mathf.Rad2Deg + 90f);
+            _focusArrow.anchoredPosition = pinned - toward * bob;
+            return;
+        }
+        float pulse = 1f + Mathf.Sin(Time.unscaledTime * 6f) * .06f;
+        _focusRing.anchoredPosition = center;
+        _focusRing.sizeDelta = size * pulse;
+        _focusArrow.localEulerAngles = Vector3.zero;
+        _focusArrow.anchoredPosition = new Vector2(center.x, center.y + size.y / 2f + 40f + bob);
+    }
+
+    /// <summary>대상 그림(SpriteRenderer 묶음)이 화면에서 차지하는 사각형.</summary>
+    private static bool TryScreenRect(Transform target, Camera camera, out Rect rect)
+    {
+        rect = default;
+        bool any = false;
+        Bounds bounds = default;
+        foreach (SpriteRenderer renderer in target.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (!renderer.enabled || renderer.sprite == null) continue;
+            if (!any) { bounds = renderer.bounds; any = true; }
+            else bounds.Encapsulate(renderer.bounds);
+        }
+        if (!any) bounds = new Bounds(target.position, new Vector3(1f, 1.5f, 0f));
+        Vector3 a = camera.WorldToScreenPoint(bounds.min), b = camera.WorldToScreenPoint(bounds.max);
+        if (a.z < 0 || b.z < 0) return false;
+        rect = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        return true;
     }
 
     // ───── 준비 카드 ─────
@@ -176,7 +260,9 @@ public class FirstDayGuide : MonoBehaviour
         string block = _day.GetStartBlockReason();
         if (string.IsNullOrEmpty(block))
         {
-            _prepStatus.text = "준비 완료 — 왼쪽 [운영 시작]을 누르면 손님이 들어와요.";
+            var soldOut = _day.SoldOutMenus();
+            _prepStatus.text = soldOut.Count == 0 ? "준비 완료 — 왼쪽 [운영 시작]을 누르면 손님이 들어와요."
+                : $"준비 완료 — 재료가 없어 오늘 품절: {string.Join(", ", soldOut)}";
             _prepStatus.color = DayLoopUI.Kit.GoodInk;
             _prepStatusPanel.color = DayLoopUI.Kit.GoodTint;
         }
@@ -424,9 +510,10 @@ public class FirstDayGuide : MonoBehaviour
             if (!agent.IsSleeping) continue;
 
             _sleepGuideActive = true;
+            _sleepingAgent = agent;
             string role = agent is ChefAgent ? "주방" : "홀";
             SetGuide("직원 잠듦", $"지친 {role} 직원이 잠들었어요. 자는 동안에는 일이 멈춰요.",
-                "잠든 직원(발밑에 '잠듦' 표시)을 클릭하면 깨울 수 있어요. 체력이 낮을수록 잘 잠들어요.");
+                "잠든 직원 머리 위 [직원 깨우기]를 누르거나 직원을 클릭하면 바로 깨울 수 있어요. 그냥 두면 잠시 뒤 스스로 깨요. 체력이 낮을수록 잘 잠들어요.");
             RefreshGuideBar();
             WaitForContinue(() => EndSleepGuide(true));
             return;
@@ -448,6 +535,17 @@ public class FirstDayGuide : MonoBehaviour
     private void Build()
     {
         _canvas = DayLoopUI.CreateCanvas("[DayLoop] Guide", 60, gameObject.scene);
+        // 안내가 말하는 손님·직원을 짚는 노란 고리와 위에서 까딱이는 화살표. 누름은 막지 않는다.
+        var ring = DayLoopUI.Panel(_canvas.transform, DayLoopUI.Kit.Coin, "[Guide] Focus Ring");
+        ring.sprite = GameTutorial.RingSprite; ring.type = Image.Type.Sliced; ring.raycastTarget = false;
+        _focusRing = ring.rectTransform;
+        DayLoopUI.Place(_focusRing, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(90, 90));
+        var arrow = ReferenceTitleView.Picture(_canvas.transform, "IconChevronDown");
+        arrow.color = DayLoopUI.Kit.Coin; arrow.raycastTarget = false; arrow.preserveAspect = true;
+        arrow.gameObject.AddComponent<Outline>().effectColor = DayLoopUI.Kit.Line;
+        _focusArrow = arrow.rectTransform;
+        DayLoopUI.Place(_focusArrow, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(64, 64));
+        _focusRing.gameObject.SetActive(false); _focusArrow.gameObject.SetActive(false);
         _canvas.transform.SetParent(transform, false);
 
         // 준비 화면 배경 그림: 다른 UI(관리 버튼·안내 띠·토스트)보다 뒤, 월드보다 앞에 화면을 꽉 채운다.
@@ -537,9 +635,14 @@ public class FirstDayGuide : MonoBehaviour
         DayLoopUI.Horizontal(actions, 0, 14);
         DayLoopUI.Layout(actions, preferredHeight: 50);
         DayLoopUI.Spacer(actions);
-        var skip = DayLoopUI.KitButton(actions, "안내 건너뛰기", DayLoopUI.Kit.Sand, DayLoopUI.Kit.Ink, 22, SkipGuide);
+        // 시안의 안내 버튼(외곽선·아래 그림자가 그림에 들어 있다). 50 높이에 맞게 모서리를 70%로 줄이고, 그림자만큼 글자를 올린다.
+        var skip = DayLoopUI.Button(actions, "안내 건너뛰기", Color.white, DayLoopUI.Kit.Ink, 22, SkipGuide);
+        DesignArt.ApplySliced(skip.image, "PlayHud/ButtonSecondary", .7f);
+        DayLoopUI.Stretch(skip.GetComponentInChildren<TMP_Text>().rectTransform, 0f, 0f, 0f, 4f);
         DayLoopUI.Layout(skip, preferredWidth: 204, preferredHeight: 50);
-        _continueButton = DayLoopUI.KitButton(actions, "확인", DayLoopUI.Kit.WoodLight, Color.white, 24, Continue, "Continue");
+        _continueButton = DayLoopUI.Button(actions, "확인", Color.white, Color.white, 24, Continue, "Continue");
+        DesignArt.ApplySliced(_continueButton.image, "PlayHud/ButtonPrimary", .7f);
+        DayLoopUI.Stretch(_continueButton.GetComponentInChildren<TMP_Text>().rectTransform, 0f, 0f, 0f, 4f);
         DayLoopUI.Layout(_continueButton, preferredWidth: 100, preferredHeight: 50);
         _continueButton.gameObject.SetActive(false);
 

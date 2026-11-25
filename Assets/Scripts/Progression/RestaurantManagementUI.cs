@@ -37,7 +37,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         ("영업 준비", "메뉴 · 재료 · 직원", "Menu", new[] { "메뉴", "재료", "직원" }),
         ("식당 꾸미기", "가구 · 조리도구 · 식당 증축", "Furniture", new[] { "가구", "식당", "대장간" }),
-        ("섬 생활", "상점 · 연구 · 탐험 · 집", "Explore", new[] { "상점", "엘프", "연구", "주민", "집" }),
+        ("섬 생활", "상점 · 연구 · 탐험 · 섬 소식", "Explore", new[] { "상점", "엘프", "연구", "주민", "소식", "집" }),
     };
 
     private static string GroupOf(string section) => Groups.FirstOrDefault(g => g.sections.Contains(section)).name;
@@ -46,6 +46,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         "엘프" => "엘프 상점",
         "주민" => "탐험",
+        "소식" => "섬 소식",
         "식당" => "조리도구",
         "가구" => "가구 배치",
         "대장간" => "식당 증축",
@@ -64,6 +65,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         "엘프" => "특별 재료 · 설계도",
         "연구" => "새 요리 배우기",
         "주민" => "직원 파견 · 수확",
+        "소식" => "주민 부탁 · 배 수리",
         "집" => "할 일 · 주급 · 취침",
         _ => "",
     };
@@ -80,6 +82,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         "엘프" => "Elf",
         "연구" => "Research",
         "주민" => "Explore",
+        "소식" => "Explore",
         "집" => "House",
         _ => "Play",
     };
@@ -112,7 +115,11 @@ public partial class RestaurantManagementUI : MonoBehaviour
     // 식당: 하단에 운영 시작 버튼이 있으므로 관리 버튼은 그 위에 배치한다.
     private void BuildOpener()
     {
-        var opener = DayLoopUI.KitButton(canvas.transform, "관리", DayLoopUI.Kit.Sea, Color.white, 28, () => Open("메뉴"), "Opener");
+        // 플레이씬 시안(Figma 386:212): 영업 HUD 오른쪽 위 칸들과 같은 나무 테에 종이를 끼운 버튼
+        var opener = DesignArt.WoodButton(canvas.transform, "관리", 30, () => Open("메뉴"), "Opener");
+        var label = opener.GetComponentInChildren<TMP_Text>();
+        label.font = DesignFonts.Heading;
+        label.fontSharedMaterial = label.font.material;
         PlaceOpener(opener, false);
         openers.Add(opener);
     }
@@ -122,7 +129,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         var rt = (RectTransform)opener.transform;
         if (besideHud)
-            DayLoopUI.Place(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-(24 + RestaurantHud.Current.TopRightWidth + 12), -24), new Vector2(150, 64));
+            DayLoopUI.Place(rt, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-(24 + RestaurantHud.Current.TopRightWidth + 12), -24), new Vector2(140, 64));   // 시안 비율 116×54
         else
             DayLoopUI.Place(rt, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 124), new Vector2(170, 66));
     }
@@ -255,6 +262,13 @@ public partial class RestaurantManagementUI : MonoBehaviour
         bool selected = section == tab;
         Color ink = selected ? Color.white : DayLoopUI.Kit.Ink;
         var item = DayLoopUI.Button(parent, "", selected ? DayLoopUI.Kit.Sea : Color.white, Color.clear, 10, () => Open(section), section);
+        if (section == "연구" && RestaurantProgress.ResearchLocked)
+        {
+            // 장사 전에는 연구 항목을 흐리게 끄고, 올리면 언제 갈 수 있는지 알려 준다.
+            item.interactable = false;
+            item.gameObject.AddComponent<CanvasGroup>().alpha = .5f;
+            HoverTip.Attach(item.gameObject, () => RestaurantProgress.ResearchLocked ? RestaurantProgress.FreeTimeOnlyTip : null);
+        }
         DayLoopUI.Chunky(item.image, 2f, 0f);
         item.GetComponent<Outline>().effectColor = selected ? DayLoopUI.Kit.SeaDeep : DayLoopUI.Kit.Divider;
         item.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
@@ -295,6 +309,13 @@ public partial class RestaurantManagementUI : MonoBehaviour
     {
         if (window == null || (!RestaurantProgress.CanManage && !(GameFlow.Phase == GamePhase.Operation && section == "메뉴"))) return;
         if (PayrollPending) section = "임금 정산";
+        if (section == "연구" && RestaurantProgress.ResearchLocked)
+        {
+            // 다른 화면의 [연구 살펴보기] 같은 길로 들어와도 장사 전에는 연구소를 열지 않는다.
+            if (!window.gameObject.activeSelf) Open("메뉴");
+            message.text = "연구소는 " + RestaurantProgress.FreeTimeOnlyTip;
+            return;
+        }
         if (tab == "메뉴" && section != tab && window.gameObject.activeSelf) RestaurantProgress.FinishMenuEditing();
         CloseManagementDialogs();
         string group = GroupOf(section);
@@ -386,6 +407,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
                 break;
             case "주민":
                 DesignedExplore(s); break;
+            case "소식":
+                DesignedIslandNews(s); break;
             case "가구":
                 DesignedFurniture(s); break;
             case "집":
@@ -450,7 +473,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
         int next = Mathf.Min(level + 1, RestaurantRules.MaxLevel);
 
         var top = DayLoopUI.Rect("Restaurant level", content);
-        DayLoopUI.Layout(top, preferredHeight: 338);
+        DayLoopUI.Layout(top, preferredHeight: 378); // 레벨 혜택 6줄(홀 직원 포함)이 들어가는 높이
         var topLayout = DayLoopUI.Horizontal(top, 0, 18);
         topLayout.childForceExpandHeight = true;
         topLayout.padding = new RectOffset(0, 0, 0, 8);
@@ -499,6 +522,8 @@ public partial class RestaurantManagementUI : MonoBehaviour
         BenefitRow(benefits, "", $"현재 Lv.{level}", hasNext ? $"다음 Lv.{target}" : "-", true);
         BenefitRow(benefits, "손님 좌석", $"{RestaurantRules.SeatLimit(level)}개", hasNext ? Delta(RestaurantRules.SeatLimit(level), RestaurantRules.SeatLimit(target), "개") : "-");
         BenefitRow(benefits, "요리 공간", $"{RestaurantRules.CookingSpace(level)}개", hasNext ? Delta(RestaurantRules.CookingSpace(level), RestaurantRules.CookingSpace(target), "개") : "-");
+        int hall = RestaurantRules.StaffLimit(level, PartTimerRole.Serving), nextHall = RestaurantRules.StaffLimit(target, PartTimerRole.Serving);
+        BenefitRow(benefits, "홀 직원", $"{hall}명", hasNext ? Delta(hall, nextHall, "명") : "-");
         BenefitRow(benefits, "대기열", $"{RestaurantRules.WaitingLimit(level)}명", hasNext ? Delta(RestaurantRules.WaitingLimit(level), RestaurantRules.WaitingLimit(target), "명") : "-");
         BenefitRow(benefits, "레시피 등급", RestaurantRules.GradeRange(level), hasNext ? RestaurantRules.GradeRange(target) : "-");
         BenefitRow(benefits, "하루 방문 손님", $"{RestaurantRules.DailyVisitors(level)}명", hasNext ? Delta(RestaurantRules.DailyVisitors(level), RestaurantRules.DailyVisitors(target), "명") : "-");
@@ -634,6 +659,10 @@ public partial class RestaurantManagementUI : MonoBehaviour
         target = type == 1 ? RestaurantProgress.MissionTarget * 100 : type == 2 ? 1 : RestaurantProgress.MissionTarget;
     }
 
+    /// <summary>미션 진행도 숫자 위에 붙는 설명. QA #9: 미션 종류와 상관없이 "대접한 손님"으로 고정돼 있었다.</summary>
+    public static string MissionCaption(GameSaveData s) =>
+        new[] { "미션을 받은 뒤 대접한 손님", "미션을 받은 뒤 올린 매출 (G)", "미션을 받은 뒤 새로 배운 요리" }[s.progression.missionIndex % 3];
+
     /// <summary>표시용 미션 진행도. 목표를 넘겨 쌓인 이전 세이브도 목표에서 멈춰 보인다.</summary>
     public static int MissionProgress(GameSaveData s)
     {
@@ -652,12 +681,15 @@ public partial class RestaurantManagementUI : MonoBehaviour
 
     private static string RoleLabel(string role) => role == nameof(PartTimerRole.Serving) ? "홀" : role == nameof(PartTimerRole.Kitchen) ? "주방" : "대기";
 
+    // QA #25: 자유시간에 [놓으러 가기]를 누르면 이유 없이 막혔다. 가구는 다음 날 아침 영업 준비 때 놓는다고 알려 준다.
+    private const string PlacementBlockedText = "지금은 식당에 들어갈 수 없어요. 테이블은 다음 영업일 아침 [영업 준비]에서 놓을 수 있어요.";
+
     private void PlaceTable(int seats)
     {
         if (TablePlacementManager.Instance == null)
         {
             pendingPlacement = seats;
-            if (!GameFlow.TryEnterRestaurant()) { pendingPlacement = 0; message.text = "오늘은 식당에 들어갈 수 없어요."; }
+            if (!GameFlow.TryEnterRestaurant()) { pendingPlacement = 0; message.text = PlacementBlockedText; }
             return;
         }
         window.gameObject.SetActive(false);
@@ -695,7 +727,7 @@ public partial class RestaurantManagementUI : MonoBehaviour
     }
     private void BeginChallenge(int id)
     {
-        if (!RestaurantProgress.CanResearch) { message.text = "실습은 자유시간에 할 수 있어요."; return; }
+        if (!RestaurantProgress.CanResearch) { message.text = "실습은 " + RestaurantProgress.FreeTimeOnlyTip.Replace("방문할", "할"); return; }
         var research = GameSession.Current.progression.research.Find(x => x.recipeId == id);
         if (research == null || research.remainingDays > 0) { message.text = "연구 시간이 남았어요."; return; }
         if (!GameDatabase.TryGetRecipe(id, out var recipe)) return;
@@ -728,10 +760,29 @@ public partial class RestaurantManagementUI : MonoBehaviour
         DayLoopUI.Vertical(score, 33, 18);
         score.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         practice = gameObject.AddComponent<ResearchPractice>();
+        practice.ExitRequested = () => { StopPractice(); window.gameObject.SetActive(true); Refresh(); };
+        var current = practice;
         practice.Begin(stage, recipe, average => {
             bool ok = RestaurantProgress.TryCompleteResearch(id, average, out string error);
-            window.gameObject.SetActive(true); Refresh();
-            message.text = $"실습 평균 {average:0.0}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
+            string summary = $"실습 평균 {average:0.00}/5점 · " + (ok ? "새 요리를 배웠어요." : error);
+            // 요리 완성 화면을 실습 화면 위에 띄운다. 닫거나 다음 행동을 고르면 실습 화면도 함께 정리한다.
+            ResearchResultView.Open(canvas.transform, recipe, current.StepTexts, current.StepScores, average, ok, error,
+                () => { StopPractice(); if (ok) AddResearchedToMenu(id); else BeginChallenge(id); },
+                () => { StopPractice(); window.gameObject.SetActive(true); Refresh(); message.text = summary; });
         }, steps, score.transform);
+    }
+    // 결과 화면의 [메뉴에 올리기]: 빈 슬롯이 있으면 바로 올리고, 꽉 찼으면 메뉴 화면에서 고르게 한다.
+    private void AddResearchedToMenu(int id)
+    {
+        window.gameObject.SetActive(true);
+        var s = GameSession.Current;
+        int slot = s.menuSlots.IndexOf(-1);
+        if (slot < 0 && s.menuSlots.Count < RestaurantRules.MenuLimit(s.restaurantLevel)) slot = s.menuSlots.Count;
+        Open("메뉴");
+        if (s.menuSlots.Contains(id)) { message.text = "이미 오늘 메뉴에 있어요."; return; }
+        if (slot < 0) { message.text = "메뉴가 꽉 찼어요. 뺄 메뉴를 고른 뒤 새 요리를 올려 주세요."; return; }
+        bool ok = RestaurantProgress.TrySetMenu(slot, id, out string error);
+        Refresh();
+        message.text = ok ? "오늘 메뉴에 올렸어요." : error;
     }
 }

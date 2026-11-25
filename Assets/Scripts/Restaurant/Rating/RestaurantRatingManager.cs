@@ -169,7 +169,7 @@ public class RestaurantRatingManager : MonoBehaviour, ISaveParticipant
 
         if (_todayScores.Count > 0)
         {
-            _dailyHistory.Add(new DailyRatingEntry { day = day, value = Mathf.Max(0, TodayAverage - (RestaurantLitter.Count > 0 ? .2f : 0)) });
+            _dailyHistory.Add(new DailyRatingEntry { day = day, value = Mathf.Max(0, TodayAverage - (RestaurantLitter.Count > 0 ? RestaurantLitter.RatingPenalty : 0)) });
             while (_dailyHistory.Count > WindowSize) { _dailyHistory.RemoveAt(0); }
         }
 

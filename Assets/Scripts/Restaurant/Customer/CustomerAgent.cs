@@ -10,6 +10,8 @@ public class CustomerAgent : MonoBehaviour
     public float ServingLuck;
     public bool LeftAngry { get; private set; }
     public float LastRating { get; private set; }
+    /// <summary>기다리다 지쳐 나간 손님이 남기는 평가. 예전에는 결제한 손님만 평가해서 평점이 거의 4.0에 머물렀다.</summary>
+    public const float AngryRating = 1f;
 
     [ReadOnly][SerializeField] private RestaurantGameManager gm;
 
@@ -40,6 +42,15 @@ public class CustomerAgent : MonoBehaviour
 
     // 화면 표시·집계용 관찰 이벤트. 손님의 행동에는 관여하지 않는다.
     public static event Action<CustomerAgent> OnAnySpawned;
+    /// <summary>오늘 메뉴 재료가 떨어져 주문하지 못한 손님. 결산 원인 안내와 영업 중 알림에 쓴다.</summary>
+    public static event Action<CustomerAgent> OnAnySoldOut;
+    public bool SoldOut { get; private set; }
+    public void MarkSoldOut()
+    {
+        if (SoldOut) return;
+        SoldOut = true;
+        OnAnySoldOut?.Invoke(this);
+    }
     public static event Action<CustomerAgent, CustomerState> OnAnyStateChanged;
     public static event Action<CustomerAgent, RecipeData, int> OnAnyPaid;   // 실제 지급된 금액(팁 포함)
 
@@ -258,6 +269,8 @@ public class CustomerAgent : MonoBehaviour
         if (coc.GetOrderData() == null)
         {
             // 오늘의 메뉴가 비어 주문할 수 없으면 기다리지 않고 미대접으로 퇴장한다. (마감이 끝나지 않는 상황 방지)
+            // 메뉴는 있는데 재료가 다 떨어진 경우라면 품절로 알린다.
+            if (MenuManager.Instance != null && MenuManager.Instance.DailyFoods.Count > 0) MarkSoldOut();
             ratingFlag = RatingFlag.Low;
             cuc.CloseBubble();
             StartCoroutine(WaitStateChange(CustomerState.Exit));
@@ -410,7 +423,10 @@ public class CustomerAgent : MonoBehaviour
 
     private void PatienceExhausted()
     {
+        if (LeftAngry) return;
         LeftAngry = true;
+        LastRating = AngryRating;
+        if (RestaurantRatingManager.Instance != null) RestaurantRatingManager.Instance.AddCustomerScore(AngryRating);
         Debug.Log("손님이 지쳐서 나갔습니다.");
         ratingFlag = RatingFlag.Low;
         nm.SetMoving(false);
